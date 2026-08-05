@@ -1,0 +1,21 @@
+{
+  "snapshot_id": "YYYY-MM-DD-short-name",
+  "captured_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "source": "Atlas of Living Australia",
+  "query": {},
+  "coverage": {
+    "from": "YYYY-MM-DD",
+    "to": "YYYY-MM-DD"
+  },
+  "files": [
+    {
+      "path": "data/raw/example-file",
+      "sha256": "replace-with-checksum",
+      "record_count": 0
+    }
+  ],
+  "licence_and_attribution": [],
+  "pipeline_version": "git-commit-sha",
+  "notes": ""
+}
+
