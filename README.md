@@ -14,7 +14,6 @@ Occurrence records and model estimates do not guarantee a sighting.
 .
 ├── apps/web/                  # Web interface
 ├── data/                      # Data and snapshot metadata
-├── docs/                      # Project documentation
 ├── models/                    # Model notes and outputs
 ├── src/ausmammal_explorer/    # Python package
 └── tests/                     # Tests
