@@ -90,14 +90,13 @@ Never commit credentials, personal access tokens, private survey responses, or u
 
 ## Team workflow
 
-1. Create or assign an issue before substantial work begins.
-2. Branch from `main` using a descriptive name such as `feature/species-filter` or `fix/snapshot-count`.
-3. Keep commits focused and use imperative messages, for example `Add species snapshot validator`.
-4. Open a pull request and complete the template.
-5. Obtain at least one teammate review before merging.
-6. Prefer squash merging unless preserving separate commits adds useful history.
+1. Create or assign an issue, then branch from `main` using a name such as `feature/species-filter` or `fix/snapshot-count`.
+2. Keep commits small and focused.
+3. Run the relevant tests and checks before opening a pull request.
+4. Link the issue and requirement IDs in the pull request, and include screenshots for visible UI changes.
+5. Ask at least one teammate to review the change before merging.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the definition of done and collaboration conventions.
+Do not commit credentials, private information, raw data snapshots, or large generated files.
 
 ## Quality goals
 
@@ -115,4 +114,3 @@ FIT3163 Data Science Project 1 — Group 15:
 - William Koo
 - Kok Hee Tan
 - Nethra Yamala
-
