@@ -54,3 +54,7 @@ models/output/*
 !models/output/.gitkeep
 outputs/
 artifacts/
+
+# Local working files
+mtg/
+sem1/
