@@ -58,3 +58,5 @@ artifacts/
 # Local working files
 mtg/
 sem1/
+tmp/
+pitch/*.pdf
