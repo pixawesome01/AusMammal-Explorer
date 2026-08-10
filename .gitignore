@@ -48,6 +48,8 @@ pnpm-debug.log*
 # Large or generated project data
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/cleaned_marsupials_maplibre.geojson
+!data/raw/cleaned_marsupials_maxent.csv
 data/processed/*
 !data/processed/.gitkeep
 models/output/*
