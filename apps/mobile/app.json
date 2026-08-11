@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "AusMammal Explorer",
+    "slug": "ausmammal-explorer",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "edu.monash.fit3163.ausmammalexplorer"
+    },
+    "android": {
+      "package": "edu.monash.fit3163.ausmammalexplorer",
+      "predictiveBackGestureEnabled": false
+    }
+  }
+}

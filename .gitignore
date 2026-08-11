@@ -28,8 +28,9 @@ venv/
 build/
 dist/
 
-# JavaScript / web tooling
+# JavaScript / app tooling
 node_modules/
+.expo/
 .next/
 .nuxt/
 .svelte-kit/
