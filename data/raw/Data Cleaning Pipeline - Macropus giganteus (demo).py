@@ -1,5 +1,6 @@
 import json
-import galah # type: ignore
+
+import galah  # type: ignore
 
 
 def fetch_clean_and_format_marsupials(email, output_csv, output_geojson):
@@ -30,8 +31,13 @@ def fetch_clean_and_format_marsupials(email, output_csv, output_geojson):
     # mint_doi=True prompts the backend to cleanly package high-volume datasets
     raw_df = galah.atlas_occurrences(
         taxa=marsupials,
-        fields=["scientificName", "decimalLatitude", "decimalLongitude", "coordinateUncertaintyInMeters"],
-        mint_doi=True
+        fields=[
+            "scientificName",
+            "decimalLatitude",
+            "decimalLongitude",
+            "coordinateUncertaintyInMeters",
+        ],
+        mint_doi=True,
     )
 
     initial_count = len(raw_df)
@@ -62,7 +68,8 @@ def fetch_clean_and_format_marsupials(email, output_csv, output_geojson):
 
     # Step 5: Eliminate high spatial uncertainty (> 2000 metres)
     if 'coordinateUncertaintyInMeters' in df.columns:
-        df = df[(df['coordinateUncertaintyInMeters'].isna()) | (df['coordinateUncertaintyInMeters'] <= 2000)]
+        uncertainty = df["coordinateUncertaintyInMeters"]
+        df = df[uncertainty.isna() | (uncertainty <= 2000)]
 
     # Step 6: Deduplicate exact spatial overlaps to prevent MaxEnt weight inflation
     df = df.drop_duplicates(subset=['scientificName', 'decimalLatitude', 'decimalLongitude'])

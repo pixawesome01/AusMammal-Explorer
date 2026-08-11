@@ -39,16 +39,17 @@ python -m ruff check .
 
 Requires Python 3.11 or later. On Windows, activate the environment with `.venv\Scripts\Activate.ps1`.
 
-Run the web application separately:
+Run the mobile application separately:
 
 ```bash
-cd apps/web
+cd apps/mobile
 npm ci
-npm run dev
+npm run start
 ```
 
-The web application requires Node.js 24 or later. Use `npm test`, `npm run typecheck`,
-and `npm run build` before opening a frontend pull request.
+The mobile application uses React Native and Expo SDK 57. Use Node.js 24 LTS and run
+`npm test`, `npm run typecheck`, `npm run export`, and `npm run doctor` before opening a
+frontend pull request.
 
 ## Data
 
