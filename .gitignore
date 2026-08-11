@@ -48,6 +48,7 @@ pnpm-debug.log*
 # Large or generated project data
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/Data Cleaning Pipeline - Macropus giganteus (demo).py
 data/processed/*
 !data/processed/.gitkeep
 models/output/*
