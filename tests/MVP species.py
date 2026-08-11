@@ -1,10 +1,14 @@
 import time
 from datetime import datetime
+
 import pandas as pd
+
 try:
     import galah
 except Exception as exc:
-    raise SystemExit("galah-python is not installed. Run: pip install -U galah-python") from exc
+    raise SystemExit(
+        "galah-python is not installed. Run: pip install -U galah-python"
+    ) from exc
 
 TOP_N = 50
 MIN_RECENT = 10_000
