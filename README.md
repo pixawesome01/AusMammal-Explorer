@@ -12,7 +12,7 @@ Occurrence records and model estimates do not guarantee a sighting.
 
 ```text
 .
-├── apps/web/                  # Web interface
+├── apps/mobile/               # Mobile app interface
 ├── data/                      # Data and snapshot metadata
 ├── models/                    # Model notes and outputs
 ├── src/ausmammal_explorer/    # Python package
