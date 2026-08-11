@@ -39,6 +39,17 @@ python -m ruff check .
 
 Requires Python 3.11 or later. On Windows, activate the environment with `.venv\Scripts\Activate.ps1`.
 
+Run the web application separately:
+
+```bash
+cd apps/web
+npm ci
+npm run dev
+```
+
+The web application requires Node.js 24 or later. Use `npm test`, `npm run typecheck`,
+and `npm run build` before opening a frontend pull request.
+
 ## Data
 
 Use dated ALA snapshots so results remain reproducible. Raw data, processed data, and generated model outputs are not committed to Git. Record snapshot details using `data/metadata/snapshot-manifest.example.json`.
