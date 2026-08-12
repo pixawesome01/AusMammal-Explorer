@@ -68,11 +68,12 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     # Step 2: Normalize observation dates to ISO 8601 (YYYY-MM-DD).
     # ALA's eventDate can be a full timestamp, a bare date, or missing
     # entirely for older/legacy records. Records without a usable date are
-    # kept (they're still valid for the map view) but can't be used for
-    # time-based filtering, so the gap is logged rather than silently lost.
+    # kept for now (Step 3 enforces the 2020-01-01 cutoff and drops them),
+    # so the gap is logged rather than silently lost.
     before = len(df)
     if 'event_date' in df.columns:
-        df['event_date'] = pd.to_datetime(df['event_date'], errors='coerce', utc=True).dt.strftime('%Y-%m-%d')
+        df['event_date'] = pd.to_datetime(df['event_date'], 
+                                          errors='coerce', utc=True).dt.strftime('%Y-%m-%d')
         missing_dates = df['event_date'].isna().sum()
         print(f"  ({missing_dates} of {len(df)} records are missing a usable observation date)")
     else:
@@ -80,7 +81,14 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
         print("  (eventDate field not returned by the API; all records missing a date)")
     log_step("Observation dates normalized", before)
 
-    # Step 3: Normalize taxon labels to the 7 canonical MVP binomials.
+    # Step 3: Enforce minimum event date (>= 2020-01-01).
+    # Records with no usable date can't be confirmed to meet the cutoff, so
+    # they're dropped here too rather than silently passing through.
+    before = len(df)
+    df = df[pd.to_datetime(df['event_date'], errors='coerce') >= pd.Timestamp("2020-01-01")]
+    log_step("Event date before 2020-01-01 (or missing)", before)
+
+    # Step 4: Normalize taxon labels to the 7 canonical MVP binomials.
     # ALA returns full taxonomic strings - subspecies epithets, trinomials,
     # author citations - rather than a clean binomial. Without this, records
     # like "Vombatus ursinus tasmaniensis" never string-match the selector's
@@ -98,19 +106,19 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
         print(f"  Dropped unmatched/synonym taxa not in the MVP list: {unmatched}")
     log_step("Normalized to canonical MVP binomials (subspecies/synonyms rolled up)", before)
 
-    # Step 4: Strip absolute zero-coordinate anomalies (0,0)
+    # Step 5: Strip absolute zero-coordinate anomalies (0,0)
     before = len(df)
     df = df[(df['latitude'] != 0) & (df['longitude'] != 0)]
     log_step("Zero-coordinate anomalies", before)
 
-    # Step 5: Enforce Australian bounding box constraints
+    # Step 6: Enforce Australian bounding box constraints
     # (Negative latitudes, positive longitudes)
     before = len(df)
     df = df[(df['latitude'].between(-45.0, -6.0)) &
             (df['longitude'].between(110.0, 155.0))]
     log_step("Outside Australian bounding box", before)
 
-    # Step 6: Purge Capital City Centroids
+    # Step 7: Purge Capital City Centroids
     # Drops default pins assigned to legacy museum records missing precise GPS data
     before = len(df)
     centroids = {
@@ -124,7 +132,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
                   (df['longitude'].round(3) == round(lon, 3)))]
     log_step("Capital city centroids", before)
 
-    # Step 7: Exclude non-observational records (e.g. fossil/preserved specimens)
+    # Step 8: Exclude non-observational records (e.g. fossil/preserved specimens)
     # that shouldn't inform a current species distribution model.
     before = len(df)
     if 'basis_of_record' in df.columns:
@@ -132,7 +140,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
         df = df[~df['basis_of_record'].isin(excluded_bases)]
     log_step("Non-observational basis of record", before)
 
-    # Step 8: Eliminate high spatial uncertainty (> 2000 metres).
+    # Step 9: Eliminate high spatial uncertainty (> 2000 metres).
     # Records with unknown (NaN) uncertainty are kept but noted, since MaxEnt
     # can still use them - only known-poor precision is discarded.
     before = len(df)
@@ -142,12 +150,12 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
         print(f"  ({unknown_uncertainty} retained records have unknown coordinate uncertainty)")
     log_step("Spatial uncertainty > 2000m", before)
 
-    # Step 9: Deduplicate exact spatial overlaps to prevent MaxEnt weight inflation
+    # Step 10: Deduplicate exact spatial overlaps to prevent MaxEnt weight inflation
     before = len(df)
     df = df.drop_duplicates(subset=['species', 'latitude', 'longitude'])
     log_step("Duplicate spatial overlaps", before)
 
-    # Step 10: Flag geographic outliers for manual review (e.g. offshore points
+    # Step 11: Flag geographic outliers for manual review (e.g. offshore points
     # that pass the bounding-box/centroid checks but sit far outside a
     # species' typical range). Flagged per-species using median absolute
     # deviation on lat/lon so it adapts to each species' actual spread,
