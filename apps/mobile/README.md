@@ -48,7 +48,7 @@ and include touch, accessibility, and performance checks for changed interaction
 ## Current scope
 
 KAN-32 provides the shared selected-species state and an accessible selector for the
-five MVP species. KAN-36 provides the MapLibre Native base map, Australia-wide camera
+seven MVP species. KAN-36 provides the MapLibre Native base map, Australia-wide camera
 bounds, responsive portrait/landscape sizing, loading and retry states, and visible
 OpenStreetMap attribution. Occurrence layers will consume the shared species state in
 the next map task.

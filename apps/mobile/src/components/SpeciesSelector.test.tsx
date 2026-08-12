@@ -21,11 +21,11 @@ async function renderSelector() {
 }
 
 describe("SpeciesSelector", () => {
-  it("shows all five agreed MVP species", async () => {
+  it("shows all seven agreed MVP species", async () => {
     await renderSelector();
 
     const options = screen.getAllByRole("button");
-    expect(options).toHaveLength(5);
+    expect(options).toHaveLength(7);
 
     for (const species of MVP_SPECIES) {
       expect(

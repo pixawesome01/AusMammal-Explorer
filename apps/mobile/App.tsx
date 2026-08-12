@@ -19,7 +19,7 @@ function ExplorerWorkspace() {
           <Text accessibilityRole="header" style={styles.siteTitle}>
             AusMammal Explorer
           </Text>
-          <Text style={styles.siteSubtitle}>Occurrence records · five MVP species</Text>
+          <Text style={styles.siteSubtitle}>Occurrence records · seven MVP species</Text>
         </View>
 
         <SpeciesSelector />

@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 
-import { OccurrenceMap } from "./OccurrenceMap";
+import { getResponsiveMapHeight, OccurrenceMap } from "./OccurrenceMap";
 
 jest.mock("@maplibre/maplibre-react-native", () => {
   const mockReact = jest.requireActual<typeof import("react")>("react");
@@ -31,6 +31,12 @@ jest.mock("@maplibre/maplibre-react-native", () => {
 });
 
 describe("OccurrenceMap", () => {
+  it("resizes within usable portrait and landscape limits", () => {
+    expect(getResponsiveMapHeight(500)).toBe(260);
+    expect(getResponsiveMapHeight(800)).toBe(336);
+    expect(getResponsiveMapHeight(1200)).toBe(420);
+  });
+
   it("uses the agreed Australian viewport and bounds", async () => {
     const { getByTestId } = await render(<OccurrenceMap speciesName="Koala" />);
 

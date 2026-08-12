@@ -54,11 +54,15 @@ type OccurrenceMapProps = {
   speciesName: string;
 };
 
+export function getResponsiveMapHeight(windowHeight: number) {
+  return Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
+}
+
 export function OccurrenceMap({ speciesName }: OccurrenceMapProps) {
   const { height: windowHeight } = useWindowDimensions();
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
-  const mapHeight = Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
+  const mapHeight = getResponsiveMapHeight(windowHeight);
 
   const retry = () => {
     setMapState("loading");
