@@ -24,16 +24,6 @@ export const MVP_SPECIES = [
     commonName: "Swamp Wallaby",
     scientificName: "Wallabia bicolor",
   },
-  {
-    id: "common-wombat",
-    commonName: "Common Wombat",
-    scientificName: "Vombatus ursinus",
-  },
-  {
-    id: "greater-glider",
-    commonName: "Greater Glider",
-    scientificName: "Petauroides volans",
-  },
 ] as const;
 
 export type Species = (typeof MVP_SPECIES)[number];
