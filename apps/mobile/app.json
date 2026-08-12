@@ -3,7 +3,7 @@
     "name": "AusMammal Explorer",
     "slug": "ausmammal-explorer",
     "version": "0.1.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
@@ -12,6 +12,9 @@
     "android": {
       "package": "edu.monash.fit3163.ausmammalexplorer",
       "predictiveBackGestureEnabled": false
-    }
+    },
+    "plugins": [
+      "@maplibre/maplibre-react-native"
+    ]
   }
 }

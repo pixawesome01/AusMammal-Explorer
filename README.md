@@ -4,7 +4,11 @@ AusMammal Explorer helps non-expert users understand where and when Australian m
 
 ## MVP
 
-The MVP covers Koala, Eastern Grey Kangaroo, Common Brushtail Possum, Common Ringtail Possum, Swamp Wallaby, Common Wombat, and Greater Glider. Users can view clustered records on a map, filter by time, compare simple location and weather summaries, and check the source and snapshot details. An optional MaxEnt/maxnet layer may show model-based suitability estimates.
+The MVP covers five species: Koala, Eastern Grey Kangaroo, Common Brushtail Possum,
+Common Ringtail Possum, and Swamp Wallaby. Users can view clustered records on a map,
+filter by time, compare simple location and weather summaries, and check the source and
+snapshot details. An optional MaxEnt/maxnet layer may show model-based suitability
+estimates.
 
 Occurrence records and model estimates do not guarantee a sighting.
 
