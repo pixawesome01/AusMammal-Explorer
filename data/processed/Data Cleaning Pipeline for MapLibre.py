@@ -12,8 +12,8 @@ SPECIES_ID_BY_SCIENTIFIC_NAME = {
     "Trichosurus vulpecula": "common-brushtail-possum",
     "Pseudocheirus peregrinus": "common-ringtail-possum",
     "Wallabia bicolor": "swamp-wallaby",
-    #"Vombatus ursinus": "common-wombat",
-    #"Petauroides volans": "greater-glider",
+    # "Vombatus ursinus": "common-wombat",
+    # "Petauroides volans": "greater-glider",
 }
 
 CAPITAL_CITY_CENTROIDS = {
