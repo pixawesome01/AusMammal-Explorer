@@ -12,6 +12,8 @@ SPECIES_ID_BY_SCIENTIFIC_NAME = {
     "Trichosurus vulpecula": "common-brushtail-possum",
     "Pseudocheirus peregrinus": "common-ringtail-possum",
     "Wallabia bicolor": "swamp-wallaby",
+    "Vombatus ursinus": "common-wombat",
+    "Petauroides volans": "greater-glider",
 }
 
 CAPITAL_CITY_CENTROIDS = {
@@ -23,6 +25,12 @@ CAPITAL_CITY_CENTROIDS = {
 # ~5.5m - tight enough to catch default pins, not real nearby observations.
 CENTROID_TOLERANCE_DEGREES = 0.00005
 EXCLUDED_BASIS_OF_RECORD = {"FOSSIL_SPECIMEN", "PRESERVED_SPECIMEN"}
+# ALA returns the full descriptive name, e.g. "Creative Commons Attribution
+# (International) (CC-BY 4.0 (Int))" - matched case-insensitively as a
+# substring so the exact wording of the descriptive prefix doesn't matter.
+# Every other version/jurisdiction (e.g. 3.0 (Aus)) and every other variant
+# (SA, ND, NC, CC0) is excluded.
+ALLOWED_LICENSE = "CC-BY 4.0 (Int)"
 MIN_EVENT_DATE = pd.Timestamp("2020-01-01", tz="UTC")
 MAX_COORDINATE_UNCERTAINTY_M = 2000
 
@@ -42,20 +50,28 @@ def normalize_species(raw_name):
     return f"{tokens[0]} {tokens[1]}"
 
 
+def robust_scale(series):
+    """Median absolute deviation, falling back to std then a small epsilon
+    so a tiny or zero-spread group can't divide by zero/NaN."""
+    mad = (series - series.median()).abs().median()
+    if pd.isna(mad) or mad <= 0:
+        mad = series.std()
+    if pd.isna(mad) or mad <= 0:
+        mad = 1e-6
+    return mad
+
+
 def flag_outliers(group, threshold=6.0):
     lat_med, lon_med = group["latitude"].median(), group["longitude"].median()
-    lat_mad = (group["latitude"] - lat_med).abs().median() or group["latitude"].std() or 1e-6
-    lon_mad = (group["longitude"] - lon_med).abs().median() or group["longitude"].std() or 1e-6
-    lat_dev = (group["latitude"] - lat_med).abs() / lat_mad
-    lon_dev = (group["longitude"] - lon_med).abs() / lon_mad
+    lat_dev = (group["latitude"] - lat_med).abs() / robust_scale(group["latitude"])
+    lon_dev = (group["longitude"] - lon_med).abs() / robust_scale(group["longitude"])
     return (lat_dev > threshold) | (lon_dev > threshold)
 
 
 def fetch_clean_and_format_marsupials(email, output_geojson):
     """
-    Fetches ALA occurrence data for the 5 MVP marsupials and cleans it into one
-    MapLibre-ready GeoJSON file per species. MapLibre display only - MaxEnt
-    filtering is a separate pipeline.
+    Fetches ALA occurrence data for the 7 MVP marsupials and cleans it into one
+    MapLibre-ready GeoJSON file per species.
     """
     print("Initialising ALA API session via galah...")
     galah.galah_config(
@@ -70,7 +86,8 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     raw_df = galah.atlas_occurrences(
         taxa=marsupials,
         fields=["scientificName", "decimalLatitude", "decimalLongitude",
-                "coordinateUncertaintyInMeters", "basisOfRecord", "eventDate"],
+                "coordinateUncertaintyInMeters", "basisOfRecord", "eventDate", "dcterms:license"],
+        use_data_profile=True,
         mint_doi=True
     )
 
@@ -85,6 +102,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
         "coordinateUncertaintyInMeters": "coordinate_uncertainty_m",
         "basisOfRecord": "basis_of_record",
         "eventDate": "event_date",
+        "dcterms:license": "license",
     })
 
     def log_step(label, before):
@@ -125,7 +143,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     df = df[df["event_date"] >= MIN_EVENT_DATE]
     log_step("Event date before 2020-01-01 (or missing)", before)
 
-    # Step 5: reduce to binomial, keep only the 5 MVP species (no fuzzy/synonym matching).
+    # Step 5: reduce to binomial, keep only the 7 MVP species (no fuzzy/synonym matching).
     before = len(df)
     df["species"] = df["species"].apply(normalize_species)
     unmatched = sorted({s for s in df["species"] if pd.notna(s)} - set(marsupials))
@@ -160,7 +178,16 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     df = df[~df["basis_of_record"].isin(EXCLUDED_BASIS_OF_RECORD)]
     log_step("Non-observational basis of record", before)
 
-    # Step 9: drop uncertainty > 2000m; unknown uncertainty is kept and flagged.
+    # Step 9: keep only CC-BY 4.0 (Int) licensed records. No reported license
+    # can't be confirmed compliant, so it's dropped too, not kept as unknown.
+    before = len(df)
+    if "license" not in df.columns:
+        df["license"] = pd.NA
+    df["license"] = df["license"].astype("string").str.strip()
+    df = df[df["license"].str.contains(ALLOWED_LICENSE, case=False, regex=False, na=False)]
+    log_step("License other than CC-BY 4.0 (Int)", before)
+
+    # Step 10: drop uncertainty > 2000m; unknown uncertainty is kept and flagged.
     before = len(df)
     if "coordinate_uncertainty_m" not in df.columns:
         df["coordinate_uncertainty_m"] = pd.NA
@@ -173,7 +200,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     print(f"  ({unknown_uncertainty} retained records have unknown coordinate uncertainty)")
     log_step("Spatial uncertainty > 2000m", before)
 
-    # Step 10: dedupe identical species+coordinates, keep the most recent, record the count.
+    # Step 11: dedupe identical species+coordinates, keep the most recent, record the count.
     before = len(df)
     dedup_keys = ["species", "latitude", "longitude"]
     observation_counts = df.groupby(dedup_keys).size().rename("observation_count")
@@ -182,7 +209,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     df = df.merge(observation_counts, on=dedup_keys, how="left")
     log_step("Duplicate spatial overlaps (collapsed to most recent + observation count)", before)
 
-    # Step 11: flag (don't drop) per-species geographic outliers for review.
+    # Step 12: flag (don't drop) per-species geographic outliers for review.
     before = len(df)
     df["geographic_outlier"] = False
     for species_name, group in df.groupby("species"):
@@ -215,6 +242,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
             )
             uncertainty = row.coordinate_uncertainty_m
             basis_of_record = row.basis_of_record
+            license_value = row.license
             features.append({
                 "type": "Feature",
                 # Stable id (hash of species+coordinates) for MapLibre feature-state.
@@ -229,6 +257,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
                     # null when the source record had no usable date
                     "eventDate": event_date,
                     "basisOfRecord": None if pd.isna(basis_of_record) else basis_of_record,
+                    "license": str(license_value),
                     "coordinateUncertaintyM": None if pd.isna(uncertainty) else float(uncertainty),
                     "uncertaintyUnknown": bool(row.uncertainty_unknown),
                     "observationCount": int(row.observation_count),
@@ -249,7 +278,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
               f"({len(group)} records)")
 
     print(f"Data pipeline complete. Retained {len(df)} of {initial_count} "
-          f"fully verified spatial records ({len(df) / initial_count:.1%}).")
+          f"cleaned MapLibre records ({len(df) / initial_count:.1%}).")
 
 
 if __name__ == '__main__':

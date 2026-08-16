@@ -15,21 +15,35 @@ The shared cleaned datasets are stored in [Google Drive](https://drive.google.co
 
 Each frozen snapshot should have a manifest containing its source, query parameters, capture date, date coverage, record count, checksum, licence/attribution notes, and processing version. Do not silently replace an existing snapshot; create a new dated snapshot and manifest.
 
+## Source
+
+Occurrence records come from the [Atlas of Living Australia](https://www.ala.org.au/) (ALA), queried via `galah` for the 7 MVP species (koala, eastern grey kangaroo, common brushtail possum, common ringtail possum, swamp wallaby, common wombat, greater glider — see `SPECIES_ID_BY_SCIENTIFIC_NAME` in the pipeline). Each run:
+
+- Applies ALA's `CSDM` (Species Distribution Modelling) data quality profile (`use_data_profile=True`).
+- Mints a DOI for the download (`mint_doi=True`) — printed at the start of the run. Record it in the snapshot manifest and use it as the citation for that snapshot.
+
+## Licence
+
+Only records licensed `CC-BY 4.0 (Int)` (Creative Commons Attribution 4.0 International) are kept — see Cleaning pipeline step 9. No CC0, no ShareAlike/NoDerivatives/NonCommercial variants, no other version or jurisdiction, and nothing with an unreported licence. This keeps the output to attribution-only records with no redistribution or commercial-use restrictions.
+
+Cite both the source and the licence when using the cleaned data, e.g.: "Occurrence data sourced from the Atlas of Living Australia (ALA), licensed CC-BY 4.0 (Int), DOI: `<the minted DOI>`."
+
 ## Cleaning pipeline
 
-`processed/Data Cleaning Pipeline for MapLibre.py` turns a raw ALA download into one GeoJSON file per MVP species. MapLibre display only — MaxEnt filtering is a separate pipeline.
+`processed/Data Cleaning Pipeline for MapLibre.py` turns a raw ALA download (see Source above) into one GeoJSON file per MVP species. MapLibre display only — MaxEnt filtering is a separate pipeline.
 
 1. Coerce lat/lon/uncertainty to numeric; drop records missing species, lat, or lon.
 2. Drop physically impossible coordinates (outside ±90 lat / ±180 lon).
 3. Parse `eventDate` to a datetime.
 4. Drop records before 2020-01-01, or with no usable date.
-5. Reduce to the binomial and match against the 5 MVP species (no fuzzy/synonym matching).
+5. Reduce to the binomial and match against the 7 MVP species (no fuzzy/synonym matching).
 6. Enforce the Australian bounding box — also removes `(0,0)` "null island" points.
 7. Drop points within ~5.5m of a capital city centroid (likely default museum pins, not real GPS).
 8. Normalize `basisOfRecord`; drop fossil/preserved specimens.
-9. Drop coordinate uncertainty > 2000m. Unknown uncertainty is kept, just flagged separately.
-10. Dedupe identical species+coordinates, keep the most recent, record how many were collapsed.
-11. Flag (don't drop) per-species geographic outliers — real vagrants/range extensions stay on the map, just tagged; also written to `flagged_for_review.csv`.
+9. Keep only `CC-BY 4.0 (Int)` licensed records. Drops every other version/jurisdiction (e.g. `CC-BY 3.0 (Aus)`), every other variant (CC-BY-SA, CC-BY-ND, CC-BY-NC, CC0), and anything with no reported license.
+10. Drop coordinate uncertainty > 2000m. Unknown uncertainty is kept, just flagged separately.
+11. Dedupe identical species+coordinates, keep the most recent, record how many were collapsed.
+12. Flag (don't drop) per-species geographic outliers — real vagrants/range extensions stay on the map, just tagged; also written to `flagged_for_review.csv`.
 
 ## GeoJSON schema
 
@@ -42,7 +56,20 @@ One `FeatureCollection` per species: `cleaned_marsupials_maplibre_<species-id>.g
 | `properties.species` | Scientific name |
 | `properties.eventDate` | `YYYY-MM-DD`, always `>= 2020-01-01` |
 | `properties.basisOfRecord` | ALA record type, or `null` |
+| `properties.license` | ALA's full license text (guaranteed to contain `CC-BY 4.0 (Int)`) |
 | `properties.coordinateUncertaintyM` | GPS uncertainty in metres, or `null` if unknown |
 | `properties.uncertaintyUnknown` | `true` if uncertainty wasn't reported |
 | `properties.observationCount` | Raw records collapsed into this point |
 | `properties.geographicOutlier` | `true` if flagged as a spatial outlier |
+
+## Manifest
+
+Copy `metadata/snapshot-manifest.example.json` for every pipeline run and fill it in:
+
+- `snapshot_id` / `captured_at` — dated at run time.
+- `source` — `"Atlas of Living Australia"`.
+- `query` — the taxa list, `data_profile: "CSDM"`, and the minted DOI from that run.
+- `coverage` — `2020-01-01` to the run date (Step 4's cutoff).
+- `files` — one entry per `cleaned_marsupials_maplibre_<species-id>.geojson`, with its sha256 checksum and feature count (printed per species at the end of the run).
+- `licence_and_attribution` — `CC-BY 4.0 (Int)`, plus the citation string from the Licence section above.
+- `pipeline_version` — the git commit SHA of `Data Cleaning Pipeline for MapLibre.py` used for that run.
