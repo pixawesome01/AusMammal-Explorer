@@ -5,15 +5,15 @@ import os
 import galah  # type: ignore
 import pandas as pd
 
-# Matches the `id` slugs in apps/web/src/species.ts for output filenames.
+# Matches the `id` slugs in apps/mobile/src/species.ts for output filenames.
 SPECIES_ID_BY_SCIENTIFIC_NAME = {
     "Phascolarctos cinereus": "koala",
     "Macropus giganteus": "eastern-grey-kangaroo",
     "Trichosurus vulpecula": "common-brushtail-possum",
     "Pseudocheirus peregrinus": "common-ringtail-possum",
     "Wallabia bicolor": "swamp-wallaby",
-    # "Vombatus ursinus": "common-wombat",
-    # "Petauroides volans": "greater-glider",
+    "Vombatus ursinus": "common-wombat",
+    "Petauroides volans": "greater-glider",
 }
 
 CAPITAL_CITY_CENTROIDS = {
