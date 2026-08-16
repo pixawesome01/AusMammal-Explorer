@@ -25,11 +25,6 @@ CAPITAL_CITY_CENTROIDS = {
 # ~5.5m - tight enough to catch default pins, not real nearby observations.
 CENTROID_TOLERANCE_DEGREES = 0.00005
 EXCLUDED_BASIS_OF_RECORD = {"FOSSIL_SPECIMEN", "PRESERVED_SPECIMEN"}
-# ALA returns the full descriptive name, e.g. "Creative Commons Attribution
-# (International) (CC-BY 4.0 (Int))" - matched case-insensitively as a
-# substring so the exact wording of the descriptive prefix doesn't matter.
-# Every other version/jurisdiction (e.g. 3.0 (Aus)) and every other variant
-# (SA, ND, NC, CC0) is excluded.
 ALLOWED_LICENSE = "CC-BY 4.0 (Int)"
 MIN_EVENT_DATE = pd.Timestamp("2020-01-01", tz="UTC")
 MAX_COORDINATE_UNCERTAINTY_M = 2000
