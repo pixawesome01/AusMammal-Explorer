@@ -50,8 +50,22 @@ and include touch, accessibility, and performance checks for changed interaction
 KAN-32 provides the shared selected-species state and an accessible selector for the
 seven MVP species. KAN-36 provides the MapLibre Native base map, Australia-wide camera
 bounds, responsive portrait/landscape sizing, loading and retry states, and visible
-OpenStreetMap attribution. Occurrence layers will consume the shared species state in
-the next map task.
+OpenStreetMap attribution.
+
+KAN-40 provides the occurrence data layer used by the next map task:
+
+- `occurrenceSnapshot.ts` catalogues the 15 August 2026 frozen snapshot for all seven
+  species (185,338 records total).
+- `occurrenceLoader.ts` loads one species asset and validates every required GeoJSON,
+  coordinate, date and provenance field.
+- `occurrenceFilter.ts` applies the selected species and an inclusive date range.
+- `useOccurrenceRecords.ts` exposes loading, ready, empty and error states with retry.
+- `OccurrenceDataStatus.tsx` renders accessible feedback for those states.
+
+The shared Google Drive folder is authenticated project storage, not a runtime data
+endpoint. KAN-26 should supply the loader with bundled assets or an approved hosted base
+URL, then pass the filtered collection into the MapLibre occurrence layer. This keeps
+the app independent of live ALA requests and avoids committing the large GeoJSON files.
 
 The current standard OpenStreetMap raster endpoint is for modest, interactive MVP use
 only. It is identified with the app's user agent and must not be used for bulk or

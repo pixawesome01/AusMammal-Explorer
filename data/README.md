@@ -15,6 +15,13 @@ The shared cleaned datasets are stored in [Google Drive](https://drive.google.co
 
 Each frozen snapshot should have a manifest containing its source, query parameters, capture date, date coverage, record count, checksum, licence/attribution notes, and processing version. Do not silently replace an existing snapshot; create a new dated snapshot and manifest.
 
+The current app catalogue is snapshot `2026-08-15-ala-maplibre`: seven per-species
+GeoJSON files, 185,338 records in total, with coverage beginning 2020-01-01. Its exact
+per-file counts and end dates are versioned in
+`apps/mobile/src/data/occurrenceSnapshot.ts`; the app rejects files that do not match
+that catalogue or the schema below. The Drive folder is private project storage and
+must not be used as a runtime URL.
+
 ## Source
 
 Occurrence records come from the [Atlas of Living Australia](https://www.ala.org.au/) (ALA), queried via `galah` for the 7 MVP species (koala, eastern grey kangaroo, common brushtail possum, common ringtail possum, swamp wallaby, common wombat, greater glider — see `SPECIES_ID_BY_SCIENTIFIC_NAME` in the pipeline). Each run:
