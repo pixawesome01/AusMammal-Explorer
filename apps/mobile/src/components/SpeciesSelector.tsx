@@ -14,7 +14,7 @@ export function SpeciesSelector() {
           Choose a mammal
         </Text>
         <Text style={styles.description}>
-          Start with one of the five species included in the MVP.
+          Start with one of the seven species included in the MVP.
         </Text>
       </View>
 

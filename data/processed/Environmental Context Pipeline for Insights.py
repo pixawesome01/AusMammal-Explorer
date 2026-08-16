@@ -10,7 +10,7 @@ raster. Environmental data prep for MaxEnt/maxnet training is a separate,
 not-yet-built pipeline.
 """
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import rasterio  # type: ignore
@@ -75,8 +75,16 @@ def _monthly_average(variable, month):
                        CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif"):
         with rasterio.open(url) as src:
             nodata = src.nodata
-            scale = src.scales[0] if src.scales and src.scales[0] not in (None, 1.0) else spec["scale"]
-            offset = src.offsets[0] if src.offsets and src.offsets[0] not in (None, 0.0) else spec["offset"]
+            scale = (
+                src.scales[0]
+                if src.scales and src.scales[0] not in (None, 1.0)
+                else spec["scale"]
+            )
+            offset = (
+                src.offsets[0]
+                if src.offsets and src.offsets[0] not in (None, 0.0)
+                else spec["offset"]
+            )
             raw = np.array([v[0] for v in src.sample(SAMPLE_POINTS)], dtype="float64")
 
     if nodata is not None:
@@ -117,7 +125,7 @@ def build_monthly_climate_context(output_path):
         "region": "Australia (bounding box lat -45 to -6, lon 110 to 155)",
         "sampleGridStepDegrees": SAMPLE_GRID_STEP_DEG,
         "samplePointCount": len(SAMPLE_POINTS),
-        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "generatedAt": datetime.now(UTC).isoformat(),
         "months": months,
     }
 

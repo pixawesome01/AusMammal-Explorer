@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { OccurrenceMap } from "./src/components/OccurrenceMap";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
@@ -18,7 +19,7 @@ function ExplorerWorkspace() {
           <Text accessibilityRole="header" style={styles.siteTitle}>
             AusMammal Explorer
           </Text>
-          <Text style={styles.siteSubtitle}>Occurrence records · five MVP species</Text>
+          <Text style={styles.siteSubtitle}>Occurrence records · seven MVP species</Text>
         </View>
 
         <SpeciesSelector />
@@ -30,19 +31,7 @@ function ExplorerWorkspace() {
           </Text>
           <Text style={styles.scientificName}>{selectedSpecies.scientificName}</Text>
 
-          <View
-            accessible
-            accessibilityLabel={`Selected species: ${selectedSpecies.commonName}`}
-            style={styles.mapPlaceholder}
-          >
-            <Text style={styles.mapLabel}>Selected species</Text>
-            <Text testID="selected-species" style={styles.mapSpecies}>
-              {selectedSpecies.commonName}
-            </Text>
-            <Text style={styles.mapMessage}>
-              The native map will use this shared selection when KAN-36 is integrated.
-            </Text>
-          </View>
+          <OccurrenceMap speciesName={selectedSpecies.commonName} />
 
           <Text style={styles.dataNote}>
             Occurrence records show where a species has been recorded. They do not guarantee
@@ -112,37 +101,6 @@ const styles = StyleSheet.create({
     color: "#5b685f",
     fontSize: 17,
     fontStyle: "italic",
-  },
-  mapPlaceholder: {
-    minHeight: 240,
-    padding: 28,
-    justifyContent: "space-between",
-    backgroundColor: "#1f5a3f",
-    borderRadius: 18,
-    shadowColor: "#1f4633",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 5,
-  },
-  mapLabel: {
-    color: "#c8ddd0",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  mapSpecies: {
-    marginVertical: 18,
-    color: "#ffffff",
-    fontSize: 34,
-    fontWeight: "800",
-    lineHeight: 38,
-  },
-  mapMessage: {
-    color: "#e0ebe4",
-    fontSize: 15,
-    lineHeight: 22,
   },
   dataNote: {
     marginTop: 20,
