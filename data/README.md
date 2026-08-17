@@ -101,12 +101,14 @@ SILO data is distributed under [CC-BY 4.0](https://creativecommons.org/licenses/
 
 ### Pipeline
 
-1. Build a regular lon/lat sample grid across the same Australian bounding box used by the occurrence pipeline (lat -45 to -6, lon 110 to 155, 8° spacing).
-2. For each complete month from 2020-01 to the most recently finished month: download (or reuse the cached) SILO annual file for that year, per variable.
-3. `monthly_rain` is already a monthly product — sample the month-numbered band directly. `max_temp`/`min_temp` are daily-only — sample every day-of-year band within that calendar month and average across days and points; monthly mean temperature is `(mean(max_temp) + mean(min_temp)) / 2`.
-4. Convert stored integer values to real-world units using each band's own embedded scale/offset. Points that land in the ocean return nodata and are dropped from the mean automatically — no separate land mask needed.
-5. Sanity-check each month's result against a physically plausible range for Australia; an out-of-range or missing (NaN) result raises instead of being written to the output, since a NaN would also serialise as invalid (non-RFC-8259) JSON.
-6. Write one JSON summary with a `{year, month, monthName, temperatureC, precipitationMm}` entry per complete month.
+1. Build a regular lon/lat sample grid at SILO's own grid extent (lat -44 to -10, lon 112 to 154, 2° spacing) — trimmed slightly inside the occurrence pipeline's Australian bounding box (-45 to -6, 110 to 155), since a sample point outside SILO's coverage would just return nodata.
+2. For each complete month from 2020-01 to the most recently finished month (evaluated in the `Australia/Melbourne` timezone, not UTC, so a UTC date near midnight can't lag Australia's actual calendar month): download (or reuse the cached) SILO annual file for that year, per variable. Each `(variable, year)` file is downloaded at most once per run; only the current year is re-downloaded, since SILO appends to it daily.
+3. Validate that each requested band's own `NETCDF_DIM_time` metadata matches what the pipeline expects it to represent, and fail loudly if it doesn't — guards against SILO silently changing its band-to-date convention and corrupting the output without warning.
+4. `monthly_rain` is already a monthly product — sample the month-numbered band directly. `max_temp`/`min_temp` are daily-only — for each sample point, pair each day's max and min before averaging (so a day with only one of the two recorded doesn't bias the result), then average across the days in that month.
+5. Convert stored integer values to real-world units using each band's own embedded scale/offset. Points that land in the ocean return nodata and are dropped from the mean automatically — no separate land mask needed.
+6. Combine sample points into a single Australia-wide value per month using a latitude-weighted mean (a flat mean over a lon/lat grid over-represents higher latitudes, since a degree of longitude covers less ground near the poles than the equator). If fewer than `MIN_VALID_SAMPLE_FRACTION` (30%) of the grid's points have valid data for a month, the run fails rather than reporting an unrepresentative average.
+7. Sanity-check each month's result against a physically plausible range for Australia; an out-of-range or missing (NaN) result raises instead of being written to the output, since a NaN would also serialise as invalid (non-RFC-8259) JSON.
+8. Write one JSON summary — atomically, via a temp file + rename — with an entry per complete month.
 
 ### JSON schema
 
@@ -116,17 +118,18 @@ SILO data is distributed under [CC-BY 4.0](https://creativecommons.org/licenses/
 | --- | --- |
 | `source` | `"SILO (Queensland Government DES, from Bureau of Meteorology station observations; Jeffrey et al., 2001)"` |
 | `coveragePeriod` | e.g. `"2020-01 to 2026-07"` — always up to the most recently finished month |
-| `region` | The Australian bounding box used |
-| `sampleGridStepDegrees` / `samplePointCount` | Sample grid density, for reproducibility |
+| `region` | The Australian bounding box used (SILO's own grid extent) |
+| `sampleGridStepDegrees` / `nominalSamplePointCount` | Sample grid density, for reproducibility |
+| `minimumValidSampleFraction` | Minimum fraction of grid points that must have valid data for a month's mean to be trusted |
 | `generatedAt` | ISO 8601 timestamp of the run |
-| `months[]` | One entry per complete month: `year`, `month`, `monthName`, `temperatureC`, `precipitationMm` |
+| `months[]` | One entry per complete month: `year`, `month`, `monthName`, `temperatureC`, `precipitationMm`, `validTemperaturePointCount`, `validRainfallPointCount` |
 
 ### Manifest
 
 Copy `metadata/snapshot-manifest.example.json` for every run:
 
 - `source` — `"SILO"`.
-- `query` — `{"variables": ["monthly_rain", "max_temp", "min_temp"], "coverage_start": "2020-01", "sample_grid_step_degrees": 8.0}`.
+- `query` — `{"variables": ["monthly_rain", "max_temp", "min_temp"], "coverage_start": "2020-01", "sample_grid_step_degrees": 2.0}`.
 - `coverage` — `2020-01-01` to the run's most recently finished month.
 - `files` — one entry for `environmental_context_au.json`, with its sha256 checksum.
 - `licence_and_attribution` — `CC-BY 4.0`, plus "Jeffrey, S.J., et al. (2001). Using spatial interpolation to construct a comprehensive archive of Australian climate data. Environmental Modelling & Software, 16(4), 309–330."
