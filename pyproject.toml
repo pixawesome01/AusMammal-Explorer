@@ -19,7 +19,13 @@ dev = [
   "ruff>=0.6,<1",
 ]
 data = [
-  "galah-python>=0.13,<1",
+  # galah-python 0.13.4-0.13.6 (as of writing, the latest release) ship a
+  # nested same-quote f-string in galah_geolocate.py that only parses on
+  # Python 3.12+ (PEP 701); this project targets 3.11 (see requires-python
+  # above, and CI's actions/setup-python). Capped below the first broken
+  # release rather than raising requires-python, since nothing else here
+  # needs 3.12. Safe to raise the cap once a fixed release ships.
+  "galah-python>=0.13,<0.13.4",
   "pandas>=2,<3",
   "numpy>=2,<3",
   "rasterio>=1.3,<2",
