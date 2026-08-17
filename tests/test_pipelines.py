@@ -8,14 +8,13 @@ Tests verify that:
 4. Core functions have the correct signatures
 5. Output paths and directories are accessible
 
-Run with: python -m pytest tests/pipeline_tests.py -v --tb=short
+Run with: python -m pytest tests/test_pipelines.py -v --tb=short
 """
 import json
 import os
-import sys
 import tempfile
-from unittest import TestCase
 from pathlib import Path
+from unittest import TestCase
 
 
 class TestDataCleaningPipeline(TestCase):
@@ -35,7 +34,7 @@ class TestDataCleaningPipeline(TestCase):
 
     def test_pipeline_file_is_readable(self):
         """Verify the pipeline file can be read."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
             self.assertTrue(len(content) > 0, "Pipeline file is empty")
             self.assertIn(
@@ -66,12 +65,12 @@ class TestDataCleaningPipeline(TestCase):
                 with open(test_output, 'w') as f:
                     f.write('{}')
                 self.assertTrue(os.path.exists(test_output))
-            except IOError as e:
+            except OSError as e:
                 self.fail(f"Cannot write to output directory: {e}")
 
     def test_helper_functions_defined(self):
         """Verify key helper functions are defined in the pipeline."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
         
         required_functions = [
@@ -91,7 +90,7 @@ class TestDataCleaningPipeline(TestCase):
 
     def test_pipeline_config_parameters_valid(self):
         """Verify configuration parameters have sensible values."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
         
         # Check for critical parameter definitions
@@ -108,7 +107,9 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
     def setUp(self):
         """Set up test fixtures for pipeline tests."""
         self.data_processed_dir = Path(__file__).parent.parent / "data" / "processed"
-        self.pipeline_file = self.data_processed_dir / "Environmental Context Pipeline for Insights.py"
+        self.pipeline_file = (
+            self.data_processed_dir / "Environmental Context Pipeline for Insights.py"
+        )
 
     def test_pipeline_file_exists(self):
         """Verify the pipeline file exists in the expected location."""
@@ -119,7 +120,7 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
 
     def test_pipeline_file_is_readable(self):
         """Verify the pipeline file can be read."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
             self.assertTrue(len(content) > 0, "Pipeline file is empty")
             self.assertIn(
@@ -153,26 +154,28 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
 
     def test_australian_bounding_box_defined(self):
         """Verify Australian geographic boundaries are properly defined."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
-        
+
         self.assertIn("AU_MIN_LON", content)
         self.assertIn("AU_MIN_LAT", content)
         self.assertIn("AU_MAX_LON", content)
         self.assertIn("AU_MAX_LAT", content)
-        
-        # Verify reasonable values
-        self.assertIn("110.0", content)  # Western longitude
-        self.assertIn("155.0", content)  # Eastern longitude
-        self.assertIn("-45.0", content)  # Southern latitude
-        self.assertIn("-6.0", content)   # Northern latitude
 
-    def test_chelsa_parameters_defined(self):
-        """Verify CHELSA data parameters are properly configured."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        # Verify reasonable values - trimmed to SILO's own grid extent
+        # (111.975-154.025 lon, -44.025 to -9.975 lat), not the occurrence
+        # pipeline's wider box, so every sample point lands on real data.
+        self.assertIn("112.0", content)  # Western longitude
+        self.assertIn("154.0", content)  # Eastern longitude
+        self.assertIn("-44.0", content)  # Southern latitude
+        self.assertIn("-10.0", content)  # Northern latitude
+
+    def test_silo_parameters_defined(self):
+        """Verify SILO data parameters are properly configured."""
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
-        
-        self.assertIn("CHELSA_MONTHLY_URL", content)
+
+        self.assertIn("SILO_BUCKET_URL", content)
         self.assertIn("SAMPLE_GRID_STEP_DEG", content)
         self.assertIn("MONTH_NAMES", content)
         self.assertIn("Jan", content)
@@ -180,26 +183,31 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
 
     def test_climate_variables_defined(self):
         """Verify climate variables and their specifications are defined."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
-        
-        self.assertIn("VARIABLES", content)
-        self.assertIn("tas", content)  # Temperature
-        self.assertIn("pr", content)   # Precipitation
-        self.assertIn("degC", content)
-        self.assertIn("mm/month", content)
+
+        self.assertIn("PLAUSIBLE_RANGES", content)
+        self.assertIn("monthly_rain", content)  # Precipitation (monthly product)
+        self.assertIn("max_temp", content)      # Daily maximum temperature
+        self.assertIn("min_temp", content)      # Daily minimum temperature
+        self.assertIn("temperatureC", content)
+        self.assertIn("precipitationMm", content)
 
     def test_helper_functions_defined(self):
         """Verify key helper functions are defined in the pipeline."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
-        
+
         required_functions = [
             '_sample_points',
-            '_monthly_average',
+            '_download_year_file',
+            '_decode_band_values',
+            '_monthly_rainfall_mm',
+            '_monthly_mean_temperature_c',
+            '_monthly_summary',
             'build_monthly_climate_context'
         ]
-        
+
         for func_name in required_functions:
             self.assertIn(
                 f"def {func_name}",
@@ -217,12 +225,12 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
                 with open(test_output, 'w') as f:
                     json.dump(test_data, f)
                 self.assertTrue(os.path.exists(test_output))
-            except IOError as e:
+            except OSError as e:
                 self.fail(f"Cannot write to output directory: {e}")
 
     def test_output_json_structure(self):
         """Verify the expected JSON output structure is documented."""
-        with open(self.pipeline_file, 'r', encoding='utf-8') as f:
+        with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
         
         # Check for expected output fields
@@ -231,9 +239,12 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
             "coveragePeriod",
             "region",
             "sampleGridStepDegrees",
-            "samplePointCount",
+            "nominalSamplePointCount",
+            "minimumValidSampleFraction",
             "generatedAt",
-            "months"
+            "months",
+            "validTemperaturePointCount",
+            "validRainfallPointCount",
         ]
         
         for field in expected_fields:
@@ -273,7 +284,7 @@ class TestPipelineIntegration(TestCase):
             
             with self.subTest(file=file_path.name):
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
+                    with open(file_path, encoding='utf-8') as f:
                         code = f.read()
                     compile(code, file_path, 'exec')
                 except SyntaxError as e:
@@ -302,7 +313,7 @@ class TestPipelineIntegration(TestCase):
                 continue
             
             with self.subTest(file=file_path.name):
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, encoding='utf-8') as f:
                     content = f.read()
                 
                 # Check for docstrings
