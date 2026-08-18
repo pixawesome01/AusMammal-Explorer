@@ -31,6 +31,8 @@ dist/
 # JavaScript / app tooling
 node_modules/
 .expo/
+apps/mobile/ios/
+apps/mobile/android/
 .next/
 .nuxt/
 .svelte-kit/

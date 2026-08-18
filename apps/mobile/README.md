@@ -29,6 +29,29 @@ npm run start     # reconnect an installed development build to Metro
 Adding or upgrading a native dependency requires rebuilding the development app with
 `npm run ios` or `npm run android`. Expo Go cannot load the MapLibre native module.
 
+## Run on a physical device
+
+The first build needs a USB connection. Expo generates the local `ios/` or `android/`
+project automatically; these machine-specific folders are not committed.
+
+### iPhone
+
+1. Install Xcode on a Mac, connect the unlocked iPhone, and enable Developer Mode.
+2. Run `npm ci`, then `npm run ios -- --device`.
+3. If Xcode asks, choose your own Apple account under **Signing & Capabilities > Team**.
+4. Trust the developer app on the iPhone when prompted.
+
+After the development app is installed, run `npm start` to reconnect it to Metro. If
+the phone cannot reach the Mac on the local network, run `npm start -- --tunnel`.
+
+### Android
+
+1. Install Android Studio and the Android SDK, then enable USB debugging on the phone.
+2. Connect the unlocked phone and run `npm ci`, then `npm run android -- --device`.
+
+Each teammate must use their own signing identity. Do not commit certificates,
+provisioning profiles, Apple Team IDs, or generated native build folders.
+
 Run checks before opening a pull request:
 
 ```bash
