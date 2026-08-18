@@ -17,9 +17,23 @@ jest.mock("@maplibre/maplibre-react-native", () => {
   return {
     Map: ({ children, ...props }: { children?: import("react").ReactNode }) =>
       mockReact.createElement(MockPressable, props, children),
-    Camera: (props: Record<string, unknown>) => mockReact.createElement(MockView, props),
-    GeoJSONSource: ({ children, id, ...props }: { children?: import("react").ReactNode; id: string }) =>
-      mockReact.createElement(MockView, { ...props, testID: `source-${id}` }, children),
+    Camera: ({ ref, ...props }: Record<string, unknown> & { ref?: import("react").Ref<unknown> }) => {
+      mockReact.useImperativeHandle(ref, () => ({ flyTo: jest.fn() }));
+      return mockReact.createElement(MockView, props);
+    },
+    GeoJSONSource: ({
+      children,
+      id,
+      ref,
+      ...props
+    }: {
+      children?: import("react").ReactNode;
+      id: string;
+      ref?: import("react").Ref<unknown>;
+    }) => {
+      mockReact.useImperativeHandle(ref, () => ({ getClusterExpansionZoom: jest.fn() }));
+      return mockReact.createElement(MockView, { ...props, testID: `source-${id}` }, children);
+    },
     Layer: (props: Record<string, unknown>) => mockReact.createElement(MockView, props),
     TransformRequestManager: { addHeader: jest.fn() },
   };

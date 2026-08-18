@@ -4,11 +4,14 @@ import {
   Layer,
   Map,
   TransformRequestManager,
+  type CameraRef,
+  type GeoJSONSourceProps,
+  type GeoJSONSourceRef,
   type LngLat,
   type LngLatBounds,
   type StyleSpecification,
 } from "@maplibre/maplibre-react-native";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -22,7 +25,7 @@ import {
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 
 const AUSTRALIA_CENTRE: LngLat = [134.5, -25.5];
-const AUSTRALIA_BOUNDS: LngLatBounds = [112.5, -44.5, 154, -9];
+const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
 
 TransformRequestManager.addHeader({
   id: "ausmammal-osm-user-agent",
@@ -59,12 +62,56 @@ type OccurrenceMapProps = {
   collection?: OccurrenceFeatureCollection;
 };
 
+export type ClusterPressTarget = {
+  clusterId: number;
+  center: LngLat;
+};
+
+type RenderedOccurrenceFeature = {
+  properties?: { point_count?: unknown } | null;
+};
+
+export function countClusteredRecords(features: RenderedOccurrenceFeature[]) {
+  return features.reduce((total, feature) => {
+    const pointCount = feature.properties?.point_count;
+    return total +
+      (typeof pointCount === "number" && Number.isInteger(pointCount) && pointCount > 0
+        ? pointCount
+        : 1);
+  }, 0);
+}
+
+export function getClusterPressTarget(
+  features: GeoJSON.Feature[] | undefined,
+): ClusterPressTarget | null {
+  const feature = features?.[0];
+  const clusterId = feature?.properties?.cluster_id;
+  const coordinates = feature?.geometry.type === "Point" ? feature.geometry.coordinates : null;
+
+  if (
+    typeof clusterId !== "number" ||
+    !Number.isInteger(clusterId) ||
+    !coordinates ||
+    coordinates.length < 2 ||
+    typeof coordinates[0] !== "number" ||
+    !Number.isFinite(coordinates[0]) ||
+    typeof coordinates[1] !== "number" ||
+    !Number.isFinite(coordinates[1])
+  ) {
+    return null;
+  }
+
+  return { clusterId, center: [coordinates[0], coordinates[1]] };
+}
+
 export function getResponsiveMapHeight(windowHeight: number) {
   return Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
 }
 
 export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
   const { height: windowHeight } = useWindowDimensions();
+  const cameraRef = useRef<CameraRef>(null);
+  const occurrenceSourceRef = useRef<GeoJSONSourceRef>(null);
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
   const mapHeight = getResponsiveMapHeight(windowHeight);
@@ -72,6 +119,18 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
   const retry = () => {
     setMapState("loading");
     setMapKey((currentKey) => currentKey + 1);
+  };
+
+  const expandCluster: NonNullable<GeoJSONSourceProps["onPress"]> = async (event) => {
+    const target = getClusterPressTarget(event.nativeEvent.features);
+    if (!target || !occurrenceSourceRef.current || !cameraRef.current) {
+      return;
+    }
+
+    const zoom = await occurrenceSourceRef.current.getClusterExpansionZoom(target.clusterId);
+    if (Number.isFinite(zoom)) {
+      cameraRef.current.flyTo({ center: target.center, zoom, duration: 450 });
+    }
   };
 
   return (
@@ -93,6 +152,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
         onDidFinishLoadingMap={() => setMapState("ready")}
       >
         <Camera
+          ref={cameraRef}
           testID="occurrence-map-camera"
           initialViewState={{ center: AUSTRALIA_CENTRE, zoom: 3.3 }}
           minZoom={2.8}
@@ -100,10 +160,58 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
           maxBounds={AUSTRALIA_BOUNDS}
         />
         {collection && collection.features.length > 0 ? (
-          <GeoJSONSource id="occurrence-records" data={collection}>
+          <GeoJSONSource
+            ref={occurrenceSourceRef}
+            id="occurrence-records"
+            data={collection}
+            cluster
+            clusterMaxZoom={11}
+            clusterMinPoints={2}
+            clusterRadius={52}
+            onPress={expandCluster}
+          >
+            <Layer
+              id="occurrence-clusters"
+              type="circle"
+              filter={["has", "point_count"]}
+              paint={{
+                "circle-color": [
+                  "step",
+                  ["get", "point_count"],
+                  "#2b7652",
+                  100,
+                  "#206241",
+                  1000,
+                  "#17492f",
+                ],
+                "circle-opacity": 0.92,
+                "circle-radius": [
+                  "step",
+                  ["get", "point_count"],
+                  17,
+                  100,
+                  23,
+                  1000,
+                  30,
+                ],
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2,
+              }}
+            />
+            <Layer
+              id="occurrence-cluster-counts"
+              type="symbol"
+              filter={["has", "point_count"]}
+              layout={{
+                "text-field": ["get", "point_count_abbreviated"],
+                "text-size": 12,
+              }}
+              paint={{ "text-color": "#ffffff" }}
+            />
             <Layer
               id="occurrence-points"
               type="circle"
+              filter={["!", ["has", "point_count"]]}
               paint={{
                 "circle-color": [
                   "case",

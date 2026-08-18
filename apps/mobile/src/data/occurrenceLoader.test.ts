@@ -60,6 +60,35 @@ describe("occurrence snapshot loading", () => {
     ).rejects.toThrow("Invalid occurrence record 1: longitude");
   });
 
+  it("accepts records on every documented Australian coordinate boundary", async () => {
+    const coordinates: Array<[number, number]> = [
+      [110, -45],
+      [110, -6],
+      [155, -45],
+      [155, -6],
+    ];
+    const boundaryManifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: coordinates.length },
+      },
+    };
+    const features = coordinates.map((point, index) => ({
+      ...VALID_KOALA_FEATURE,
+      id: (index + 1).toString(16).padStart(16, "0"),
+      geometry: { type: "Point" as const, coordinates: point },
+    }));
+
+    await expect(
+      loadOccurrenceRecords(
+        "koala",
+        async () => ({ type: "FeatureCollection", features }),
+        boundaryManifest,
+      ),
+    ).resolves.toMatchObject({ collection: { features } });
+  });
+
   it("rejects records for a different species", async () => {
     const invalid = {
       ...VALID_KOALA_FEATURE,
