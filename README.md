@@ -41,7 +41,7 @@ python -m pytest
 python -m ruff check .
 ```
 
-Requires Python 3.11 or later. On Windows, activate the environment with `.venv\Scripts\Activate.ps1`.
+Requires Python 3.12 or later. On Windows, activate the environment with `.venv\Scripts\Activate.ps1`.
 
 Running the scripts under `data/processed/` (the ALA cleaning pipeline and the SILO
 environmental context pipeline) needs their own dependencies, not installed by `.[dev]`:

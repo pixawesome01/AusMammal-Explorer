@@ -7,7 +7,7 @@ name = "ausmammal-explorer"
 version = "0.1.0"
 description = "Data tooling for the AusMammal Explorer project"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 authors = [
   { name = "FIT3163 Group 15" },
 ]
@@ -19,14 +19,18 @@ dev = [
   "ruff>=0.6,<1",
 ]
 data = [
-  # galah-python 0.13.4-0.13.6 (as of writing, the latest release) ship a
-  # nested same-quote f-string in galah_geolocate.py that only parses on
-  # Python 3.12+ (PEP 701); this project targets 3.11 (see requires-python
-  # above, and CI's actions/setup-python). Capped below the first broken
-  # release rather than raising requires-python, since nothing else here
-  # needs 3.12. Safe to raise the cap once a fixed release ships.
-  "galah-python>=0.13,<0.13.4",
-  "pandas>=2,<3",
+  # galah-python's 0.13.x line (every release through 0.13.6, the latest as
+  # of writing, checked directly) ships nested same-quote f-strings in its
+  # own source (e.g. common_add_functions.py) that only parse on Python
+  # 3.12+ (PEP 701). No currently published >=0.13 release avoids this, so
+  # the fix is requiring 3.12+ (see requires-python above and CI's
+  # actions/setup-python) rather than capping galah-python.
+  "galah-python>=0.13",
+  # pandas 2.x raises ValueError when a NaN-containing result from .str
+  # accessor methods (e.g. .str.contains on a column with missing values)
+  # is used to boolean-index a DataFrame; pandas 3.x treats it as
+  # non-matching instead. Pinned to 3.x so that behaviour is relied upon.
+  "pandas>=3,<4",
   "numpy>=2,<3",
   "rasterio>=1.3,<2",
 ]
@@ -42,7 +46,7 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
