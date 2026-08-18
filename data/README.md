@@ -15,6 +15,24 @@ The shared cleaned datasets are stored in [Google Drive](https://drive.google.co
 
 Each frozen snapshot should have a manifest containing its source, query parameters, capture date, date coverage, record count, checksum, licence/attribution notes, and processing version. Do not silently replace an existing snapshot; create a new dated snapshot and manifest.
 
+## MVP species screening
+
+RTM-7 uses the versioned thresholds in
+`src/ausmammal_explorer/species_screening.py`. Re-run the seven-species ALA
+screening with Python 3.12 and the data dependencies:
+
+```bash
+python data/processed/species_suitability_screening.py \
+  --captured-at YYYY-MM-DD
+```
+
+The script does not require an email for public aggregate queries. If the ALA
+service requires one in future, pass `--email`; it is used only for the request
+and is never written. Dated input metrics and pass/fail reports are saved under
+`data/metadata/species-screening/`. The report records all four RTM-7 decisions,
+including zero-gap coverage from 2020-01 through 2026-03 and a strict `> 5%`
+source-share comparison.
+
 The current app catalogue is snapshot `2026-08-15-ala-maplibre`: seven per-species
 GeoJSON files, 185,338 records in total, with coverage beginning 2020-01-01. Its exact
 per-file counts and end dates are versioned in

@@ -9,16 +9,20 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+from ausmammal_explorer.species_screening import APPROVED_THRESHOLDS, month_sequence
+
 # Add parent directory to path to import pipeline functions
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Constants from the pipeline
 TOP_N = 50
-MIN_RECENT = 10_000
-MIN_STATES = 4
-MIN_MONTHS = 24
-MAX_GAP = 0
-MIN_SOURCES = 2
+MIN_RECENT = APPROVED_THRESHOLDS.minimum_recent_records
+MIN_STATES = APPROVED_THRESHOLDS.minimum_states_or_territories
+MIN_MONTHS = len(
+    month_sequence(APPROVED_THRESHOLDS.continuity_start, APPROVED_THRESHOLDS.continuity_end)
+)
+MAX_GAP = APPROVED_THRESHOLDS.maximum_missing_months
+MIN_SOURCES = APPROVED_THRESHOLDS.minimum_sources_over_share
 MAMMALIA = "Mammalia"
 NAME = "scientificName"
 PROFILES = ["ALA general", "ALA General", "ALA"]
@@ -28,10 +32,8 @@ EXCLUDE = [
     "Capra ", "Rattus", "Mus ", "Oryctolagus", "Vulpes",
 ]
 
-# `tests/MVP species.py` is a standalone script (not part of the
-# ausmammal_explorer package, and its filename isn't a valid module path),
-# so these tests exercise local reimplementations of its pure logic rather
-# than importing it directly.
+# These legacy data-shape tests use the approved thresholds imported from the
+# production screening module so there is only one versioned source of truth.
 
 
 def count_col(df):
@@ -169,7 +171,7 @@ class TestDivisionByZero:
         for sp, group in df.groupby(NAME):
             total = float(group["count"].sum())
             if total:
-                over_5pct = int((group["count"] / total >= 0.05).sum())
+                over_5pct = int((group["count"] / total > 0.05).sum())
                 result_rows.append({NAME: sp, "sources_over_5pct": over_5pct})
         result = pd.DataFrame(result_rows)
         assert len(result) == 0
@@ -207,7 +209,7 @@ class TestFilteringResults:
             NAME: ["Species A"],
             "recent_count": [100],  # Below MIN_RECENT (10_000)
             "state_count": [1],     # Below MIN_STATES (4)
-            "active_months_2020_present": [10],  # Below MIN_MONTHS (24)
+            "active_months_2020_present": [10],  # Below the required 75 months
             "max_gap_months": [5],
             "sources_over_5pct": [1]
         })

@@ -1,0 +1,492 @@
+{
+  "all_species_passed": true,
+  "captured_at": "2026-08-19",
+  "requirements": [
+    "RTM-7",
+    "RTM-46",
+    "RTM-47",
+    "RTM-48"
+  ],
+  "schema_version": 1,
+  "source": "Atlas of Living Australia",
+  "source_profile": "ALA general",
+  "species": [
+    {
+      "passed": true,
+      "scientific_name": "Phascolarctos cinereus",
+      "species_id": "koala",
+      "thresholds": [
+        {
+          "actual": 62014,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "62,014 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 5,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Queensland",
+              "South Australia",
+              "Victoria"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 5 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 2,
+            "source_shares": {
+              "ALA species sightings and OzAtlas": 8.063e-05,
+              "Australian Museum provider for OZCAM": 0.00873996,
+              "Collective non-invasive Koala DNA sampling database — Qld & NSW": 0.00206405,
+              "Cudgen Nature Reserve Habitat Restoration": 8.063e-05,
+              "Earth Guardians Weekly Feed": 0.00079014,
+              "Geelong Field Naturalists Club": 0.000129,
+              "Koala Count": 0.00080627,
+              "Koala Mapping Mackay, Whitsundays & Central Queensland Areas": 0.00167704,
+              "Museums Victoria provider for OZCAM": 0.0001935,
+              "NSW BioNet Atlas": 0.61528042,
+              "NatureMapr": 0.00464411,
+              "Northern Rivers Koala Habitat Restoration Project": 1.613e-05,
+              "Observation.org, Nature data from around the World": 0.00033863,
+              "Redlands Coast Koala Watch": 0.03457284,
+              "SA Fauna": 0.00228981,
+              "Tweed Koala Sightings": 0.00696617,
+              "Victorian Biodiversity Atlas": 0.01254555,
+              "WildNet - Queensland Wildlife Data": 0.00338633,
+              "iNaturalist Australia": 0.30539878
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "2 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "scientific_name": "Macropus giganteus",
+      "species_id": "eastern-grey-kangaroo",
+      "thresholds": [
+        {
+          "actual": 40050,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "40,050 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 6,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Queensland",
+              "South Australia",
+              "Tasmania",
+              "Victoria"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 6 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 2,
+            "source_shares": {
+              "ALA species sightings and OzAtlas": 2.497e-05,
+              "AWC Ecological Monitoring Surveys": 0.0015231,
+              "Earth Guardians Weekly Feed": 0.00137328,
+              "Entangled Wildlife Australia": 7.491e-05,
+              "Geelong Field Naturalists Club": 2.497e-05,
+              "Logan City Council Species Sightings": 9.988e-05,
+              "Museums Victoria provider for OZCAM": 0.00362047,
+              "NSW BioNet Atlas": 0.59498127,
+              "NatureMapr": 0.01780275,
+              "SA Fauna": 9.988e-05,
+              "Victorian Biodiversity Atlas": 0.02661673,
+              "WildNet - Queensland Wildlife Data": 0.00022472,
+              "Wildlife Road Tolls": 2.497e-05,
+              "iNaturalist Australia": 0.35350811
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "2 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "scientific_name": "Trichosurus vulpecula",
+      "species_id": "common-brushtail-possum",
+      "thresholds": [
+        {
+          "actual": 34139,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "34,139 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 8,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Northern Territory",
+              "Queensland",
+              "South Australia",
+              "Tasmania",
+              "Victoria",
+              "Western Australia"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 8 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 3,
+            "source_shares": {
+              "AWC Ecological Monitoring Surveys": 0.01789742,
+              "Australian Museum provider for OZCAM": 5.858e-05,
+              "Dandjoo": 0.00275345,
+              "Earth Guardians Weekly Feed": 0.00125956,
+              "Fauna Atlas N.T.": 2.929e-05,
+              "Logan City Council Species Sightings": 5.858e-05,
+              "Museums Victoria provider for OZCAM": 0.00928557,
+              "NSW BioNet Atlas": 0.63803861,
+              "NatureMapr": 0.00981282,
+              "SA Fauna": 0.01095521,
+              "Victorian Biodiversity Atlas": 0.05211049,
+              "WildNet - Queensland Wildlife Data": 0.0007323,
+              "Wildlife Watch NSC": 0.00011717,
+              "iNaturalist Australia": 0.25689095
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "3 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "scientific_name": "Pseudocheirus peregrinus",
+      "species_id": "common-ringtail-possum",
+      "thresholds": [
+        {
+          "actual": 26905,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "26,905 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 7,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Queensland",
+              "South Australia",
+              "Tasmania",
+              "Victoria",
+              "Western Australia"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 7 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 3,
+            "source_shares": {
+              "ALA species sightings and OzAtlas": 3.717e-05,
+              "Australian Museum provider for OZCAM": 0.00026017,
+              "Earth Guardians Weekly Feed": 0.00126371,
+              "Entangled Wildlife Australia": 7.434e-05,
+              "Geelong Field Naturalists Club": 7.434e-05,
+              "Museums Victoria provider for OZCAM": 0.00304776,
+              "NSW BioNet Atlas": 0.64943319,
+              "NatureMapr": 0.00260175,
+              "SA Fauna": 0.00620702,
+              "Victorian Biodiversity Atlas": 0.09500093,
+              "WildNet - Queensland Wildlife Data": 0.00029734,
+              "Wildlife Watch NSC": 0.00081769,
+              "iNaturalist Australia": 0.24088459
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "3 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "scientific_name": "Wallabia bicolor",
+      "species_id": "swamp-wallaby",
+      "thresholds": [
+        {
+          "actual": 24611,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "24,611 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 5,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Queensland",
+              "South Australia",
+              "Victoria"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 5 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 4,
+            "source_shares": {
+              "AWC Ecological Monitoring Surveys": 0.00182845,
+              "Australian Museum provider for OZCAM": 8.126e-05,
+              "Earth Guardians Weekly Feed": 0.00056885,
+              "Geelong Field Naturalists Club": 0.0001219,
+              "Logan City Council Species Sightings": 8.126e-05,
+              "Museums Victoria provider for OZCAM": 0.06513348,
+              "NSW BioNet Atlas": 0.37568567,
+              "NatureMapr": 0.0223071,
+              "SA Fauna": 0.00060948,
+              "Victorian Biodiversity Atlas": 0.18544553,
+              "WildNet - Queensland Wildlife Data": 0.00036569,
+              "Wildlife Watch NSC": 0.00032506,
+              "Willoughby Wildlife Watch": 4.063e-05,
+              "iNaturalist Australia": 0.34740563
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "4 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "scientific_name": "Vombatus ursinus",
+      "species_id": "common-wombat",
+      "thresholds": [
+        {
+          "actual": 13124,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "13,124 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 7,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Queensland",
+              "South Australia",
+              "Tasmania",
+              "Victoria",
+              "Western Australia"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 7 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 3,
+            "source_shares": {
+              "Australian Museum provider for OZCAM": 0.00038098,
+              "Earth Guardians Weekly Feed": 0.00083816,
+              "Geelong Field Naturalists Club": 7.62e-05,
+              "Museums Victoria provider for OZCAM": 0.01272478,
+              "NSW BioNet Atlas": 0.47264553,
+              "NatureMapr": 0.02293508,
+              "SA Fauna": 0.00068577,
+              "Victorian Biodiversity Atlas": 0.07352941,
+              "iNaturalist Australia": 0.41618409
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "3 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "scientific_name": "Petauroides volans",
+      "species_id": "greater-glider",
+      "thresholds": [
+        {
+          "actual": 10787,
+          "expected": ">= 10000 from 2024-01",
+          "key": "recent_records",
+          "passed": true,
+          "reason": "10,787 recent records meet the minimum of 10,000."
+        },
+        {
+          "actual": {
+            "count": 4,
+            "values": [
+              "Australian Capital Territory",
+              "New South Wales",
+              "Queensland",
+              "Victoria"
+            ]
+          },
+          "expected": ">= 4 distinct values",
+          "key": "state_or_territory_breadth",
+          "passed": true,
+          "reason": "Records cover 4 distinct states or territories; the minimum is 4."
+        },
+        {
+          "actual": {
+            "covered_month_count": 75,
+            "missing_months": [],
+            "required_month_count": 75
+          },
+          "expected": "every month from 2020-01 through 2026-03; <= 0 missing",
+          "key": "monthly_continuity",
+          "passed": true,
+          "reason": "0 required month(s) are missing."
+        },
+        {
+          "actual": {
+            "qualifying_source_count": 3,
+            "source_shares": {
+              "ALA species sightings and OzAtlas": 9.27e-05,
+              "Australian Museum provider for OZCAM": 0.00037082,
+              "Earth Guardians Weekly Feed": 0.00037082,
+              "Geelong Field Naturalists Club": 0.00018541,
+              "Museums Victoria provider for OZCAM": 0.00027811,
+              "NSW BioNet Atlas": 0.70223417,
+              "NatureMapr": 0.00278113,
+              "Victorian Biodiversity Atlas": 0.18958005,
+              "WildNet - Queensland Wildlife Data": 0.00120515,
+              "iNaturalist Australia": 0.10290164
+            }
+          },
+          "expected": ">= 2 sources each contributing > 5% of recent records",
+          "key": "source_diversity",
+          "passed": true,
+          "reason": "3 source(s) contribute more than 5%; the minimum is 2."
+        }
+      ]
+    }
+  ],
+  "threshold_version": "rtm-r7-v1",
+  "thresholds": {
+    "continuity_end": "2026-03",
+    "continuity_start": "2020-01",
+    "maximum_missing_months": 0,
+    "minimum_recent_records": 10000,
+    "minimum_sources_over_share": 2,
+    "minimum_states_or_territories": 4,
+    "recent_period_start": "2024-01",
+    "source_period_start": "2024-01",
+    "source_share_exclusive_minimum": 0.05,
+    "version": "rtm-r7-v1"
+  }
+}
