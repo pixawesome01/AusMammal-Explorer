@@ -1,5 +1,7 @@
 import {
   Camera,
+  GeoJSONSource,
+  Layer,
   Map,
   TransformRequestManager,
   type LngLat,
@@ -16,6 +18,8 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+
+import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 
 const AUSTRALIA_CENTRE: LngLat = [134.5, -25.5];
 const AUSTRALIA_BOUNDS: LngLatBounds = [112.5, -44.5, 154, -9];
@@ -52,13 +56,14 @@ type MapState = "loading" | "ready" | "error";
 
 type OccurrenceMapProps = {
   speciesName: string;
+  collection?: OccurrenceFeatureCollection;
 };
 
 export function getResponsiveMapHeight(windowHeight: number) {
   return Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
 }
 
-export function OccurrenceMap({ speciesName }: OccurrenceMapProps) {
+export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
   const { height: windowHeight } = useWindowDimensions();
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
@@ -94,6 +99,26 @@ export function OccurrenceMap({ speciesName }: OccurrenceMapProps) {
           maxZoom={16}
           maxBounds={AUSTRALIA_BOUNDS}
         />
+        {collection && collection.features.length > 0 ? (
+          <GeoJSONSource id="occurrence-records" data={collection}>
+            <Layer
+              id="occurrence-points"
+              type="circle"
+              paint={{
+                "circle-color": [
+                  "case",
+                  ["get", "geographicOutlier"],
+                  "#cf6b45",
+                  "#1f7a4d",
+                ],
+                "circle-opacity": 0.82,
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 2.5, 12, 6],
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 1,
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
       </Map>
 
       {mapState === "loading" ? (
@@ -124,6 +149,14 @@ export function OccurrenceMap({ speciesName }: OccurrenceMapProps) {
       >
         <Text style={styles.attributionText}>© OpenStreetMap contributors</Text>
       </Pressable>
+
+      {collection ? (
+        <View accessibilityLiveRegion="polite" style={styles.recordCount}>
+          <Text style={styles.recordCountText} testID="map-record-count">
+            {collection.features.length.toLocaleString()} mapped
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -193,5 +226,19 @@ const styles = StyleSheet.create({
     color: "#243c31",
     fontSize: 10,
     fontWeight: "600",
+  },
+  recordCount: {
+    position: "absolute",
+    left: 8,
+    bottom: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    backgroundColor: "rgba(22, 60, 44, 0.9)",
+    borderRadius: 5,
+  },
+  recordCountText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "800",
   },
 });

@@ -21,10 +21,17 @@ Expo plugin for both platforms.
 
 ```bash
 npm ci
+npm run data:serve # from apps/mobile, serves local gitignored data on port 8765
 npm run ios       # macOS with Xcode
 npm run android   # Android Studio and an emulator/device
 npm run start     # reconnect an installed development build to Metro
 ```
+
+Copy the seven frozen GeoJSON files from the project's `Datasets` Drive folder into
+`data/processed/`, copy `.env.example` to `.env`, and set
+`EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL` to the asset server. For a physical phone,
+use the development computer's LAN IP instead of `localhost`. These large files stay
+gitignored.
 
 Adding or upgrading a native dependency requires rebuilding the development app with
 `npm run ios` or `npm run android`. Expo Go cannot load the MapLibre native module.

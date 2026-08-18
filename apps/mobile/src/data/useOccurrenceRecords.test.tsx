@@ -95,4 +95,50 @@ describe("useOccurrenceRecords", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(readAsset).toHaveBeenCalledTimes(2);
   });
+
+  it("never exposes records from the previously selected species", async () => {
+    const swampFeature: OccurrenceFeature = {
+      ...FEATURE,
+      properties: { ...FEATURE.properties, species: "Wallabia bicolor" },
+    };
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        "swamp-wallaby": { ...TEST_MANIFEST.files["swamp-wallaby"], recordCount: 1 },
+      },
+    };
+    let resolveKoala: (value: unknown) => void = () => undefined;
+    let resolveSwamp: (value: unknown) => void = () => undefined;
+    const readAsset = jest.fn((file: OccurrenceSnapshotManifest["files"]["koala"]) =>
+      new Promise<unknown>((resolve) => {
+        if (file.speciesId === "koala") {
+          resolveKoala = resolve;
+        } else {
+          resolveSwamp = resolve;
+        }
+      }),
+    );
+    const { result, rerender } = await renderHook(
+      ({ speciesId }: { speciesId: "koala" | "swamp-wallaby" }) =>
+        useOccurrenceRecords({ speciesId, readAsset, manifest }),
+      { initialProps: { speciesId: "koala" as const } },
+    );
+
+    await waitFor(() => expect(readAsset).toHaveBeenCalledWith(manifest.files.koala));
+    await act(async () => rerender({ speciesId: "swamp-wallaby" }));
+    await waitFor(() => expect(readAsset).toHaveBeenCalledWith(manifest.files["swamp-wallaby"]));
+    await act(async () => {
+      resolveKoala(VALID_COLLECTION);
+      await Promise.resolve();
+    });
+    expect(result.current.status).toBe("loading");
+
+    await act(async () => {
+      resolveSwamp({ type: "FeatureCollection", features: [swampFeature] });
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.records?.speciesId).toBe("swamp-wallaby");
+  });
 });

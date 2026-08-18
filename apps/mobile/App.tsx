@@ -1,12 +1,37 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { AboutOccurrenceData } from "./src/components/AboutOccurrenceData";
+import { OccurrenceDataStatus } from "./src/components/OccurrenceDataStatus";
 import { OccurrenceMap } from "./src/components/OccurrenceMap";
+import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
+import { createRuntimeOccurrenceAssetReader } from "./src/data/occurrenceAssetReader";
+import type { OccurrenceAssetReader } from "./src/data/occurrenceLoader";
+import {
+  OCCURRENCE_SNAPSHOT,
+  type OccurrenceSnapshotManifest,
+} from "./src/data/occurrenceSnapshot";
+import { useOccurrenceRecords } from "./src/data/useOccurrenceRecords";
 import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
-function ExplorerWorkspace() {
+const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
+
+type ExplorerWorkspaceProps = {
+  readAsset?: OccurrenceAssetReader;
+  manifest?: OccurrenceSnapshotManifest;
+};
+
+export function ExplorerWorkspace({
+  readAsset = runtimeOccurrenceAssetReader,
+  manifest = OCCURRENCE_SNAPSHOT,
+}: ExplorerWorkspaceProps) {
   const { selectedSpecies } = useSpeciesSelection();
+  const occurrenceState = useOccurrenceRecords({
+    speciesId: selectedSpecies.id,
+    readAsset,
+    manifest,
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -31,7 +56,17 @@ function ExplorerWorkspace() {
           </Text>
           <Text style={styles.scientificName}>{selectedSpecies.scientificName}</Text>
 
-          <OccurrenceMap speciesName={selectedSpecies.commonName} />
+          <OccurrenceMap
+            collection={occurrenceState.records?.collection}
+            speciesName={selectedSpecies.commonName}
+          />
+
+          <OccurrenceDataStatus
+            speciesName={selectedSpecies.commonName}
+            state={occurrenceState}
+          />
+          <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
+          <AboutOccurrenceData species={selectedSpecies} state={occurrenceState} />
 
           <Text style={styles.dataNote}>
             Occurrence records show where a species has been recorded. They do not guarantee

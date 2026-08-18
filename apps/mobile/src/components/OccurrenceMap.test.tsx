@@ -24,6 +24,9 @@ jest.mock("@maplibre/maplibre-react-native", () => {
         children,
       ),
     Camera: (props: Record<string, unknown>) => mockReact.createElement(MockView, props),
+    GeoJSONSource: ({ children, ...props }: { children?: import("react").ReactNode }) =>
+      mockReact.createElement(MockView, props, children),
+    Layer: (props: Record<string, unknown>) => mockReact.createElement(MockView, props),
     TransformRequestManager: {
       addHeader: jest.fn(),
     },
@@ -63,5 +66,33 @@ describe("OccurrenceMap", () => {
 
     await fireEvent.press(getByTestId("occurrence-map"));
     expect(queryByTestId("map-loading-state")).toBeNull();
+  });
+
+  it("renders valid occurrence points and reports their mapped count", async () => {
+    const collection = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          id: "0123456789abcdef",
+          geometry: { type: "Point" as const, coordinates: [153.0281, -27.4705] as [number, number] },
+          properties: {
+            species: "Phascolarctos cinereus",
+            eventDate: "2026-08-04",
+            basisOfRecord: "HUMAN_OBSERVATION",
+            license: "CC-BY 4.0 (Int)",
+            coordinateUncertaintyM: 10,
+            uncertaintyUnknown: false,
+            observationCount: 1,
+            geographicOutlier: false,
+          },
+        },
+      ],
+    };
+    const { getByTestId } = await render(
+      <OccurrenceMap collection={collection} speciesName="Koala" />,
+    );
+
+    expect(getByTestId("map-record-count").props.children).toEqual(["1", " mapped"]);
   });
 });

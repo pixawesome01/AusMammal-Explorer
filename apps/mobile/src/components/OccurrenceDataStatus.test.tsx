@@ -8,6 +8,10 @@ import { OccurrenceDataStatus } from "./OccurrenceDataStatus";
 const retry = jest.fn();
 const RECORDS: LoadedOccurrenceRecords = {
   snapshotId: OCCURRENCE_SNAPSHOT.snapshotId,
+  capturedAt: OCCURRENCE_SNAPSHOT.capturedAt,
+  source: OCCURRENCE_SNAPSHOT.source,
+  storageUrl: OCCURRENCE_SNAPSHOT.storageUrl,
+  license: OCCURRENCE_SNAPSHOT.license,
   speciesId: "koala",
   file: OCCURRENCE_SNAPSHOT.files.koala,
   collection: {

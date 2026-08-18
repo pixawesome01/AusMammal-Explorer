@@ -37,21 +37,30 @@ const LOADING_STATE: OccurrenceRecordsState = {
   error: null,
 };
 
+type RequestBoundState = {
+  requestKey: string;
+  result: OccurrenceRecordsState;
+};
+
 export function useOccurrenceRecords({
   speciesId,
   dateRange,
   readAsset,
   manifest = OCCURRENCE_SNAPSHOT,
 }: UseOccurrenceRecordsOptions): UseOccurrenceRecordsResult {
-  const [state, setState] = useState<OccurrenceRecordsState>(LOADING_STATE);
   const [requestVersion, setRequestVersion] = useState(0);
   const retry = useCallback(() => setRequestVersion((version) => version + 1), []);
   const fromDate = dateRange?.from;
   const toDate = dateRange?.to;
+  const requestKey = `${speciesId}:${fromDate ?? ""}:${toDate ?? ""}:${requestVersion}`;
+  const [state, setState] = useState<RequestBoundState>({
+    requestKey,
+    result: LOADING_STATE,
+  });
 
   useEffect(() => {
     let isCurrentRequest = true;
-    setState(LOADING_STATE);
+    setState({ requestKey, result: LOADING_STATE });
 
     const load = async () => {
       try {
@@ -67,9 +76,12 @@ export function useOccurrenceRecords({
 
         const records = { ...loaded, collection };
         setState({
-          status: collection.features.length === 0 ? "empty" : "ready",
-          records,
-          error: null,
+          requestKey,
+          result: {
+            status: collection.features.length === 0 ? "empty" : "ready",
+            records,
+            error: null,
+          },
         });
       } catch (cause) {
         if (!isCurrentRequest) {
@@ -77,7 +89,10 @@ export function useOccurrenceRecords({
         }
 
         const error = cause instanceof Error ? cause : new Error("Occurrence data could not load.");
-        setState({ status: "error", records: null, error });
+        setState({
+          requestKey,
+          result: { status: "error", records: null, error },
+        });
       }
     };
 
@@ -86,7 +101,10 @@ export function useOccurrenceRecords({
     return () => {
       isCurrentRequest = false;
     };
-  }, [fromDate, manifest, readAsset, requestVersion, speciesId, toDate]);
+  }, [fromDate, manifest, readAsset, requestKey, speciesId, toDate]);
 
-  return useMemo(() => ({ ...state, retry }), [retry, state]);
+  return useMemo(
+    () => ({ ...(state.requestKey === requestKey ? state.result : LOADING_STATE), retry }),
+    [requestKey, retry, state],
+  );
 }

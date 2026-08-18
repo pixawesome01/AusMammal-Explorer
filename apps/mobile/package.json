@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit --pretty false",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
+    "data:serve": "python3 -m http.server 8765 --directory ../../data/processed",
     "export": "expo export --platform android --output-dir dist",
     "doctor": "expo-doctor"
   },

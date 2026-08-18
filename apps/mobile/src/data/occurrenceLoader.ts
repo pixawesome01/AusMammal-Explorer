@@ -38,6 +38,10 @@ export type OccurrenceFeatureCollection = {
 
 export type LoadedOccurrenceRecords = {
   snapshotId: string;
+  capturedAt: string;
+  source: string;
+  storageUrl: string;
+  license: string;
   speciesId: SpeciesId;
   file: OccurrenceSnapshotFile;
   collection: OccurrenceFeatureCollection;
@@ -223,6 +227,10 @@ export async function loadOccurrenceRecords(
 
   return {
     snapshotId: manifest.snapshotId,
+    capturedAt: manifest.capturedAt,
+    source: manifest.source,
+    storageUrl: manifest.storageUrl,
+    license: manifest.license,
     speciesId,
     file,
     collection: parseOccurrenceFeatureCollection(rawAsset, file, manifest.license),
