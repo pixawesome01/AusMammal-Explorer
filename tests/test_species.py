@@ -2,11 +2,12 @@
 # EXCEPTION TESTS - Test data pipeline error handling and edge cases
 # ============================================================================
 
-import pandas as pd
-import pytest
-from unittest.mock import patch, MagicMock
 import sys
 from pathlib import Path
+from unittest.mock import patch
+
+import pandas as pd
+import pytest
 
 # Add parent directory to path to import pipeline functions
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -27,15 +28,11 @@ EXCLUDE = [
     "Capra ", "Rattus", "Mus ", "Oryctolagus", "Vulpes",
 ]
 
-# Import or mock the pipeline functions
-try:
-    from ausmammal_explorer.MVP_species import (
-        count_col, rename_count, per_species, source_diversity,
-        counts, resolve_profile, discover, build_summary
-    )
-except (ImportError, ModuleNotFoundError):
-    # If import fails, functions will be mocked or tested with local implementations
-    pass
+# `tests/MVP species.py` is a standalone script (not part of the
+# ausmammal_explorer package, and its filename isn't a valid module path),
+# so these tests exercise local reimplementations of its pure logic rather
+# than importing it directly.
+
 
 def count_col(df):
     cols = {str(c).lower(): str(c) for c in df.columns}
@@ -98,13 +95,14 @@ class TestDataTypes:
         """Should raise error when year/month cannot be converted to int"""
         df = pd.DataFrame({"year": ["invalid"], "month": ["invalid"]})
         with pytest.raises((ValueError, TypeError)):
-            result = df["year"].astype(int) * 12 + df["month"].astype(int)
+            df["year"].astype(int) * 12 + df["month"].astype(int)
 
     def test_null_species_name_string_operation(self):
-        """Should raise error when operating on null species names"""
+        """Should not raise on null species names - .str.contains treats them
+        as non-matching rather than propagating an error."""
         df = pd.DataFrame({"scientificName": [None, "Species B"]})
-        with pytest.raises((AttributeError, TypeError)):
-            df[df["scientificName"].str.contains(" ")]
+        result = df[df["scientificName"].str.contains(" ")]
+        assert list(result["scientificName"]) == ["Species B"]
 
     def test_mixed_type_counts(self):
         """Should handle mixed numeric/non-numeric count values"""
@@ -171,7 +169,8 @@ class TestDivisionByZero:
         for sp, group in df.groupby(NAME):
             total = float(group["count"].sum())
             if total:
-                result_rows.append({NAME: sp, "sources_over_5pct": int((group["count"] / total >= 0.05).sum())})
+                over_5pct = int((group["count"] / total >= 0.05).sum())
+                result_rows.append({NAME: sp, "sources_over_5pct": over_5pct})
         result = pd.DataFrame(result_rows)
         assert len(result) == 0
 
@@ -183,7 +182,6 @@ class TestFilteringResults:
         """Should raise error when all species queries fail - testing error handling logic"""
         # Test the error handling logic directly
         frames = []
-        species_list = ["Species A"]
         # Simulate all failures
         if not frames:
             with pytest.raises(RuntimeError, match="query failed"):
@@ -380,10 +378,11 @@ class TestDataIntegrity:
 
     def test_gap_calculation_correctness(self):
         """Should correctly calculate gaps between active months"""
-        active = [1, 2, 5, 6, 10]  # gaps: 2, 3, 0
+        # 5 active months -> 4 consecutive pairs -> 4 gaps: 0, 2, 0, 3.
+        active = [1, 2, 5, 6, 10]
         gaps = [b - a - 1 for a, b in zip(active[:-1], active[1:])]
-        assert gaps == [0, 2, 0]
-        assert max(gaps) == 2
+        assert gaps == [0, 2, 0, 3]
+        assert max(gaps) == 3
 
 
 class TestThresholdLogic:
@@ -405,7 +404,9 @@ class TestThresholdLogic:
             & (df["max_gap_months"] <= MAX_GAP)
             & (df["sources_over_5pct"] >= MIN_SOURCES)
         )
-        assert df["passes_all_thresholds"].iloc[0] is True
+        # .iloc[0] on a pandas boolean Series returns a numpy bool_ scalar,
+        # not Python's True/False singleton, so `is True` never matches.
+        assert bool(df["passes_all_thresholds"].iloc[0])
 
     def test_passes_one_threshold_fails(self):
         """Should mark False when one threshold fails"""
@@ -423,7 +424,7 @@ class TestThresholdLogic:
             & (df["max_gap_months"] <= MAX_GAP)
             & (df["sources_over_5pct"] >= MIN_SOURCES)
         )
-        assert df["passes_all_thresholds"].iloc[0] is False
+        assert not df["passes_all_thresholds"].iloc[0]
 
     def test_null_values_fillna_zeros(self):
         """Should treat null threshold values as failures"""
@@ -432,4 +433,4 @@ class TestThresholdLogic:
             "state_count": [None],
         })
         df["passes_threshold"] = df["recent_count"].fillna(0) >= MIN_RECENT
-        assert df["passes_threshold"].iloc[0] is False
+        assert not df["passes_threshold"].iloc[0]
