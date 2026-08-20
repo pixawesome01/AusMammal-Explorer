@@ -162,3 +162,7 @@ Copy `metadata/snapshot-manifest.example.json` for every run:
 - `files` — one entry for `environmental_context_au.json`, with its sha256 checksum.
 - `licence_and_attribution` — `CC-BY 4.0`, plus "Jeffrey, S.J., et al. (2001). Using spatial interpolation to construct a comprehensive archive of Australian climate data. Environmental Modelling & Software, 16(4), 309–330."
 - `pipeline_version` — the git commit SHA of `Environmental Context Pipeline for Insights.py` used for that run.
+
+## Environmental predictors (MaxEnt)
+
+`processed/Environmental Predictor Pipeline for MaxEnt.py` builds the CHELSA-based spatial predictor stack for MaxEnt/maxnet training (report Section 4, Phase 2) — a different artefact from the SILO-based Insights summary above, and it writes to `models/output/environmental_predictors_au.tif`, not `data/processed/`, since it's a model input rather than app-visualisation data. See `models/README.md` for its source, schema, and runtime notes.
