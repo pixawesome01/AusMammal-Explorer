@@ -14,9 +14,12 @@ from ausmammal_explorer.snapshot import (
     write_manifest,
 )
 
-# Repo root, so manifest file paths and pipeline_version (git sha) resolve
-# correctly no matter what directory this script is run from.
+# Repo root, so manifest/output file paths and pipeline_version (git sha)
+# resolve correctly no matter what directory this script is launched from
+# (e.g. a VS Code "Run" button uses the workspace root as cwd, not this file's
+# folder - a bare relative filename would land wherever that happened to be).
 REPO_ROOT = Path(__file__).resolve().parents[2]
+PROCESSED_DIR = REPO_ROOT / "data" / "processed"
 MANIFEST_DIR = REPO_ROOT / "data" / "metadata"
 ALA_ATTRIBUTION = "Atlas of Living Australia (https://www.ala.org.au)"
 
@@ -233,7 +236,7 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
         df.loc[group.index, "geographic_outlier"] = flag_outliers(group)
     flagged_df = df[df["geographic_outlier"]]
     if not flagged_df.empty:
-        flagged_path = "flagged_for_review.csv"
+        flagged_path = PROCESSED_DIR / "flagged_for_review.csv"
         flagged_df.to_csv(flagged_path, index=False)
         print(f"  Flagged {len(flagged_df)} geographic outliers for manual review "
               f"-> '{flagged_path}' (kept in the map export)")
@@ -353,7 +356,7 @@ def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps
 if __name__ == '__main__':
     # Define parameters
     USER_EMAIL = "ktan0152@student.monash.edu"
-    GEOJSON_OUT = "cleaned_marsupials_maplibre.geojson"
+    GEOJSON_OUT = str(PROCESSED_DIR / "cleaned_marsupials_maplibre.geojson")
 
     # Run the pipeline
     fetch_clean_and_format_marsupials(USER_EMAIL, GEOJSON_OUT)
