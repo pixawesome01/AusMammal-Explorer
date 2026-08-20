@@ -64,7 +64,17 @@ frontend pull request.
 
 ## Data
 
-Use dated ALA snapshots so results remain reproducible. Raw data, processed data, and generated model outputs are not committed to Git. Every snapshot run instead writes a checksummed, version-controlled manifest to `data/metadata/snapshot-<snapshot_id>.json`, built with `ausmammal_explorer.snapshot` (see `data/metadata/snapshot-manifest.schema.json` for the manifest shape and `snapshot-manifest.example.json` for a filled-in instance). Use `ausmammal_explorer.snapshot.verify_snapshot_files()` after a clean checkout to confirm a snapshot's files still match their recorded checksums.
+Use dated ALA snapshots so results remain reproducible. Raw data, processed data, and generated model outputs are not committed to Git. Every snapshot run instead writes a checksummed, version-controlled manifest to `data/metadata/snapshot-<snapshot_id>.json`, built with `ausmammal_explorer.snapshot` (see `data/metadata/snapshot-manifest.schema.json` for the manifest shape and `snapshot-manifest.example.json` for a filled-in instance).
+
+### Validating a snapshot from a clean checkout
+
+After cloning fresh and regenerating a snapshot's files (rerun `data/processed/Data Cleaning Pipeline for MapLibre.py`, which needs the `data` extras — see above), confirm nothing drifted from what the manifest recorded:
+
+```bash
+python -m ausmammal_explorer.snapshot data/metadata/snapshot-<snapshot_id>.json
+```
+
+This re-hashes every file the manifest lists and exits non-zero (printing what changed) on any missing file or checksum mismatch, so a clean rerun's outputs can be confirmed to exactly match a committed snapshot without relying on hidden local state (stale caches, un-committed edits, etc). Pass `--repo-root PATH` if the manifest is validated from outside its own checkout; otherwise the repository root is auto-detected via `git rev-parse --show-toplevel` (falling back to the nearest `pyproject.toml`).
 
 ## Team workflow
 

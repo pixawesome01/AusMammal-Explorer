@@ -13,10 +13,12 @@ Example instance: data/metadata/snapshot-manifest.example.json
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import subprocess
-from collections.abc import Iterable, Mapping
+import sys
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -199,3 +201,91 @@ def verify_snapshot_files(manifest: Mapping[str, Any], repo_root: Path) -> list[
         if actual != expected:
             mismatches.append(f"{relative_path}: expected {expected}, got {actual}")
     return mismatches
+
+
+def discover_repo_root(start: Path) -> Path:
+    """Find the repository root above `start` via git, without relying on local state.
+
+    Falls back to walking up to a directory containing pyproject.toml if git
+    isn't available (e.g. a checkout exported without .git), so validation
+    still works from a genuinely clean checkout.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=start if start.is_dir() else start.parent,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return Path(result.stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        pass
+
+    for candidate in (start, *start.resolve().parents):
+        if (candidate / "pyproject.toml").exists():
+            return candidate
+    raise FileNotFoundError(
+        f"could not find the repository root above {start} "
+        "(no git checkout and no pyproject.toml found)"
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI: validate a snapshot from a clean checkout against its manifest checksums.
+
+    Usage: python -m ausmammal_explorer.snapshot <manifest-path> [--repo-root PATH]
+    Exit code 0 means every file the manifest lists matches its recorded
+    checksum; 1 means the manifest is malformed or a file is missing/changed.
+    """
+    parser = argparse.ArgumentParser(
+        prog="python -m ausmammal_explorer.snapshot",
+        description=(
+            "Validate a frozen ALA snapshot from a clean checkout: re-hash every "
+            "file a manifest lists and report any drift from its recorded checksum."
+        ),
+    )
+    parser.add_argument(
+        "manifest",
+        type=Path,
+        help="Path to a snapshot manifest JSON file, "
+        "e.g. data/metadata/snapshot-2026-08-11-ala-marsupials.json",
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=None,
+        help="Repository root that manifest file paths are relative to "
+        "(default: auto-detected via git or pyproject.toml).",
+    )
+    args = parser.parse_args(argv)
+
+    if not args.manifest.exists():
+        print(f"Manifest not found: {args.manifest}", file=sys.stderr)
+        return 1
+    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+
+    schema_errors = validate_manifest(manifest)
+    if schema_errors:
+        print(f"Manifest '{args.manifest}' is malformed:", file=sys.stderr)
+        for error in schema_errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+
+    repo_root = args.repo_root or discover_repo_root(args.manifest.resolve().parent)
+    mismatches = verify_snapshot_files(manifest, repo_root)
+    if mismatches:
+        print(f"Snapshot '{manifest['snapshot_id']}' FAILED clean-checkout validation:")
+        for mismatch in mismatches:
+            print(f"  - {mismatch}")
+        return 1
+
+    print(
+        f"Snapshot '{manifest['snapshot_id']}' verified: "
+        f"{len(manifest['files'])} file(s) match their recorded checksums."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
