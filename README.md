@@ -64,7 +64,7 @@ frontend pull request.
 
 ## Data
 
-Use dated ALA snapshots so results remain reproducible. Raw data, processed data, and generated model outputs are not committed to Git. Every snapshot run instead writes a checksummed, version-controlled manifest to `data/metadata/snapshot-<snapshot_id>.json`, built with `ausmammal_explorer.snapshot` (see `data/metadata/snapshot-manifest.schema.json` for the manifest shape and `snapshot-manifest.example.json` for a filled-in instance).
+Use dated ALA snapshots so results remain reproducible. Raw data, processed data, and generated model outputs are not committed to Git. Every snapshot run instead writes a checksummed, version-controlled manifest to `data/metadata/snapshot-<snapshot_id>.json`, built with `ausmammal_explorer.snapshot` (see `data/metadata/snapshot-manifest.schema.json` for the manifest shape and `snapshot-manifest.example.json` for a filled-in instance). Each manifest retains the snapshot's source, retrieval date, licence/attribution, and its full transformation provenance — every cleaning/filtering step the pipeline applied, with before/after record counts.
 
 ### Validating a snapshot from a clean checkout
 

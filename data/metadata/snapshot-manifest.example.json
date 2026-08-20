@@ -15,6 +15,14 @@
     }
   ],
   "licence_and_attribution": [],
+  "transformation_provenance": [
+    {
+      "step": "example cleaning/filtering step",
+      "records_before": 0,
+      "records_after": 0,
+      "records_dropped": 0
+    }
+  ],
   "pipeline_version": "git-commit-sha",
   "notes": ""
 }

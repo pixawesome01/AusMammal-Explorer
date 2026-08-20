@@ -1,11 +1,13 @@
 """Build, validate and verify the frozen ALA snapshot manifest.
 
 A snapshot manifest records what a dated data extraction produced: the
-source, the query that was run, the covered date range, one checksummed
-entry per output file, and licence/attribution metadata. The manifest is
-committed to version control even though the snapshot data files it
-describes are not (see README.md, "Data"), so it is the reproducible record
-of what a given snapshot contained.
+source, retrieval date, the query that was run, the covered date range, one
+checksummed entry per output file, licence/attribution metadata, and the
+ordered transformation provenance (cleaning/filtering steps with before/after
+record counts) applied to produce it. The manifest is committed to version
+control even though the snapshot data files it describes are not (see
+README.md, "Data"), so it is the reproducible record of what a given
+snapshot contained and how it was derived.
 
 Shape: data/metadata/snapshot-manifest.schema.json (versioned JSON Schema)
 Example instance: data/metadata/snapshot-manifest.example.json
@@ -33,11 +35,18 @@ REQUIRED_TOP_LEVEL_FIELDS = (
     "coverage",
     "files",
     "licence_and_attribution",
+    "transformation_provenance",
     "pipeline_version",
     "notes",
 )
 REQUIRED_FILE_FIELDS = ("path", "sha256", "record_count")
 REQUIRED_COVERAGE_FIELDS = ("from", "to")
+REQUIRED_TRANSFORMATION_STEP_FIELDS = (
+    "step",
+    "records_before",
+    "records_after",
+    "records_dropped",
+)
 
 
 def sha256_of_file(path: Path) -> str:
@@ -79,6 +88,23 @@ class SnapshotFile:
         }
 
 
+@dataclass(frozen=True)
+class TransformationStep:
+    """One cleaning/filtering step applied while preparing a snapshot's outputs."""
+
+    step: str
+    records_before: int
+    records_after: int
+
+    def describe(self) -> dict[str, Any]:
+        return {
+            "step": self.step,
+            "records_before": self.records_before,
+            "records_after": self.records_after,
+            "records_dropped": self.records_before - self.records_after,
+        }
+
+
 def build_manifest(
     *,
     snapshot_id: str,
@@ -88,6 +114,7 @@ def build_manifest(
     coverage: Mapping[str, str],
     files: Iterable[SnapshotFile],
     licence_and_attribution: Iterable[Mapping[str, Any]],
+    transformation_provenance: Iterable[TransformationStep],
     repo_root: Path,
     notes: str = "",
 ) -> dict[str, Any]:
@@ -104,6 +131,7 @@ def build_manifest(
         "coverage": dict(coverage),
         "files": [snapshot_file.describe(repo_root) for snapshot_file in files],
         "licence_and_attribution": [dict(entry) for entry in licence_and_attribution],
+        "transformation_provenance": [step.describe() for step in transformation_provenance],
         "pipeline_version": current_pipeline_version(repo_root),
         "notes": notes,
     }
@@ -158,6 +186,33 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
                     f"licence_and_attribution[{index}] must have non-empty "
                     "'licence' and 'attribution' fields"
                 )
+
+    transformation_provenance = manifest.get("transformation_provenance")
+    if not isinstance(transformation_provenance, list) or not transformation_provenance:
+        errors.append("transformation_provenance must be a non-empty array")
+    else:
+        for index, step in enumerate(transformation_provenance):
+            if not isinstance(step, Mapping):
+                errors.append(f"transformation_provenance[{index}] must be an object")
+                continue
+            for field_name in REQUIRED_TRANSFORMATION_STEP_FIELDS:
+                if field_name not in step:
+                    errors.append(
+                        f"transformation_provenance[{index}] missing required field: "
+                        f"{field_name}"
+                    )
+            before, after, dropped = (
+                step.get("records_before"),
+                step.get("records_after"),
+                step.get("records_dropped"),
+            )
+            if all(isinstance(value, int) for value in (before, after, dropped)):
+                if before - after != dropped:
+                    errors.append(
+                        f"transformation_provenance[{index}].records_dropped "
+                        f"({dropped}) does not equal records_before - records_after "
+                        f"({before} - {after})"
+                    )
 
     return errors
 

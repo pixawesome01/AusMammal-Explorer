@@ -4,6 +4,7 @@ import pytest
 
 from ausmammal_explorer.snapshot import (
     SnapshotFile,
+    TransformationStep,
     build_manifest,
     discover_repo_root,
     main,
@@ -30,6 +31,26 @@ def species_file(repo_root):
     return path
 
 
+def _build_test_manifest(repo_root, species_file, **overrides):
+    kwargs = {
+        "snapshot_id": "2026-08-11-ala-marsupials",
+        "captured_at": "2026-08-11T09:15:00Z",
+        "source": "Atlas of Living Australia",
+        "query": {},
+        "coverage": {"from": "2020-01-01", "to": "2026-08-11"},
+        "files": [SnapshotFile(path=species_file, record_count=1)],
+        "licence_and_attribution": [
+            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
+        ],
+        "transformation_provenance": [
+            TransformationStep(step="Missing core values", records_before=2, records_after=1)
+        ],
+        "repo_root": repo_root,
+    }
+    kwargs.update(overrides)
+    return build_manifest(**kwargs)
+
+
 def test_sha256_of_file_matches_known_digest(tmp_path):
     path = tmp_path / "sample.txt"
     path.write_text("ausmammal", encoding="utf-8")
@@ -51,17 +72,11 @@ def test_sha256_of_file_changes_when_contents_change(tmp_path):
 
 
 def test_build_manifest_produces_valid_manifest(repo_root, species_file):
-    manifest = build_manifest(
-        snapshot_id="2026-08-11-ala-marsupials",
-        captured_at="2026-08-11T09:15:00Z",
-        source="Atlas of Living Australia",
+    manifest = _build_test_manifest(
+        repo_root,
+        species_file,
         query={"taxa": ["Phascolarctos cinereus"]},
-        coverage={"from": "2020-01-01", "to": "2026-08-11"},
         files=[SnapshotFile(path=species_file, record_count=42)],
-        licence_and_attribution=[
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        repo_root=repo_root,
     )
 
     assert validate_manifest(manifest) == []
@@ -69,6 +84,7 @@ def test_build_manifest_produces_valid_manifest(repo_root, species_file):
     assert manifest["files"][0]["record_count"] == 42
     assert manifest["files"][0]["sha256"] == sha256_of_file(species_file)
     assert manifest["pipeline_version"]  # "unknown" outside git, a sha inside it
+    assert manifest["transformation_provenance"][0]["records_dropped"] == 1
 
 
 def test_validate_manifest_reports_missing_fields():
@@ -78,27 +94,7 @@ def test_validate_manifest_reports_missing_fields():
     assert "missing required field: files" in errors
 
 
-def test_validate_manifest_reports_bad_checksum():
-    manifest = {
-        "snapshot_id": "2026-08-11-ala-marsupials",
-        "captured_at": "2026-08-11T09:15:00Z",
-        "source": "Atlas of Living Australia",
-        "query": {},
-        "coverage": {"from": "2020-01-01", "to": "2026-08-11"},
-        "files": [{"path": "x.geojson", "sha256": "not-a-checksum", "record_count": 1}],
-        "licence_and_attribution": [
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        "pipeline_version": "unknown",
-        "notes": "",
-    }
-
-    errors = validate_manifest(manifest)
-
-    assert any("sha256" in error for error in errors)
-
-
-def test_validate_manifest_reports_missing_licence_fields():
+def _valid_dict_manifest(**overrides):
     manifest = {
         "snapshot_id": "2026-08-11-ala-marsupials",
         "captured_at": "2026-08-11T09:15:00Z",
@@ -106,14 +102,55 @@ def test_validate_manifest_reports_missing_licence_fields():
         "query": {},
         "coverage": {"from": "2020-01-01", "to": "2026-08-11"},
         "files": [{"path": "x.geojson", "sha256": "0" * 64, "record_count": 1}],
-        "licence_and_attribution": [{"licence": "CC-BY 4.0 (Int)"}],
+        "licence_and_attribution": [
+            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
+        ],
+        "transformation_provenance": [
+            {"step": "example step", "records_before": 2, "records_after": 1, "records_dropped": 1}
+        ],
         "pipeline_version": "unknown",
         "notes": "",
     }
+    manifest.update(overrides)
+    return manifest
+
+
+def test_validate_manifest_reports_bad_checksum():
+    manifest = _valid_dict_manifest(
+        files=[{"path": "x.geojson", "sha256": "not-a-checksum", "record_count": 1}]
+    )
+
+    errors = validate_manifest(manifest)
+
+    assert any("sha256" in error for error in errors)
+
+
+def test_validate_manifest_reports_missing_licence_fields():
+    manifest = _valid_dict_manifest(licence_and_attribution=[{"licence": "CC-BY 4.0 (Int)"}])
 
     errors = validate_manifest(manifest)
 
     assert any("licence_and_attribution" in error for error in errors)
+
+
+def test_validate_manifest_reports_missing_transformation_provenance():
+    manifest = _valid_dict_manifest(transformation_provenance=[])
+
+    errors = validate_manifest(manifest)
+
+    assert any("transformation_provenance" in error for error in errors)
+
+
+def test_validate_manifest_reports_inconsistent_records_dropped():
+    manifest = _valid_dict_manifest(
+        transformation_provenance=[
+            {"step": "example step", "records_before": 10, "records_after": 8, "records_dropped": 1}
+        ]
+    )
+
+    errors = validate_manifest(manifest)
+
+    assert any("records_dropped" in error for error in errors)
 
 
 def test_write_manifest_rejects_invalid_manifest(repo_root):
@@ -122,18 +159,7 @@ def test_write_manifest_rejects_invalid_manifest(repo_root):
 
 
 def test_write_manifest_writes_pretty_printed_json(repo_root, species_file):
-    manifest = build_manifest(
-        snapshot_id="2026-08-11-ala-marsupials",
-        captured_at="2026-08-11T09:15:00Z",
-        source="Atlas of Living Australia",
-        query={},
-        coverage={"from": "2020-01-01", "to": "2026-08-11"},
-        files=[SnapshotFile(path=species_file, record_count=1)],
-        licence_and_attribution=[
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        repo_root=repo_root,
-    )
+    manifest = _build_test_manifest(repo_root, species_file)
     output_path = repo_root / "data" / "metadata" / "snapshot-2026-08-11-ala-marsupials.json"
 
     written_path = write_manifest(manifest, output_path)
@@ -143,35 +169,13 @@ def test_write_manifest_writes_pretty_printed_json(repo_root, species_file):
 
 
 def test_verify_snapshot_files_detects_no_drift_for_untouched_files(repo_root, species_file):
-    manifest = build_manifest(
-        snapshot_id="2026-08-11-ala-marsupials",
-        captured_at="2026-08-11T09:15:00Z",
-        source="Atlas of Living Australia",
-        query={},
-        coverage={"from": "2020-01-01", "to": "2026-08-11"},
-        files=[SnapshotFile(path=species_file, record_count=1)],
-        licence_and_attribution=[
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        repo_root=repo_root,
-    )
+    manifest = _build_test_manifest(repo_root, species_file)
 
     assert verify_snapshot_files(manifest, repo_root) == []
 
 
 def test_verify_snapshot_files_detects_checksum_drift(repo_root, species_file):
-    manifest = build_manifest(
-        snapshot_id="2026-08-11-ala-marsupials",
-        captured_at="2026-08-11T09:15:00Z",
-        source="Atlas of Living Australia",
-        query={},
-        coverage={"from": "2020-01-01", "to": "2026-08-11"},
-        files=[SnapshotFile(path=species_file, record_count=1)],
-        licence_and_attribution=[
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        repo_root=repo_root,
-    )
+    manifest = _build_test_manifest(repo_root, species_file)
 
     species_file.write_text('{"type": "FeatureCollection", "features": [1]}', encoding="utf-8")
 
@@ -181,18 +185,7 @@ def test_verify_snapshot_files_detects_checksum_drift(repo_root, species_file):
 
 
 def test_verify_snapshot_files_detects_missing_file(repo_root, species_file):
-    manifest = build_manifest(
-        snapshot_id="2026-08-11-ala-marsupials",
-        captured_at="2026-08-11T09:15:00Z",
-        source="Atlas of Living Australia",
-        query={},
-        coverage={"from": "2020-01-01", "to": "2026-08-11"},
-        files=[SnapshotFile(path=species_file, record_count=1)],
-        licence_and_attribution=[
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        repo_root=repo_root,
-    )
+    manifest = _build_test_manifest(repo_root, species_file)
 
     species_file.unlink()
 
@@ -201,18 +194,7 @@ def test_verify_snapshot_files_detects_missing_file(repo_root, species_file):
 
 
 def _write_valid_manifest(repo_root, species_file):
-    manifest = build_manifest(
-        snapshot_id="2026-08-11-ala-marsupials",
-        captured_at="2026-08-11T09:15:00Z",
-        source="Atlas of Living Australia",
-        query={},
-        coverage={"from": "2020-01-01", "to": "2026-08-11"},
-        files=[SnapshotFile(path=species_file, record_count=1)],
-        licence_and_attribution=[
-            {"licence": "CC-BY 4.0 (Int)", "attribution": "Atlas of Living Australia"}
-        ],
-        repo_root=repo_root,
-    )
+    manifest = _build_test_manifest(repo_root, species_file)
     manifest_path = repo_root / "data" / "metadata" / "snapshot-2026-08-11-ala-marsupials.json"
     return write_manifest(manifest, manifest_path)
 
