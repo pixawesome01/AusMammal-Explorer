@@ -129,18 +129,27 @@ def _fetch_band(predictor):
             with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
                                CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif"):
                 with rasterio.open(url) as src:
-                    window = window_from_bounds(AU_MIN_LON, AU_MIN_LAT, AU_MAX_LON, AU_MAX_LAT,
-                                                 transform=src.transform)
+                    # Rounded once and reused for both the read and the
+                    # transform below - src.read() truncates a fractional
+                    # window to integer pixels internally, so computing the
+                    # transform from the original unrounded window would
+                    # describe an origin up to one native pixel away from
+                    # the pixels actually read.
+                    window = window_from_bounds(
+                        AU_MIN_LON, AU_MIN_LAT, AU_MAX_LON, AU_MAX_LAT, transform=src.transform
+                    ).round_offsets(op="floor").round_lengths(op="ceil")
                     raw = src.read(1, window=window).astype("float32")
                     src_transform = src.window_transform(window)
                     src_crs = src.crs
                     nodata = src.nodata
                     # Prefer the file's own scale/offset tags; fall back to
-                    # the documented CHELSA V2.1 spec if not embedded.
-                    scale = (src.scales[0] if src.scales and src.scales[0] not in (None, 1.0)
-                             else predictor.scale)
-                    offset = (src.offsets[0] if src.offsets and src.offsets[0] not in (None, 0.0)
-                              else predictor.offset)
+                    # the documented CHELSA V2.1 spec only if the file has no
+                    # tag at all. Checking "not None" (rather than excluding
+                    # the identity values 1.0/0.0) matters here - an embedded
+                    # scale/offset that happens to equal 1.0/0.0 is real
+                    # metadata, not evidence the tag is missing.
+                    scale = src.scales[0] if src.scales and src.scales[0] is not None else predictor.scale
+                    offset = src.offsets[0] if src.offsets and src.offsets[0] is not None else predictor.offset
             break
         except Exception as exc:
             last_error = exc

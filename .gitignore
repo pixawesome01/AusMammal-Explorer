@@ -51,12 +51,12 @@ pnpm-debug.log*
 # Large or generated project data
 data/raw/*
 !data/raw/.gitkeep
-!data/raw/*.docx
 data/processed/*
 !data/processed/.gitkeep
 !data/processed/*.py
 models/output/*
 !models/output/.gitkeep
+!models/output/*.tif
 outputs/
 artifacts/
 
