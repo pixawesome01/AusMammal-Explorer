@@ -1,10 +1,11 @@
 """
 Builds an actual (not climatological) month-by-month rainfall/temperature
-summary for Australia, covering every complete calendar month from
-2020-01 through the most recently finished month. Used by the app's
-Insights view (proposal report requirement R5 - "summarise when the
-selected mammal species is most commonly recorded using monthly averages
-and simple rainfall/temperature context"; see the Mock-up 3 slide).
+summary for Australia, plus a per-species breakdown for any MVP species
+with a locally-available cleaned occurrence file, covering every complete
+calendar month from 2020-01 through the most recently finished month. Used
+by the app's Insights view (proposal report requirement R5 - "summarise
+when the selected mammal species is most commonly recorded using monthly
+averages and simple rainfall/temperature context"; see the Mock-up 3 slide).
 
 Source: SILO gridded climate data (Queensland Government DES, interpolated
 from Bureau of Meteorology station observations; Jeffrey et al., 2001),
@@ -13,17 +14,28 @@ hosted publicly without authentication on AWS Open Data
 SILO is the standard freely-accessible surrogate built from the same station
 network and is widely used in Australian ecological modelling.
 
-The result is a coarse sample-grid mean across the whole continent, not a
-species-specific climate context: it is not weighted by, or restricted to,
-where any particular mammal was actually observed. That is a reasonable
-"simple" first cut, but a species with a narrow range (e.g. Tasmania-only)
-will see a national average that may not describe its actual conditions.
+Two series are produced:
+  - "months": a coarse sample-grid mean across the whole continent.
+  - "bySpecies": for any species whose cleaned occurrence GeoJSON
+    (Data Cleaning Pipeline for MapLibre.py's output) is found alongside
+    this script, the same computation but sampled at that species' own
+    occurrence coordinates instead of a flat grid - so a narrow-range
+    species (e.g. Tasmania-only) gets climate context from where it's
+    actually recorded, not a continental average. Species with no cleaned
+    file present locally are simply omitted from "bySpecies", not treated
+    as an error.
+
+Reruns are incremental: months already present in `output_path` from a
+prior run are reused as-is, except for the current year (whose SILO files
+can still be revised/appended), so a routine refresh only downloads and
+recomputes what might actually have changed.
 """
 import calendar
 import json
 import math
 import shutil
 import time
+import urllib.error
 import urllib.request
 import warnings
 from datetime import UTC, date, datetime
@@ -71,6 +83,11 @@ SAMPLE_GRID_STEP_DEG = 2.0
 # now; a land-mask-aware "valid vs. expected-valid" ratio would be a
 # stronger (but more involved) version of this check.
 MIN_VALID_SAMPLE_FRACTION = 0.3
+
+# Occurrence files can carry tens of thousands of points; sampling SILO at
+# every one would be needlessly slow for a "simple" summary. Capped to an
+# evenly-spaced, deterministic subsample instead (see _species_sample_points).
+MAX_SPECIES_SAMPLE_POINTS = 300
 
 MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -149,30 +166,63 @@ def _download_year_file(variable, year, refresh=False):
     decide when a refresh is needed (build_monthly_climate_context's
     per-run file cache refreshes the current year exactly once), so a
     single run never re-downloads the same (variable, year) file multiple
-    times just because several months share it.
+    times just because several series/months share it.
+
+    A `refresh` re-check still avoids a wasted full re-download when
+    nothing has actually changed server-side: it sends the previous
+    download's Last-Modified value as If-Modified-Since, and a 304 response
+    means the cached file is still current, so it's kept as-is. Client
+    errors (4xx - a bad URL, a year not published, etc.) fail immediately
+    instead of retrying, since retrying can't fix them; only timeouts and
+    5xx responses are treated as transient and retried.
     """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     destination = CACHE_DIR / f"{year}.{variable}.nc"
+    meta_path = CACHE_DIR / f"{destination.name}.meta"
+
     if destination.exists() and not refresh:
         return destination
 
     url = SILO_BUCKET_URL.format(variable=variable, year=year)
     tmp_destination = CACHE_DIR / f"{destination.name}.part"
 
+    headers = {"User-Agent": "AusMammalExplorer/0.1"}
+    if destination.exists() and meta_path.exists():
+        previous_last_modified = meta_path.read_text(encoding="utf-8").strip()
+        if previous_last_modified:
+            headers["If-Modified-Since"] = previous_last_modified
+
     last_error = None
     for attempt in range(NETWORK_RETRIES + 1):
         try:
-            request = urllib.request.Request(
-                url, headers={"User-Agent": "AusMammalExplorer/0.1"}
-            )
+            request = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
                 with open(tmp_destination, "wb") as f:
                     shutil.copyfileobj(response, f)
+                last_modified = response.headers.get("Last-Modified")
             tmp_destination.replace(destination)
+            if last_modified:
+                meta_path.write_text(last_modified, encoding="utf-8")
             return destination
-        except Exception as exc:
-            last_error = exc
+        except urllib.error.HTTPError as exc:
             tmp_destination.unlink(missing_ok=True)
+            if exc.code == 304:
+                # Server confirms the cached file is still current.
+                return destination
+            if 400 <= exc.code < 500:
+                raise RuntimeError(
+                    f"SILO {variable} {year} request failed with HTTP {exc.code} "
+                    f"(permanent, not retrying): {url}"
+                ) from exc
+            last_error = exc
+            if attempt < NETWORK_RETRIES:
+                print(f"  WARNING: download failed for SILO {variable} {year} "
+                      f"(attempt {attempt + 1}/{NETWORK_RETRIES + 1}, HTTP {exc.code}). "
+                      "Retrying...")
+                time.sleep(NETWORK_RETRY_PAUSE_SECONDS)
+        except Exception as exc:
+            tmp_destination.unlink(missing_ok=True)
+            last_error = exc
             if attempt < NETWORK_RETRIES:
                 print(f"  WARNING: download failed for SILO {variable} {year} "
                       f"(attempt {attempt + 1}/{NETWORK_RETRIES + 1}): {exc}. Retrying...")
@@ -221,8 +271,34 @@ def _validate_band_time(src, variable, year, band_index):
         )
 
 
-def _decode_band_values(src, variable, year, band_index, points):
-    """Samples one band at `points`, returning real-world values with nodata as NaN."""
+def _point_pixel_indices(src, points):
+    """
+    Precomputes each sample point's (row, col) pixel location once per
+    open file, so decoding a band only needs one bulk array index instead
+    of one rasterio .sample() call per point - verified to produce
+    identical values to .sample() here, at a fraction of the cost once a
+    file is local rather than remote (.sample() iterates points one at a
+    time regardless). Points outside the raster's actual pixel grid are
+    marked invalid rather than silently wrapping via negative-index
+    indexing.
+    """
+    height, width = src.height, src.width
+    rows = np.empty(len(points), dtype=np.int64)
+    cols = np.empty(len(points), dtype=np.int64)
+    valid = np.empty(len(points), dtype=bool)
+    for i, (lon, lat) in enumerate(points):
+        row, col = src.index(lon, lat)
+        in_bounds = 0 <= row < height and 0 <= col < width
+        valid[i] = in_bounds
+        rows[i] = row if in_bounds else 0
+        cols[i] = col if in_bounds else 0
+    return rows, cols, valid
+
+
+def _decode_band_values(src, variable, year, band_index, rows, cols, valid):
+    """Reads one band and returns real-world values at precomputed pixel
+    positions (see _point_pixel_indices), with nodata and out-of-grid
+    points both as NaN."""
     if band_index > src.count:
         raise RuntimeError(
             f"Requested band {band_index} but the SILO {variable} {year} file only "
@@ -235,9 +311,9 @@ def _decode_band_values(src, variable, year, band_index, points):
     offset = src.offsets[band_index - 1] if src.offsets else 0.0
     nodata = src.nodatavals[band_index - 1] if src.nodatavals else None
 
-    raw = np.array(
-        [v[0] for v in src.sample(points, indexes=[band_index])], dtype="float64"
-    )
+    band = src.read(band_index)
+    raw = band[rows, cols].astype("float64")
+    raw = np.where(valid, raw, np.nan)
     if nodata is not None:
         raw = np.where(raw == nodata, np.nan, raw)
     return raw * scale + offset
@@ -245,7 +321,7 @@ def _decode_band_values(src, variable, year, band_index, points):
 
 def _spatial_weighted_mean(values_by_point, latitudes):
     """
-    Latitude-weighted mean across the sample grid: a degree of longitude
+    Latitude-weighted mean across the sample points: a degree of longitude
     covers less physical ground area near the poles than near the equator,
     so a flat unweighted mean over a lon/lat grid over-represents higher
     latitudes. Also returns how many sample points actually contributed a
@@ -258,7 +334,7 @@ def _spatial_weighted_mean(values_by_point, latitudes):
         raise RuntimeError(
             f"Only {valid_count} of {len(values_by_point)} sample points had valid "
             f"data (minimum {minimum_required} required) - the result would not be "
-            "a meaningful Australia-wide estimate."
+            "a meaningful estimate."
         )
 
     weights = np.cos(np.radians(latitudes))
@@ -268,21 +344,22 @@ def _spatial_weighted_mean(values_by_point, latitudes):
     return weighted_mean, valid_count
 
 
-def _monthly_rainfall_mm(year, month, get_year_file):
-    """Latitude-weighted mean of SILO's monthly_rain grid, in mm."""
+def _monthly_rainfall_mm(year, month, get_year_file, points, latitudes):
+    """Latitude-weighted mean of SILO's monthly_rain grid, in mm, at `points`."""
     path = get_year_file("monthly_rain", year)
     with rasterio.open(path) as src:
-        values = _decode_band_values(src, "monthly_rain", year, month, SAMPLE_POINTS)
-    return _spatial_weighted_mean(values, SAMPLE_LATITUDES)
+        rows, cols, valid = _point_pixel_indices(src, points)
+        values = _decode_band_values(src, "monthly_rain", year, month, rows, cols, valid)
+    return _spatial_weighted_mean(values, latitudes)
 
 
-def _monthly_mean_temperature_c(year, month, get_year_file):
+def _monthly_mean_temperature_c(year, month, get_year_file, points, latitudes):
     """
-    Latitude-weighted mean temperature for the month, in degC. Each sample
-    point's monthly value is its own mean of (max+min)/2 across the days in
-    that month that had a valid paired Tmax/Tmin reading - paired per day,
-    not max and min averaged independently, so a day where only one of the
-    two was recorded doesn't quietly bias the result.
+    Latitude-weighted mean temperature for the month, in degC, at `points`.
+    Each sample point's monthly value is its own mean of (max+min)/2 across
+    the days in that month that had a valid paired Tmax/Tmin reading -
+    paired per day, not max and min averaged independently, so a day where
+    only one of the two was recorded doesn't quietly bias the result.
     """
     max_path = get_year_file("max_temp", year)
     min_path = get_year_file("min_temp", year)
@@ -292,10 +369,12 @@ def _monthly_mean_temperature_c(year, month, get_year_file):
     day_bands = range(first_day_of_year, first_day_of_year + days_in_month)
 
     with rasterio.open(max_path) as max_src, rasterio.open(min_path) as min_src:
+        max_rows, max_cols, max_valid = _point_pixel_indices(max_src, points)
+        min_rows, min_cols, min_valid = _point_pixel_indices(min_src, points)
         daily_paired_means = [
             (
-                _decode_band_values(max_src, "max_temp", year, day, SAMPLE_POINTS)
-                + _decode_band_values(min_src, "min_temp", year, day, SAMPLE_POINTS)
+                _decode_band_values(max_src, "max_temp", year, day, max_rows, max_cols, max_valid)
+                + _decode_band_values(min_src, "min_temp", year, day, min_rows, min_cols, min_valid)
             ) / 2
             for day in day_bands
         ]
@@ -309,23 +388,23 @@ def _monthly_mean_temperature_c(year, month, get_year_file):
         warnings.simplefilter("ignore", category=RuntimeWarning)
         monthly_values_by_point = np.nanmean(np.stack(daily_paired_means), axis=0)
 
-    return _spatial_weighted_mean(monthly_values_by_point, SAMPLE_LATITUDES)
+    return _spatial_weighted_mean(monthly_values_by_point, latitudes)
 
 
-def _monthly_summary(year, month, get_year_file):
+def _monthly_summary(year, month, get_year_file, points, latitudes):
     """
     Returns one month's {temperatureC, precipitationMm, ...valid point
-    counts}, raising if a result is missing (NaN), outside the physically
-    plausible range for Australia, or backed by too few valid sample
-    points - rather than letting a bad value reach the JSON output. A NaN
-    would also serialise as an invalid (non-RFC-8259) JSON token that
+    counts} at `points`, raising if a result is missing (NaN), outside the
+    physically plausible range for Australia, or backed by too few valid
+    sample points - rather than letting a bad value reach the JSON output.
+    A NaN would also serialise as an invalid (non-RFC-8259) JSON token that
     breaks strict JS parsers.
     """
     temperature_c, valid_temperature_points = _monthly_mean_temperature_c(
-        year, month, get_year_file
+        year, month, get_year_file, points, latitudes
     )
     precipitation_mm, valid_rainfall_points = _monthly_rainfall_mm(
-        year, month, get_year_file
+        year, month, get_year_file, points, latitudes
     )
 
     for key, value in (("temperatureC", temperature_c), ("precipitationMm", precipitation_mm)):
@@ -345,21 +424,127 @@ def _monthly_summary(year, month, get_year_file):
     }
 
 
+def _index_months_by_key(month_entries):
+    """Maps a list of month dicts to {(year, month): entry} for O(1) reuse lookups."""
+    indexed = {}
+    for entry in month_entries:
+        try:
+            indexed[(entry["year"], entry["month"])] = entry
+        except (KeyError, TypeError):
+            continue
+    return indexed
+
+
+def _load_json(path):
+    """Loads a JSON file, returning None (not raising) if it's missing or
+    unreadable - a missing or corrupt prior output just means a full
+    rebuild, not a hard failure."""
+    path = Path(path)
+    if not path.exists():
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"  NOTE: could not read existing output at '{path}' ({exc}); "
+              "doing a full rebuild.")
+        return None
+
+
+def _build_month_series(existing_months_by_key, compute_month, today, end_year, end_month, label):
+    """
+    Builds the ordered list of monthly entries from COVERAGE_START to the
+    most recently completed month. Months already present in a prior run's
+    output are reused as-is *except* for the current year, whose SILO
+    files can still be revised/appended - only those are always
+    recomputed. This is what makes a routine rerun cheap: past years never
+    need to be re-downloaded or re-averaged once they're already captured
+    in the output.
+    """
+    months = []
+    reused = 0
+    computed = 0
+    for year, month in month_range(COVERAGE_START_YEAR, COVERAGE_START_MONTH, end_year, end_month):
+        cached_entry = existing_months_by_key.get((year, month))
+        if cached_entry is not None and year != today.year:
+            months.append(cached_entry)
+            reused += 1
+            continue
+        months.append(compute_month(year, month))
+        computed += 1
+    print(f"  {label}: reused {reused} previously-computed month(s), "
+          f"computed {computed} new/updated month(s).")
+    return months
+
+
+def _discover_species_occurrence_files(processed_dir):
+    """
+    Finds cleaned per-species MapLibre GeoJSON files already generated
+    locally by Data Cleaning Pipeline for MapLibre.py, keyed by species id
+    parsed from the filename - not a hardcoded species list, so this
+    adapts automatically if the MVP species list changes. These files are
+    generated/gitignored, so this is best-effort: if none exist yet,
+    per-species climate context is simply skipped for this run rather than
+    failing it.
+    """
+    prefix = "cleaned_marsupials_maplibre_"
+    files = {}
+    for path in sorted(Path(processed_dir).glob(f"{prefix}*.geojson")):
+        species_id = path.stem[len(prefix):]
+        if species_id:
+            files[species_id] = path
+    return files
+
+
+def _species_sample_points(geojson_path):
+    """
+    A deterministic, capped subsample of a species' actual occurrence
+    coordinates, used instead of the flat Australia-wide grid so a
+    narrow-range species gets climate context from where it's actually
+    recorded rather than a continental average. Deterministic (evenly
+    spaced across the sorted, deduplicated coordinates, not random) so the
+    same input file always produces the same sample points.
+    """
+    with open(geojson_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    coords = sorted({
+        tuple(feature["geometry"]["coordinates"])
+        for feature in data.get("features", [])
+        if feature.get("geometry", {}).get("type") == "Point"
+        and len(feature["geometry"].get("coordinates", [])) == 2
+    })
+
+    if len(coords) <= MAX_SPECIES_SAMPLE_POINTS:
+        return coords
+
+    stride = len(coords) / MAX_SPECIES_SAMPLE_POINTS
+    return [coords[int(i * stride)] for i in range(MAX_SPECIES_SAMPLE_POINTS)]
+
+
 def build_monthly_climate_context(output_path, today=None):
     """
     Builds an actual month-by-month Australia-wide temperature/rainfall
-    summary, covering every complete month from COVERAGE_START_YEAR-
-    COVERAGE_START_MONTH through the most recently finished month, for the
-    app's Insights view.
+    summary, plus a per-species breakdown for any MVP species with a
+    locally-available cleaned occurrence file, covering every complete
+    month from COVERAGE_START_YEAR-COVERAGE_START_MONTH through the most
+    recently finished month, for the app's Insights view. Reuses
+    previously-computed months from `output_path` where possible instead
+    of rebuilding the whole history every run.
     """
     today = today or datetime.now(PROJECT_TZ).date()
     end_year, end_month = _last_complete_month(today)
+    output_path = Path(output_path)
 
-    # Downloads each (variable, year) file at most once per run: every
-    # month in a year shares the same three annual files, so without this,
-    # a 7-completed-month year would trigger 21 downloads (3 variables x 7
-    # months) of the same three files instead of 3. Only the file(s) for
-    # `today`'s year are refreshed - past years are immutable once fetched.
+    existing_document = _load_json(output_path) or {}
+
+    # Downloads each (variable, year) file at most once per run, shared
+    # across the Australia-wide series and every per-species series: e.g.
+    # a 7-completed-month year would otherwise trigger 21 downloads
+    # (3 variables x 7 months) of the same three files instead of 3, and
+    # every species series would repeat that again on top. Only the
+    # file(s) for `today`'s year are refreshed - past years are immutable
+    # once fetched.
     run_file_cache = {}
 
     def get_year_file(variable, year):
@@ -370,16 +555,15 @@ def build_monthly_climate_context(output_path, today=None):
             )
         return run_file_cache[key]
 
-    months = []
-    for year, month in month_range(COVERAGE_START_YEAR, COVERAGE_START_MONTH, end_year, end_month):
-        print(f"Fetching {MONTH_NAMES[month - 1]} {year} climate summary "
+    def au_compute_month(year, month):
+        print(f"Fetching {MONTH_NAMES[month - 1]} {year} Australia-wide climate summary "
               f"({len(SAMPLE_POINTS)} nominal sample points)...")
-        summary = _monthly_summary(year, month, get_year_file)
+        summary = _monthly_summary(year, month, get_year_file, SAMPLE_POINTS, SAMPLE_LATITUDES)
         print(f"  {MONTH_NAMES[month - 1]} {year}: {summary['temperatureC']:.1f} degC "
               f"({summary['validTemperaturePointCount']} valid pts), "
               f"{summary['precipitationMm']:.1f} mm "
               f"({summary['validRainfallPointCount']} valid pts)")
-        months.append({
+        return {
             "year": year,
             "month": month,
             "monthName": MONTH_NAMES[month - 1],
@@ -387,7 +571,61 @@ def build_monthly_climate_context(output_path, today=None):
             "precipitationMm": round(summary["precipitationMm"], 1),
             "validTemperaturePointCount": summary["validTemperaturePointCount"],
             "validRainfallPointCount": summary["validRainfallPointCount"],
-        })
+        }
+
+    existing_au_months = _index_months_by_key(existing_document.get("months", []))
+    months = _build_month_series(
+        existing_au_months, au_compute_month, today, end_year, end_month,
+        label="Australia-wide",
+    )
+
+    processed_dir = output_path.parent
+    species_files = _discover_species_occurrence_files(processed_dir)
+    existing_by_species = existing_document.get("bySpecies", {})
+    by_species = {}
+
+    if not species_files:
+        print(f"  No cleaned occurrence GeoJSON files found in '{processed_dir}'; "
+              "skipping per-species climate context (run Data Cleaning Pipeline "
+              "for MapLibre.py first to enable it).")
+    else:
+        print(f"Found {len(species_files)} species occurrence file(s); "
+              "building per-species climate context...")
+        for species_id, geojson_path in species_files.items():
+            species_points = _species_sample_points(geojson_path)
+            if not species_points:
+                print(f"  Skipping {species_id}: no usable point coordinates in "
+                      f"'{geojson_path.name}'.")
+                continue
+            species_latitudes = np.array([lat for _, lat in species_points])
+
+            def species_compute_month(year, month, _species_id=species_id,
+                                       _points=species_points, _lats=species_latitudes):
+                print(f"Fetching {MONTH_NAMES[month - 1]} {year} climate summary for "
+                      f"{_species_id} ({len(_points)} occurrence-based sample points)...")
+                summary = _monthly_summary(year, month, get_year_file, _points, _lats)
+                return {
+                    "year": year,
+                    "month": month,
+                    "monthName": MONTH_NAMES[month - 1],
+                    "temperatureC": round(summary["temperatureC"], 1),
+                    "precipitationMm": round(summary["precipitationMm"], 1),
+                    "validTemperaturePointCount": summary["validTemperaturePointCount"],
+                    "validRainfallPointCount": summary["validRainfallPointCount"],
+                }
+
+            existing_species_months = _index_months_by_key(
+                existing_by_species.get(species_id, {}).get("months", [])
+            )
+            species_months = _build_month_series(
+                existing_species_months, species_compute_month, today, end_year, end_month,
+                label=species_id,
+            )
+            by_species[species_id] = {
+                "samplePointCount": len(species_points),
+                "sourceFile": geojson_path.name,
+                "months": species_months,
+            }
 
     summary_document = {
         "source": "SILO (Queensland Government DES, from Bureau of Meteorology "
@@ -401,9 +639,9 @@ def build_monthly_climate_context(output_path, today=None):
         "minimumValidSampleFraction": MIN_VALID_SAMPLE_FRACTION,
         "generatedAt": datetime.now(UTC).isoformat(),
         "months": months,
+        "bySpecies": by_species,
     }
 
-    output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_output_path = output_path.with_name(output_path.name + ".part")
     with open(tmp_output_path, "w", encoding="utf-8") as f:
