@@ -148,8 +148,10 @@ def _fetch_band(predictor):
                     # the identity values 1.0/0.0) matters here - an embedded
                     # scale/offset that happens to equal 1.0/0.0 is real
                     # metadata, not evidence the tag is missing.
-                    scale = src.scales[0] if src.scales and src.scales[0] is not None else predictor.scale
-                    offset = src.offsets[0] if src.offsets and src.offsets[0] is not None else predictor.offset
+                    scale = (src.scales[0] if src.scales and src.scales[0] is not None
+                              else predictor.scale)
+                    offset = (src.offsets[0] if src.offsets and src.offsets[0] is not None
+                              else predictor.offset)
             break
         except Exception as exc:
             last_error = exc
