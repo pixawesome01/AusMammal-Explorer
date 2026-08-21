@@ -26,7 +26,7 @@ export type OccurrenceSnapshotManifest = {
 };
 
 /**
- * Runtime catalogue for the frozen ALA snapshot generated on 15 August 2026.
+ * Runtime catalogue for the frozen ALA snapshot generated on 20 August 2026.
  *
  * The large GeoJSON files remain in shared project storage and are intentionally
  * excluded from Git. KAN-26 can provide either bundled assets or an approved
@@ -36,10 +36,15 @@ export type OccurrenceSnapshotManifest = {
  * and mirror the filters actually applied in
  * `data/processed/Data Cleaning Pipeline for MapLibre.py`, so they stay accurate
  * if that pipeline's thresholds change.
+ *
+ * Values below are read straight from the committed manifest
+ * (data/metadata/snapshot-2026-08-20-ala-marsupials.json) and the real output
+ * files' eventDate coverage - keep this in sync whenever a new frozen
+ * snapshot is generated and uploaded.
  */
 export const OCCURRENCE_SNAPSHOT = {
-  snapshotId: "2026-08-15-ala-maplibre",
-  capturedAt: "2026-08-15T13:56:29Z",
+  snapshotId: "2026-08-20-ala-maplibre",
+  capturedAt: "2026-08-20T08:51:10Z",
   source: "Atlas of Living Australia",
   storageUrl:
     "https://drive.google.com/drive/folders/1eIxSBsXw6IL7deIvjocGKczJrofpjdkl",
@@ -63,49 +68,49 @@ export const OCCURRENCE_SNAPSHOT = {
       speciesId: "koala",
       scientificName: "Phascolarctos cinereus",
       fileName: "cleaned_marsupials_maplibre_koala.geojson",
-      recordCount: 42794,
-      coverage: { from: "2020-01-01", to: "2026-08-04" },
+      recordCount: 42786,
+      coverage: { from: "2020-01-01", to: "2026-08-15" },
     },
     "eastern-grey-kangaroo": {
       speciesId: "eastern-grey-kangaroo",
       scientificName: "Macropus giganteus",
       fileName: "cleaned_marsupials_maplibre_eastern-grey-kangaroo.geojson",
-      recordCount: 26630,
-      coverage: { from: "2020-01-01", to: "2026-08-08" },
+      recordCount: 26635,
+      coverage: { from: "2020-01-01", to: "2026-08-11" },
     },
     "common-brushtail-possum": {
       speciesId: "common-brushtail-possum",
       scientificName: "Trichosurus vulpecula",
       fileName: "cleaned_marsupials_maplibre_common-brushtail-possum.geojson",
-      recordCount: 35830,
-      coverage: { from: "2020-01-01", to: "2026-08-07" },
+      recordCount: 35831,
+      coverage: { from: "2020-01-01", to: "2026-08-12" },
     },
     "common-ringtail-possum": {
       speciesId: "common-ringtail-possum",
       scientificName: "Pseudocheirus peregrinus",
       fileName: "cleaned_marsupials_maplibre_common-ringtail-possum.geojson",
-      recordCount: 36930,
-      coverage: { from: "2020-01-01", to: "2026-08-04" },
+      recordCount: 36934,
+      coverage: { from: "2020-01-01", to: "2026-08-15" },
     },
     "swamp-wallaby": {
       speciesId: "swamp-wallaby",
       scientificName: "Wallabia bicolor",
       fileName: "cleaned_marsupials_maplibre_swamp-wallaby.geojson",
-      recordCount: 19588,
+      recordCount: 19586,
       coverage: { from: "2020-01-01", to: "2026-08-08" },
     },
     "common-wombat": {
       speciesId: "common-wombat",
       scientificName: "Vombatus ursinus",
       fileName: "cleaned_marsupials_maplibre_common-wombat.geojson",
-      recordCount: 11727,
-      coverage: { from: "2020-01-01", to: "2026-07-30" },
+      recordCount: 11737,
+      coverage: { from: "2020-01-01", to: "2026-08-10" },
     },
     "greater-glider": {
       speciesId: "greater-glider",
       scientificName: "Petauroides volans",
       fileName: "cleaned_marsupials_maplibre_greater-glider.geojson",
-      recordCount: 11839,
+      recordCount: 11841,
       coverage: { from: "2020-01-01", to: "2026-06-15" },
     },
   },
