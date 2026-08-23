@@ -15,6 +15,10 @@ The shared cleaned datasets are stored in [Google Drive](https://drive.google.co
 
 Each frozen snapshot should have a manifest containing its source, query parameters, capture date, date coverage, record count, checksum, licence/attribution notes, and processing version. Do not silently replace an existing snapshot; create a new dated snapshot and manifest.
 
+## Running the occurrence pipelines together
+
+`processed/Run All Cleaning Pipelines.py` runs `Data Cleaning Pipeline for MapLibre.py` and `Data Cleaning Pipeline for MaxEnt.py` back-to-back with the same ALA account email, so both snapshots are captured as close together in time as practically possible (R8). ALA has no "as of" query filter, so this narrows the drift window between the two rather than guaranteeing identical underlying data (R7). Each pipeline mints its own DOI and automatically writes its own manifest recording it — no manual step needed. Run it from anywhere; it changes to its own directory before writing output, so both pipelines' relative-path outputs land in the usual place regardless of the caller's working directory.
+
 ## MVP species screening
 
 RTM-7 uses the versioned thresholds in
@@ -89,15 +93,18 @@ One `FeatureCollection` per species: `cleaned_marsupials_maplibre_<species-id>.g
 
 ## Manifest
 
-Copy `metadata/snapshot-manifest.example.json` for every pipeline run and fill it in:
+Every run of `Data Cleaning Pipeline for MapLibre.py` automatically writes its own manifest — `data/metadata/snapshot-<YYYY-MM-DD>-ala-marsupials.json` — via `src/ausmammal_explorer/snapshot.py` (`metadata/snapshot-manifest.example.json` is a reference instance/template, not something to hand-copy). It contains:
 
 - `snapshot_id` / `captured_at` — dated at run time.
 - `source` — `"Atlas of Living Australia"`.
-- `query` — the taxa list, `data_profile: "CSDM"`, and the minted DOI from that run.
-- `coverage` — `2020-01-01` to the run date (Step 4's cutoff).
-- `files` — one entry per `cleaned_marsupials_maplibre_<species-id>.geojson`, with its sha256 checksum and feature count (printed per species at the end of the run).
-- `licence_and_attribution` — `CC-BY 4.0 (Int)`, plus the citation string from the Licence section above.
-- `pipeline_version` — the git commit SHA of `Data Cleaning Pipeline for MapLibre.py` used for that run.
+- `query` — the taxa list, `data_profile: "CSDM"`, and **`query.doi`** — the exact DOI minted for that run (`print_doi=False` on the `atlas_occurrences()` call returns it instead of only printing it). Required, not optional: without it, R8's reproducibility test (re-running the pipeline later and confirming the same aggregates) can't be guaranteed, since a live ALA query can drift over time but re-fetching by DOI always returns the identical frozen dataset.
+- `coverage` — `2020-01-01` to the run's actual max `eventDate`.
+- `files` — one entry per `cleaned_marsupials_maplibre_<species-id>.geojson`, with its sha256 checksum and feature count.
+- `licence_and_attribution` — one entry per distinct licence string actually present in the cleaned data (in practice always `CC-BY 4.0 (Int)`, per the Licence section above).
+- `transformation_provenance` — every cleaning step's before/after record counts (RTM-58).
+- `pipeline_version` — the git commit SHA of the code that produced the snapshot.
+
+Validate a snapshot from a clean checkout with `python -m ausmammal_explorer.snapshot data/metadata/snapshot-<id>.json` — re-hashes every listed file and reports any drift from its recorded checksum.
 
 ## Environmental context (visualisation only)
 
@@ -166,3 +173,7 @@ Copy `metadata/snapshot-manifest.example.json` for every run:
 ## Environmental predictors (MaxEnt)
 
 `processed/Environmental Predictor Pipeline for MaxEnt.py` builds the CHELSA-based spatial predictor stack for MaxEnt/maxnet training (report Section 4, Phase 2) — a different artefact from the SILO-based Insights summary above, and it writes to `models/output/environmental_predictors_au.tif`, not `data/processed/`, since it's a model input rather than app-visualisation data. See `models/README.md` for its source, schema, and runtime notes.
+
+## Occurrence records (MaxEnt)
+
+`processed/Data Cleaning Pipeline for MaxEnt.py` builds the cleaned presence-record table for MaxEnt/maxnet training (report Section 4, Phase 1) — a separate pipeline from the MapLibre one above, with a stricter coordinate-uncertainty threshold (≤1000m vs 2000m) and no equivalent of the outlier-flagging step. It writes to `models/output/occurrence_records_for_maxent.csv`, not `data/processed/`, for the same model-input-vs-visualisation-data reason as the predictor stack above. See `models/README.md` for its source and cleaning steps.

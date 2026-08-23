@@ -2,7 +2,9 @@
   "snapshot_id": "YYYY-MM-DD-short-name",
   "captured_at": "YYYY-MM-DDTHH:MM:SSZ",
   "source": "Atlas of Living Australia",
-  "query": {},
+  "query": {
+    "doi": "https://doi.org/replace-with-the-doi-printed-at-the-start-of-the-run"
+  },
   "coverage": {
     "from": "YYYY-MM-DD",
     "to": "YYYY-MM-DD"

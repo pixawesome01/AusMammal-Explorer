@@ -81,10 +81,15 @@ def flag_outliers(group, threshold=6.0):
     return (lat_dev > threshold) | (lon_dev > threshold)
 
 
-def fetch_clean_and_format_marsupials(email, output_geojson):
+def fetch_ala_occurrences(email):
     """
-    Fetches ALA occurrence data for the 7 MVP marsupials and cleans it into one
-    MapLibre-ready GeoJSON file per species.
+    Fetches raw ALA occurrence data for the 7 MVP marsupials under the CSDM
+    profile, minting a DOI. Separated from cleaning so a single fetch can be
+    shared between this pipeline and Data Cleaning Pipeline for MaxEnt.py
+    (see Run All Cleaning Pipelines.py) - both pipelines query ALA with
+    identical parameters, so sharing one download means both outputs trace
+    back to the exact same DOI instead of two separate (if near-identical)
+    ALA requests.
     """
     print("Initialising ALA API session via galah...")
     galah.galah_config(
@@ -96,14 +101,27 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     marsupials = list(SPECIES_ID_BY_SCIENTIFIC_NAME.keys())
 
     print("Querying ALA API (Minting DOI to handle large data volume)...")
-    raw_df = galah.atlas_occurrences(
+    # print_doi=False makes atlas_occurrences() return (doi, dataframe) instead
+    # of just the dataframe, so the DOI can be recorded in the snapshot
+    # manifest (R8) rather than only ever appearing in console output.
+    doi, raw_df = galah.atlas_occurrences(
         taxa=marsupials,
         fields=["scientificName", "decimalLatitude", "decimalLongitude",
                 "coordinateUncertaintyInMeters", "basisOfRecord", "eventDate", "dcterms:license"],
         use_data_profile=True,
-        mint_doi=True
+        mint_doi=True,
+        print_doi=False,
     )
+    print(f"  DOI: {doi}")
+    return doi, raw_df
 
+
+def clean_and_format_marsupials(doi, raw_df, output_geojson):
+    """
+    Cleans an already-fetched raw ALA dataframe (see fetch_ala_occurrences)
+    into one MapLibre-ready GeoJSON file per species.
+    """
+    marsupials = list(SPECIES_ID_BY_SCIENTIFIC_NAME.keys())
     initial_count = len(raw_df)
     print(f"Downloaded {initial_count} raw records. Starting cleaning...")
 
@@ -304,10 +322,10 @@ def fetch_clean_and_format_marsupials(email, output_geojson):
     print(f"Data pipeline complete. Retained {len(df)} of {initial_count} "
           f"cleaned MapLibre records ({len(df) / initial_count:.1%}).")
 
-    write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps)
+    write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps, doi)
 
 
-def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps):
+def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps, doi):
     """Freeze this run's outputs into a checksummed, version-controlled manifest.
 
     The GeoJSON files themselves are not committed (see README.md, "Data"),
@@ -335,6 +353,7 @@ def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps
             "min_event_date": MIN_EVENT_DATE.strftime("%Y-%m-%d"),
             "max_coordinate_uncertainty_m": MAX_COORDINATE_UNCERTAINTY_M,
             "allowed_license": ALLOWED_LICENSE,
+            "doi": doi,
         },
         coverage={
             "from": df["event_date"].min().strftime("%Y-%m-%d"),
@@ -351,6 +370,18 @@ def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps
     manifest_path = write_manifest(manifest, MANIFEST_DIR / f"snapshot-{snapshot_id}.json")
     print(f"Snapshot manifest written to '{manifest_path}' "
           f"({len(snapshot_files)} files checksummed).")
+
+
+def fetch_clean_and_format_marsupials(email, output_geojson):
+    """
+    Fetches ALA occurrence data for the 7 MVP marsupials and cleans it into
+    one MapLibre-ready GeoJSON file per species. Thin wrapper combining
+    fetch_ala_occurrences and clean_and_format_marsupials for standalone use;
+    call those two separately to share one ALA fetch across both this
+    pipeline and Data Cleaning Pipeline for MaxEnt.py.
+    """
+    doi, raw_df = fetch_ala_occurrences(email)
+    clean_and_format_marsupials(doi, raw_df, output_geojson)
 
 
 if __name__ == '__main__':
