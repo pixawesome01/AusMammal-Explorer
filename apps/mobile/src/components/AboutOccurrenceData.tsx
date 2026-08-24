@@ -12,6 +12,8 @@ type AboutOccurrenceDataProps = {
 export function AboutOccurrenceData({ species, state }: AboutOccurrenceDataProps) {
   const records = state.records;
   const snapshot = records ?? OCCURRENCE_SNAPSHOT;
+  const isBundledSample = snapshot.snapshotId.endsWith("-mobile-sample");
+  const fullRecordCount = OCCURRENCE_SNAPSHOT.files[species.id].recordCount;
 
   return (
     <View accessibilityLabel={`About ${species.commonName} occurrence data`} style={styles.card}>
@@ -23,6 +25,12 @@ export function AboutOccurrenceData({ species, state }: AboutOccurrenceDataProps
       <Text style={styles.detail}>Scientific name: {species.scientificName}</Text>
       <Text style={styles.detail}>Snapshot: {snapshot.snapshotId}</Text>
       <Text style={styles.detail}>Licence: {snapshot.license}</Text>
+      {isBundledSample && records ? (
+        <Text style={styles.detail}>
+          Mobile map: {records.file.recordCount.toLocaleString()} authentic sampled records from{" "}
+          {fullRecordCount.toLocaleString()} frozen source records
+        </Text>
+      ) : null}
       <Pressable
         accessibilityRole="link"
         onPress={() => Linking.openURL(snapshot.storageUrl)}
@@ -44,7 +52,7 @@ const styles = StyleSheet.create({
   title: {
     color: "#163c2c",
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   description: {
     marginTop: 8,
@@ -68,7 +76,7 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#1f5a3f",
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     textDecorationLine: "underline",
   },
 });

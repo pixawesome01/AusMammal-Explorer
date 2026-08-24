@@ -1,8 +1,15 @@
 import {
   createHttpOccurrenceAssetReader,
-  OccurrenceDataError,
   type OccurrenceAssetReader,
 } from "./occurrenceLoader";
+import {
+  BUNDLED_OCCURRENCE_SNAPSHOT,
+  createBundledOccurrenceAssetReader,
+} from "./bundledOccurrenceSnapshot";
+import {
+  OCCURRENCE_SNAPSHOT,
+  type OccurrenceSnapshotManifest,
+} from "./occurrenceSnapshot";
 
 const ASSET_BASE_URL_VARIABLE = "EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL";
 
@@ -21,10 +28,11 @@ export function createRuntimeOccurrenceAssetReader(
     return createHttpOccurrenceAssetReader(baseUrl);
   }
 
-  return async () => {
-    throw new OccurrenceDataError(
-      `Occurrence assets are not configured. Set ${ASSET_BASE_URL_VARIABLE} to the folder that hosts the frozen GeoJSON files.`,
-      "asset-read",
-    );
-  };
+  return createBundledOccurrenceAssetReader();
+}
+
+export function getRuntimeOccurrenceSnapshot(
+  baseUrl = publicAssetBaseUrl(),
+): OccurrenceSnapshotManifest {
+  return baseUrl ? OCCURRENCE_SNAPSHOT : BUNDLED_OCCURRENCE_SNAPSHOT;
 }

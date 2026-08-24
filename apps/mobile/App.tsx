@@ -22,20 +22,21 @@ import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { StateRanking } from "./src/components/StateRanking";
 import { TemporalFilters } from "./src/components/TemporalFilters";
-import { createRuntimeOccurrenceAssetReader } from "./src/data/occurrenceAssetReader";
+import {
+  createRuntimeOccurrenceAssetReader,
+  getRuntimeOccurrenceSnapshot,
+} from "./src/data/occurrenceAssetReader";
 import type {
   OccurrenceDateRange,
   OccurrenceTemporalFilter,
 } from "./src/data/occurrenceFilter";
 import type { OccurrenceAssetReader } from "./src/data/occurrenceLoader";
-import {
-  OCCURRENCE_SNAPSHOT,
-  type OccurrenceSnapshotManifest,
-} from "./src/data/occurrenceSnapshot";
+import type { OccurrenceSnapshotManifest } from "./src/data/occurrenceSnapshot";
 import { useOccurrenceRecords } from "./src/data/useOccurrenceRecords";
 import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
 const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
+const runtimeOccurrenceSnapshot = getRuntimeOccurrenceSnapshot();
 
 type ExplorerWorkspaceProps = {
   dateRange?: OccurrenceDateRange;
@@ -54,7 +55,7 @@ const TABS: { id: ExplorerTab; label: string }[] = [
 export function ExplorerWorkspace({
   dateRange,
   readAsset = runtimeOccurrenceAssetReader,
-  manifest = OCCURRENCE_SNAPSHOT,
+  manifest = runtimeOccurrenceSnapshot,
 }: ExplorerWorkspaceProps) {
   const { height: windowHeight } = useWindowDimensions();
   const { selectedSpecies } = useSpeciesSelection();
@@ -86,7 +87,8 @@ export function ExplorerWorkspace({
       <SafeAreaView style={styles.selectorSafeArea}>
         <StatusBar style="light" />
         <SpeciesSelector
-          onSpeciesPress={() => {
+          onSpeciesPress={(_species, month) => {
+            setTemporalFilter(month === undefined ? {} : { month });
             setActiveTab("records");
             setExplorerOpen(true);
           }}
@@ -338,8 +340,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
   },
   speciesThumb: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#d9dfdb" },
-  speciesControlText: { maxWidth: 155, color: "#1d262b", fontSize: 15, fontWeight: "800" },
-  chevron: { marginTop: -2, color: "#445057", fontSize: 14, fontWeight: "700" },
+  speciesControlText: { maxWidth: 155, color: "#1d262b", fontSize: 15, fontWeight: "700" },
+  chevron: { marginTop: -2, color: "#445057", fontSize: 14, fontWeight: "600" },
   zoomControls: {
     height: 40,
     flexDirection: "row",
@@ -367,7 +369,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  mapCountText: { color: "#47524c", fontSize: 11, fontWeight: "700" },
+  mapCountText: { color: "#47524c", fontSize: 11, fontWeight: "600" },
   bottomSheet: {
     position: "absolute",
     right: 0,
@@ -415,8 +417,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  tabText: { color: "#343d39", fontSize: 12, fontWeight: "700" },
-  activeTabText: { color: "#111714", fontWeight: "800" },
+  tabText: { color: "#343d39", fontSize: 12, fontWeight: "600" },
+  activeTabText: { color: "#111714", fontWeight: "700" },
   sheetScrollContent: { paddingTop: 12, paddingBottom: 26 },
   aboutButton: {
     alignSelf: "center",
@@ -427,11 +429,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  infoIcon: { color: "#3e89f7", fontSize: 15, fontWeight: "700" },
-  aboutButtonText: { color: "#3e89f7", fontSize: 12, fontWeight: "800" },
+  infoIcon: { color: "#3e89f7", fontSize: 15, fontWeight: "600" },
+  aboutButtonText: { color: "#3e89f7", fontSize: 12, fontWeight: "700" },
   predictionPanel: { paddingHorizontal: 8, paddingTop: 24 },
-  panelEyebrow: { color: "#778079", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
-  panelTitle: { marginTop: 7, color: "#1d2521", fontSize: 22, fontWeight: "800" },
+  panelEyebrow: { color: "#778079", fontSize: 10, fontWeight: "700", letterSpacing: 1.2 },
+  panelTitle: { marginTop: 7, color: "#1d2521", fontSize: 22, fontWeight: "700" },
   panelDescription: { marginTop: 8, color: "#5d6761", fontSize: 13, lineHeight: 19 },
   legendCard: {
     marginTop: 20,
@@ -442,7 +444,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.62)",
   },
   legendLabels: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  legendLabel: { color: "#39443e", fontSize: 12, fontWeight: "700" },
+  legendLabel: { color: "#39443e", fontSize: 12, fontWeight: "600" },
   legendBar: { height: 22, flexDirection: "row", overflow: "hidden", borderRadius: 11 },
   legendSegment: { flex: 1 },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(23,31,27,0.30)" },
@@ -467,7 +469,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     backgroundColor: "#ffffff",
   },
-  aboutHeaderTitle: { flex: 1, color: "#1d2521", fontSize: 17, fontWeight: "800", textAlign: "center" },
+  aboutHeaderTitle: { flex: 1, color: "#1d2521", fontSize: 17, fontWeight: "700", textAlign: "center" },
   modalHeaderSpacer: { width: 42 },
   aboutContent: { padding: 18, paddingBottom: 40 },
   dataNote: { marginTop: 16, color: "#69716c", fontSize: 12, lineHeight: 18 },

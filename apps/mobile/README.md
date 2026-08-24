@@ -9,9 +9,9 @@
 - **Clustering:** prepared per-species assets or vector tiles, with native map clustering
 - **Data loading:** compact, versioned assets generated from the frozen project snapshot
 
-The mobile application must not depend on live ALA requests during the demo. Python
-pipeline code prepares compact, versioned assets under `data/processed/`. The app reads
-only the selected species asset from its local bundle or approved app storage.
+The mobile application does not depend on live ALA requests during the demo. It includes
+a deterministic 600-record sample for each MVP species, generated from the frozen project
+snapshot, so maps work immediately without a local data server.
 
 MapLibre React Native contains native Android and iOS code, so the map requires an Expo
 development build and does not run inside Expo Go. The app config includes MapLibre's
@@ -21,17 +21,16 @@ Expo plugin for both platforms.
 
 ```bash
 npm ci
-npm run data:serve # from apps/mobile, serves local gitignored data on port 8765
 npm run ios       # macOS with Xcode
 npm run android   # Android Studio and an emulator/device
 npm run start     # reconnect an installed development build to Metro
 ```
 
-Copy the seven frozen GeoJSON files from the project's `Datasets` Drive folder into
-`data/processed/`, copy `.env.example` to `.env`, and set
-`EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL` to the asset server. For a physical phone,
-use the development computer's LAN IP instead of `localhost`. These large files stay
-gitignored.
+The bundled sample is the default. To test the complete frozen snapshot instead, copy
+the seven full GeoJSON files from the project's `Datasets` Drive folder into
+`data/processed/`, run `npm run data:serve`, copy `.env.example` to `.env`, and set
+`EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL` to that server. A physical phone must use the
+development computer's LAN IP instead of `localhost`. These large files stay gitignored.
 
 Adding or upgrading a native dependency requires rebuilding the development app with
 `npm run ios` or `npm run android`. Expo Go cannot load the MapLibre native module.
@@ -92,10 +91,11 @@ KAN-40 provides the occurrence data layer used by the next map task:
 - `useOccurrenceRecords.ts` exposes loading, ready, empty and error states with retry.
 - `OccurrenceDataStatus.tsx` renders accessible feedback for those states.
 
-The shared Google Drive folder is authenticated project storage, not a runtime data
-endpoint. KAN-26 should supply the loader with bundled assets or an approved hosted base
-URL, then pass the filtered collection into the MapLibre occurrence layer. This keeps
-the app independent of live ALA requests and avoids committing the large GeoJSON files.
+The shared Google Drive folder remains the source for the complete snapshot, not a
+runtime endpoint. `createRuntimeOccurrenceAssetReader(...)` uses the bundled authentic
+sample by default and switches to the complete files when an approved asset base URL is
+configured. This keeps the app independent of live ALA requests and avoids committing
+the large GeoJSON files.
 
 RTM-3 adds combinable year, month, and Australian-season filters. Filters reuse the
 loaded species snapshot and update the map, visible count, summary, and rankings without
