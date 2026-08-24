@@ -21,6 +21,13 @@ async function renderSelector() {
 }
 
 describe("SpeciesSelector", () => {
+  it("uses the generated AusMammal wordmark", async () => {
+    await renderSelector();
+
+    expect(screen.getByLabelText("AusMammal Explorer")).toBeTruthy();
+    expect(screen.queryByText("Australian Mammal Explorer")).toBeNull();
+  });
+
   it("shows all seven agreed MVP species", async () => {
     await renderSelector();
 
@@ -59,5 +66,26 @@ describe("SpeciesSelector", () => {
     expect(screen.getByRole("button", { name: /koala/i }).props.accessibilityState).toEqual({
       selected: false,
     });
+  });
+
+  it("lets the user choose a month in seasonal view and carries it into the map", async () => {
+    const onSpeciesPress = jest.fn();
+    await render(
+      <SpeciesProvider>
+        <SpeciesSelector initialMonth={8} onSpeciesPress={onSpeciesPress} />
+      </SpeciesProvider>,
+    );
+
+    await fireEvent.press(screen.getByRole("button", { name: "Seasonal view" }));
+    expect(screen.getByLabelText("Seasonal species view")).toBeTruthy();
+    expect(screen.getByText("Winter · August")).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Next month" }));
+    expect(screen.getByText("Spring · September")).toBeTruthy();
+
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Koala, September records" }),
+    );
+    expect(onSpeciesPress).toHaveBeenCalledWith(MVP_SPECIES[0], 9);
   });
 });

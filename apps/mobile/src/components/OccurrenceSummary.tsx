@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: "#346b50",
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
   },
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: "#102a1e",
     fontSize: 19,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   metrics: {
     marginTop: 16,
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   metricValue: {
     color: "#163c2c",
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   metricLabel: {
     marginTop: 3,

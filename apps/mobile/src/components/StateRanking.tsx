@@ -92,11 +92,11 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: "#346b50",
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  title: { marginTop: 5, color: "#163c2c", fontSize: 21, fontWeight: "800" },
+  title: { marginTop: 5, color: "#163c2c", fontSize: 21, fontWeight: "700" },
   description: { marginTop: 7, color: "#5a685f", fontSize: 13, lineHeight: 19 },
   message: {
     marginTop: 16,
@@ -108,11 +108,11 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   row: { marginTop: 16, flexDirection: "row", alignItems: "center", gap: 12 },
-  rank: { width: 20, color: "#346b50", fontSize: 14, fontWeight: "800" },
+  rank: { width: 20, color: "#346b50", fontSize: 14, fontWeight: "700" },
   rowBody: { flex: 1 },
   rowHeading: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
-  stateName: { flex: 1, color: "#263c30", fontSize: 14, fontWeight: "700" },
-  count: { color: "#163c2c", fontSize: 14, fontWeight: "800" },
+  stateName: { flex: 1, color: "#263c30", fontSize: 14, fontWeight: "600" },
+  count: { color: "#163c2c", fontSize: 14, fontWeight: "700" },
   barTrack: {
     height: 7,
     marginTop: 7,

@@ -83,12 +83,12 @@ const styles = StyleSheet.create({
     width: "100%",
     color: "#163c2c",
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   message: {
     color: "#294b3a",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   description: {
     width: "100%",
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   errorTitle: {
     color: "#712f25",
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   errorDescription: {
     marginTop: 6,
@@ -129,6 +129,6 @@ const styles = StyleSheet.create({
   retryText: {
     color: "#ffffff",
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
   },
 });

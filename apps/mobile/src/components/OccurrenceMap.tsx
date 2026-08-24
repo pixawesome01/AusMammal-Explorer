@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: "#ffffff",
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "700",
     textAlign: "center",
   },
   stateText: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   retryText: {
     color: "#163c2c",
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   attribution: {
     position: "absolute",
@@ -400,6 +400,6 @@ const styles = StyleSheet.create({
   recordCountText: {
     color: "#ffffff",
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
   },
 });
