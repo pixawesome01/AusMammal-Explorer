@@ -1,6 +1,7 @@
 import type { OccurrenceFeature, OccurrenceFeatureCollection } from "./occurrenceLoader";
 import {
   filterOccurrenceRecords,
+  getAustralianSeason,
   OccurrenceFilterError,
 } from "./occurrenceFilter";
 
@@ -30,8 +31,10 @@ const COLLECTION: OccurrenceFeatureCollection = {
   type: "FeatureCollection",
   features: [
     feature("0000000000000001", "Phascolarctos cinereus", "2024-01-01"),
+    feature("0000000000000005", "Phascolarctos cinereus", "2024-03-15"),
     feature("0000000000000002", "Phascolarctos cinereus", "2024-06-15"),
     feature("0000000000000003", "Phascolarctos cinereus", "2024-12-31"),
+    feature("0000000000000006", "Phascolarctos cinereus", "2025-06-15"),
     feature("0000000000000004", "Wallabia bicolor", "2024-06-15"),
   ],
 };
@@ -45,6 +48,7 @@ describe("filterOccurrenceRecords", () => {
 
     expect(result.features.map(({ id }) => id)).toEqual([
       "0000000000000001",
+      "0000000000000005",
       "0000000000000002",
       "0000000000000003",
     ]);
@@ -63,11 +67,37 @@ describe("filterOccurrenceRecords", () => {
     expect(afterJune.features.map(({ id }) => id)).toEqual([
       "0000000000000002",
       "0000000000000003",
+      "0000000000000006",
     ]);
     expect(beforeJune.features.map(({ id }) => id)).toEqual([
       "0000000000000001",
+      "0000000000000005",
       "0000000000000002",
     ]);
+  });
+
+  it("combines year, month and Australian season filters", () => {
+    expect(
+      filterOccurrenceRecords(COLLECTION, {
+        speciesId: "koala",
+        year: 2024,
+        season: "winter",
+      }).features.map(({ id }) => id),
+    ).toEqual(["0000000000000002"]);
+
+    expect(
+      filterOccurrenceRecords(COLLECTION, {
+        speciesId: "koala",
+        month: 6,
+      }).features.map(({ id }) => id),
+    ).toEqual(["0000000000000002", "0000000000000006"]);
+  });
+
+  it("uses Southern Hemisphere seasons", () => {
+    expect([12, 1, 2].map(getAustralianSeason)).toEqual(["summer", "summer", "summer"]);
+    expect([3, 4, 5].map(getAustralianSeason)).toEqual(["autumn", "autumn", "autumn"]);
+    expect([6, 7, 8].map(getAustralianSeason)).toEqual(["winter", "winter", "winter"]);
+    expect([9, 10, 11].map(getAustralianSeason)).toEqual(["spring", "spring", "spring"]);
   });
 
   it("returns an empty collection when no sightings match", () => {
@@ -102,6 +132,15 @@ describe("filterOccurrenceRecords", () => {
         dateRange: { from: "2025-01-01", to: "2024-01-01" },
       }),
     ).toThrow(OccurrenceFilterError);
+  });
+
+  it("rejects invalid year and month values", () => {
+    expect(() =>
+      filterOccurrenceRecords(COLLECTION, { speciesId: "koala", year: 2024.5 }),
+    ).toThrow("positive integer");
+    expect(() =>
+      filterOccurrenceRecords(COLLECTION, { speciesId: "koala", month: 13 }),
+    ).toThrow("from 1 to 12");
   });
 
   it("does not mutate the frozen source collection", () => {
