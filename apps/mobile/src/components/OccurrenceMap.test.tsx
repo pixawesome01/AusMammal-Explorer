@@ -79,7 +79,11 @@ describe("OccurrenceMap", () => {
     const { getByTestId } = await render(<OccurrenceMap speciesName="Koala" />);
 
     const camera = getByTestId("occurrence-map-camera");
-    expect(camera.props.initialViewState).toEqual({ center: [134.5, -25.5], zoom: 3.3 });
+    expect(camera.props.initialViewState).toEqual({
+      bounds: [110, -45, 155, -6],
+      padding: { top: 12, right: 12, bottom: 12, left: 12 },
+    });
+    expect(camera.props.minZoom).toBe(2);
     expect(camera.props.maxBounds).toEqual([110, -45, 155, -6]);
   });
 

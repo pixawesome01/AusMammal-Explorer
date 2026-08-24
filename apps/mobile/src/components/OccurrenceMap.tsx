@@ -24,8 +24,8 @@ import {
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 
-const AUSTRALIA_CENTRE: LngLat = [134.5, -25.5];
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
+const AUSTRALIA_VIEW_PADDING = { top: 12, right: 12, bottom: 12, left: 12 };
 export const MAP_GLYPHS_URL =
   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
@@ -161,8 +161,8 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
         <Camera
           ref={cameraRef}
           testID="occurrence-map-camera"
-          initialViewState={{ center: AUSTRALIA_CENTRE, zoom: 3.3 }}
-          minZoom={2.8}
+          initialViewState={{ bounds: AUSTRALIA_BOUNDS, padding: AUSTRALIA_VIEW_PADDING }}
+          minZoom={2}
           maxZoom={16}
           maxBounds={AUSTRALIA_BOUNDS}
         />
