@@ -1,4 +1,5 @@
 import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { AboutOccurrenceData } from "./src/components/AboutOccurrenceData";
@@ -6,8 +7,12 @@ import { OccurrenceDataStatus } from "./src/components/OccurrenceDataStatus";
 import { OccurrenceMap } from "./src/components/OccurrenceMap";
 import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
+import { TemporalFilters } from "./src/components/TemporalFilters";
 import { createRuntimeOccurrenceAssetReader } from "./src/data/occurrenceAssetReader";
-import type { OccurrenceDateRange } from "./src/data/occurrenceFilter";
+import type {
+  OccurrenceDateRange,
+  OccurrenceTemporalFilter,
+} from "./src/data/occurrenceFilter";
 import type { OccurrenceAssetReader } from "./src/data/occurrenceLoader";
 import {
   OCCURRENCE_SNAPSHOT,
@@ -30,9 +35,11 @@ export function ExplorerWorkspace({
   manifest = OCCURRENCE_SNAPSHOT,
 }: ExplorerWorkspaceProps) {
   const { selectedSpecies } = useSpeciesSelection();
+  const [temporalFilter, setTemporalFilter] = useState<OccurrenceTemporalFilter>({});
   const occurrenceState = useOccurrenceRecords({
     speciesId: selectedSpecies.id,
     dateRange,
+    temporalFilter,
     readAsset,
     manifest,
   });
@@ -59,6 +66,12 @@ export function ExplorerWorkspace({
             Explore {selectedSpecies.commonName} records
           </Text>
           <Text style={styles.scientificName}>{selectedSpecies.scientificName}</Text>
+
+          <TemporalFilters
+            coverage={manifest.files[selectedSpecies.id].coverage}
+            value={temporalFilter}
+            onChange={setTemporalFilter}
+          />
 
           <OccurrenceMap
             collection={occurrenceState.records?.collection}

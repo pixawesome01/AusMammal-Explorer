@@ -153,4 +153,42 @@ describe("ExplorerWorkspace species flow", () => {
 
     warning.mockRestore();
   });
+
+  it("updates map records for combined time filters and clears them", async () => {
+    const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const dates = ["2024-01-15", "2024-06-15", "2024-07-15", "2025-06-15"];
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: dates.length },
+      },
+    };
+    const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
+      type: "FeatureCollection",
+      features: dates.map((eventDate, index) => ({
+        ...featureFor(file.scientificName, index + 1),
+        properties: { ...featureFor(file.scientificName, index + 1).properties, eventDate },
+      })),
+    }));
+
+    await render(
+      <SpeciesProvider>
+        <ExplorerWorkspace readAsset={readAsset} manifest={manifest} />
+      </SpeciesProvider>,
+    );
+    await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+
+    await fireEvent.press(screen.getByRole("button", { name: "2024" }));
+    await waitFor(() => expect(screen.getByText("3 sightings found")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("button", { name: "June" }));
+    await waitFor(() => expect(screen.getByText("1 sighting found")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
+    expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
+    await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+    expect(readAsset).toHaveBeenCalledTimes(1);
+    warning.mockRestore();
+  });
 });
