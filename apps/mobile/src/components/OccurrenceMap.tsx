@@ -127,9 +127,13 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
       return;
     }
 
-    const zoom = await occurrenceSourceRef.current.getClusterExpansionZoom(target.clusterId);
-    if (Number.isFinite(zoom)) {
-      cameraRef.current.flyTo({ center: target.center, zoom, duration: 450 });
+    try {
+      const zoom = await occurrenceSourceRef.current.getClusterExpansionZoom(target.clusterId);
+      if (Number.isFinite(zoom)) {
+        cameraRef.current.flyTo({ center: target.center, zoom, duration: 450 });
+      }
+    } catch {
+      // Keep the current map position when the native source cannot resolve a cluster.
     }
   };
 
@@ -203,7 +207,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
               type="symbol"
               filter={["has", "point_count"]}
               layout={{
-                "text-field": ["get", "point_count_abbreviated"],
+                "text-field": ["to-string", ["get", "point_count"]],
                 "text-size": 12,
               }}
               paint={{ "text-color": "#ffffff" }}

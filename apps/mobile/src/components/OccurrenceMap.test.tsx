@@ -138,6 +138,9 @@ describe("OccurrenceMap", () => {
       "has",
       "point_count",
     ]);
+    expect(getByTestId("layer-occurrence-cluster-counts").props.layout).toMatchObject({
+      "text-field": ["to-string", ["get", "point_count"]],
+    });
     expect(getByTestId("layer-occurrence-points").props.filter).toEqual([
       "!",
       ["has", "point_count"],
@@ -187,6 +190,51 @@ describe("OccurrenceMap", () => {
       zoom: 8,
       duration: 450,
     });
+  });
+
+  it("keeps the current view when cluster expansion cannot be resolved", async () => {
+    mockGetClusterExpansionZoom.mockRejectedValue(new Error("cluster unavailable"));
+    const collection = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          id: "0123456789abcdef",
+          geometry: {
+            type: "Point" as const,
+            coordinates: [144.9631, -37.8136] as [number, number],
+          },
+          properties: {
+            species: "Phascolarctos cinereus",
+            eventDate: "2024-06-15",
+            basisOfRecord: null,
+            license: "CC-BY 4.0 (Int)",
+            coordinateUncertaintyM: null,
+            uncertaintyUnknown: true,
+            observationCount: 1,
+            geographicOutlier: false,
+          },
+        },
+      ],
+    };
+    const { getByTestId } = await render(
+      <OccurrenceMap collection={collection} speciesName="Koala" />,
+    );
+
+    await fireEvent(getByTestId("source-occurrence-records"), "press", {
+      nativeEvent: {
+        features: [
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [145, -37.8] },
+            properties: { cluster: true, cluster_id: 42, point_count: 18 },
+          },
+        ],
+      },
+    });
+
+    expect(mockGetClusterExpansionZoom).toHaveBeenCalledWith(42);
+    expect(mockFlyTo).not.toHaveBeenCalled();
   });
 
   it("ignores individual points and malformed cluster events", () => {
