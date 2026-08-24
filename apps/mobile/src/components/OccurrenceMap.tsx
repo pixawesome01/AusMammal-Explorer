@@ -11,7 +11,7 @@ import {
   type LngLatBounds,
   type StyleSpecification,
 } from "@maplibre/maplibre-react-native";
-import { useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -63,6 +63,13 @@ type MapState = "loading" | "ready" | "error";
 type OccurrenceMapProps = {
   speciesName: string;
   collection?: OccurrenceFeatureCollection;
+  fullScreen?: boolean;
+  showRecordCount?: boolean;
+};
+
+export type OccurrenceMapHandle = {
+  zoomIn: () => void;
+  zoomOut: () => void;
 };
 
 export type ClusterPressTarget = {
@@ -111,13 +118,35 @@ export function getResponsiveMapHeight(windowHeight: number) {
   return Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
 }
 
-export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
+export const OccurrenceMap = forwardRef<OccurrenceMapHandle, OccurrenceMapProps>(
+function OccurrenceMap(
+  { speciesName, collection, fullScreen = false, showRecordCount = true },
+  ref,
+) {
   const { height: windowHeight } = useWindowDimensions();
   const cameraRef = useRef<CameraRef>(null);
   const occurrenceSourceRef = useRef<GeoJSONSourceRef>(null);
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
+  const [zoom, setZoom] = useState(3);
   const mapHeight = getResponsiveMapHeight(windowHeight);
+
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => {
+      setZoom((currentZoom) => {
+        const nextZoom = Math.min(16, currentZoom + 1);
+        cameraRef.current?.zoomTo(nextZoom, { duration: 300 });
+        return nextZoom;
+      });
+    },
+    zoomOut: () => {
+      setZoom((currentZoom) => {
+        const nextZoom = Math.max(2, currentZoom - 1);
+        cameraRef.current?.zoomTo(nextZoom, { duration: 300 });
+        return nextZoom;
+      });
+    },
+  }));
 
   const retry = () => {
     setMapState("loading");
@@ -133,6 +162,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
     try {
       const zoom = await occurrenceSourceRef.current.getClusterExpansionZoom(target.clusterId);
       if (Number.isFinite(zoom)) {
+        setZoom(zoom);
         cameraRef.current.flyTo({ center: target.center, zoom, duration: 450 });
       }
     } catch {
@@ -143,7 +173,10 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
   return (
     <View
       accessibilityLabel={`Occurrence map for ${speciesName}`}
-      style={[styles.container, { height: mapHeight }]}
+      style={[
+        styles.container,
+        fullScreen ? styles.fullScreenContainer : { height: mapHeight },
+      ]}
     >
       <Map
         key={mapKey}
@@ -157,6 +190,11 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
         logo={false}
         onDidFailLoadingMap={() => setMapState("error")}
         onDidFinishLoadingMap={() => setMapState("ready")}
+        onRegionDidChange={(event) => {
+          if (Number.isFinite(event.nativeEvent.zoom)) {
+            setZoom(event.nativeEvent.zoom);
+          }
+        }}
       >
         <Camera
           ref={cameraRef}
@@ -266,7 +304,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
         <Text style={styles.attributionText}>© OpenStreetMap contributors</Text>
       </Pressable>
 
-      {collection ? (
+      {collection && showRecordCount ? (
         <View accessibilityLiveRegion="polite" style={styles.recordCount}>
           <Text style={styles.recordCountText} testID="map-record-count">
             {collection.features.length.toLocaleString()} mapped
@@ -275,7 +313,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -289,6 +327,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 18,
     elevation: 5,
+  },
+  fullScreenContainer: {
+    flex: 1,
+    minHeight: 0,
+    borderRadius: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   map: {
     flex: 1,

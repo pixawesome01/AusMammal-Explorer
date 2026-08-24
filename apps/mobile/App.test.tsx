@@ -84,26 +84,36 @@ describe("ExplorerWorkspace species flow", () => {
 
     for (const [index, species] of MVP_SPECIES.entries()) {
       if (index > 0) {
-        await fireEvent.press(screen.getByRole("button", { name: new RegExp(species.commonName, "i") }));
+        await fireEvent.press(
+          screen.getByRole("button", { name: "Back to species selection" }),
+        );
       }
+      await fireEvent.press(
+        screen.getByRole("button", { name: new RegExp(species.commonName, "i") }),
+      );
 
       await waitFor(() =>
-        expect(
-          screen.getByLabelText(`Occurrence summary for ${species.commonName}`),
-        ).toBeTruthy(),
+        expect(screen.getByLabelText(`Occurrence map for ${species.commonName}`)).toBeTruthy(),
       );
+      expect(screen.getByText(`${index + 1} records shown`)).toBeTruthy();
+      expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(
+        index + 1,
+      );
+
+      await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
       await waitFor(() =>
         expect(screen.getByTestId("mapped-record-count").props.children).toBe(
           (index + 1).toLocaleString(),
         ),
       );
+      expect(screen.getByLabelText(`Occurrence summary for ${species.commonName}`)).toBeTruthy();
 
-      expect(screen.getByText(`Explore ${species.commonName} records`)).toBeTruthy();
-      expect(screen.getByLabelText(`Occurrence map for ${species.commonName}`)).toBeTruthy();
+      await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
+      await fireEvent.press(screen.getByRole("button", { name: "About this data" }));
       expect(screen.getByLabelText(`About ${species.commonName} occurrence data`)).toBeTruthy();
       expect(screen.getByText(`Scientific name: ${species.scientificName}`)).toBeTruthy();
-      expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(
-        index + 1,
+      await fireEvent.press(
+        screen.getByRole("button", { name: "Close about this data" }),
       );
     }
 
@@ -141,6 +151,8 @@ describe("ExplorerWorkspace species flow", () => {
       </SpeciesProvider>,
     );
 
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+
     await waitFor(() => expect(screen.getByText("2 sightings found")).toBeTruthy());
 
     const mappedFeatures = screen.getByTestId("source-occurrence-records").props.data.features;
@@ -148,7 +160,8 @@ describe("ExplorerWorkspace species flow", () => {
       "2024-01-15",
       "2024-06-15",
     ]);
-    expect(screen.getByTestId("map-record-count").props.children).toEqual(["2", " mapped"]);
+    expect(screen.getByText("2 records shown")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByTestId("mapped-record-count").props.children).toBe("2");
 
     warning.mockRestore();
@@ -177,19 +190,23 @@ describe("ExplorerWorkspace species flow", () => {
         <ExplorerWorkspace readAsset={readAsset} manifest={manifest} />
       </SpeciesProvider>,
     );
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
     await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
-    expect(screen.getByTestId("state-count-4").props.children).toBe("4");
 
     await fireEvent.press(screen.getByRole("button", { name: "2024" }));
     await waitFor(() => expect(screen.getByText("3 sightings found")).toBeTruthy());
     await fireEvent.press(screen.getByRole("button", { name: "June" }));
     await waitFor(() => expect(screen.getByText("1 sighting found")).toBeTruthy());
-    expect(screen.getByTestId("state-count-4").props.children).toBe("1");
     await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
 
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.getByTestId("state-count-4").props.children).toBe("1");
+    await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
+
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
     await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByTestId("state-count-4").props.children).toBe("4");
     expect(readAsset).toHaveBeenCalledTimes(1);
     warning.mockRestore();

@@ -36,13 +36,15 @@ type TemporalFiltersProps = {
 
 type FilterChipProps = {
   label: string;
+  displayLabel?: string;
   selected: boolean;
   onPress: () => void;
 };
 
-function FilterChip({ label, selected, onPress }: FilterChipProps) {
+function FilterChip({ label, displayLabel = label, selected, onPress }: FilterChipProps) {
   return (
     <Pressable
+      accessibilityLabel={label}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
@@ -52,7 +54,9 @@ function FilterChip({ label, selected, onPress }: FilterChipProps) {
         pressed && styles.chipPressed,
       ]}
     >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+        {displayLabel}
+      </Text>
     </Pressable>
   );
 }
@@ -93,6 +97,7 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
       <FilterRow>
         <FilterChip
           label="All years"
+          displayLabel="All yrs"
           selected={value.year === undefined}
           onPress={() => onChange({ ...value, year: undefined })}
         />
@@ -117,6 +122,7 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
           <FilterChip
             key={month}
             label={month}
+            displayLabel={month.slice(0, 3)}
             selected={value.month === index + 1}
             onPress={() => onChange({ ...value, month: index + 1 })}
           />
@@ -145,42 +151,40 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 18,
-    paddingVertical: 16,
-    backgroundColor: "#e7efe9",
-    borderRadius: 16,
+    paddingBottom: 4,
+    backgroundColor: "transparent",
   },
   headingRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
   },
   headingCopy: { flex: 1 },
-  title: { color: "#163c2c", fontSize: 20, fontWeight: "800" },
-  helper: { marginTop: 3, color: "#5a685f", fontSize: 12 },
-  clearText: { color: "#1d6846", fontSize: 13, fontWeight: "800" },
+  title: { color: "#1c242a", fontSize: 17, fontWeight: "800" },
+  helper: { marginTop: 2, color: "#71797e", fontSize: 11 },
+  clearText: { color: "#3783ee", fontSize: 12, fontWeight: "800" },
   label: {
-    marginTop: 15,
-    marginBottom: 7,
-    paddingHorizontal: 16,
-    color: "#476052",
-    fontSize: 12,
+    marginTop: 13,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+    color: "#4f565b",
+    fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
   },
-  filterRow: { gap: 8, paddingHorizontal: 16 },
+  filterRow: { gap: 6, paddingHorizontal: 4 },
   chip: {
-    minHeight: 38,
+    minWidth: 48,
+    minHeight: 32,
     justifyContent: "center",
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: "#aebbb1",
-    borderRadius: 19,
-    backgroundColor: "#ffffff",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: "rgba(211, 214, 215, 0.82)",
   },
-  chipSelected: { borderColor: "#1e6847", backgroundColor: "#1e6847" },
+  chipSelected: { backgroundColor: "#3e89f7" },
   chipPressed: { opacity: 0.72 },
-  chipText: { color: "#30483a", fontSize: 13, fontWeight: "700" },
+  chipText: { color: "#25292c", fontSize: 12, fontWeight: "700" },
   chipTextSelected: { color: "#ffffff" },
 });

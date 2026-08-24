@@ -1,4 +1,5 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { createRef } from "react";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import {
   countClusteredRecords,
@@ -6,9 +7,11 @@ import {
   getResponsiveMapHeight,
   MAP_GLYPHS_URL,
   OccurrenceMap,
+  type OccurrenceMapHandle,
 } from "./OccurrenceMap";
 
 const mockFlyTo = jest.fn();
+const mockZoomTo = jest.fn();
 const mockGetClusterExpansionZoom = jest.fn();
 
 jest.mock("@maplibre/maplibre-react-native", () => {
@@ -33,7 +36,7 @@ jest.mock("@maplibre/maplibre-react-native", () => {
         children,
       ),
     Camera: ({ ref, ...props }: Record<string, unknown> & { ref?: import("react").Ref<unknown> }) => {
-      mockReact.useImperativeHandle(ref, () => ({ flyTo: mockFlyTo }));
+      mockReact.useImperativeHandle(ref, () => ({ flyTo: mockFlyTo, zoomTo: mockZoomTo }));
       return mockReact.createElement(MockView, props);
     },
     GeoJSONSource: ({
@@ -66,6 +69,7 @@ jest.mock("@maplibre/maplibre-react-native", () => {
 describe("OccurrenceMap", () => {
   beforeEach(() => {
     mockFlyTo.mockClear();
+    mockZoomTo.mockClear();
     mockGetClusterExpansionZoom.mockReset().mockResolvedValue(8);
   });
 
@@ -94,6 +98,20 @@ describe("OccurrenceMap", () => {
       glyphs: MAP_GLYPHS_URL,
     });
     expect(MAP_GLYPHS_URL).toMatch(/^https:\/\//);
+  });
+
+  it("exposes the mock-up zoom controls through its ref", async () => {
+    const ref = createRef<OccurrenceMapHandle>();
+    await render(<OccurrenceMap ref={ref} speciesName="Koala" />);
+
+    await act(async () => {
+      ref.current?.zoomIn();
+    });
+    expect(mockZoomTo).toHaveBeenLastCalledWith(4, { duration: 300 });
+    await act(async () => {
+      ref.current?.zoomOut();
+    });
+    expect(mockZoomTo).toHaveBeenLastCalledWith(3, { duration: 300 });
   });
 
   it("shows loading and error states and supports retry", async () => {
