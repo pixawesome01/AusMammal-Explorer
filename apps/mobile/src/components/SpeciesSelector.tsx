@@ -49,10 +49,10 @@ export function SpeciesSelector({
     <View accessibilityLabel="MVP species selector" style={styles.screen}>
       <View style={styles.header}>
         <Image
-          accessibilityLabel="AusMammal Explorer"
+          accessibilityLabel="AusMammal"
           accessibilityRole="image"
           resizeMode="contain"
-          source={require("../../assets/branding/ausmammal-explorer-logo.png")}
+          source={require("../../assets/branding/ausmammal-logo.png")}
           style={styles.logo}
         />
         <Text style={styles.description}>Select one species you want to observe</Text>
@@ -153,9 +153,9 @@ export function SpeciesSelector({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: "hidden", backgroundColor: "#27313b" },
-  header: { alignItems: "center", paddingHorizontal: 18, paddingTop: 10, paddingBottom: 14 },
-  logo: { width: "100%", maxWidth: 338, height: 104 },
-  description: { marginTop: -8, color: "#d4d9df", fontSize: 13, fontWeight: "400", textAlign: "center" },
+  header: { alignItems: "center", paddingHorizontal: 18, paddingTop: 16, paddingBottom: 14 },
+  logo: { width: "100%", maxWidth: 326, height: 72, alignSelf: "center" },
+  description: { color: "#d4d9df", fontSize: 13, fontWeight: "400", textAlign: "center" },
   toolbar: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
   searchBox: {
     flex: 1, height: 42, flexDirection: "row", alignItems: "center", paddingHorizontal: 12,

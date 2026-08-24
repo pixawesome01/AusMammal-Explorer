@@ -24,7 +24,7 @@ describe("SpeciesSelector", () => {
   it("uses the generated AusMammal wordmark", async () => {
     await renderSelector();
 
-    expect(screen.getByLabelText("AusMammal Explorer")).toBeTruthy();
+    expect(screen.getByLabelText("AusMammal")).toBeTruthy();
     expect(screen.queryByText("Australian Mammal Explorer")).toBeNull();
   });
 
