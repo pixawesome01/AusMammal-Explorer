@@ -24,7 +24,9 @@ describe("SpeciesSelector", () => {
   it("shows all seven agreed MVP species", async () => {
     await renderSelector();
 
-    const options = screen.getAllByRole("button");
+    const options = screen
+      .getAllByRole("button")
+      .filter((option) => option.props.accessibilityHint?.includes("occurrence explorer"));
     expect(options).toHaveLength(7);
 
     for (const species of MVP_SPECIES) {
