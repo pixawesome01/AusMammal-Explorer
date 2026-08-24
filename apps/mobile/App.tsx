@@ -7,6 +7,7 @@ import { OccurrenceDataStatus } from "./src/components/OccurrenceDataStatus";
 import { OccurrenceMap } from "./src/components/OccurrenceMap";
 import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
+import { StateRanking } from "./src/components/StateRanking";
 import { TemporalFilters } from "./src/components/TemporalFilters";
 import { createRuntimeOccurrenceAssetReader } from "./src/data/occurrenceAssetReader";
 import type {
@@ -83,6 +84,11 @@ export function ExplorerWorkspace({
             state={occurrenceState}
           />
           <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
+          <StateRanking
+            collection={occurrenceState.records?.collection}
+            speciesName={selectedSpecies.commonName}
+            status={occurrenceState.status}
+          />
           <AboutOccurrenceData species={selectedSpecies} state={occurrenceState} />
 
           <Text style={styles.dataNote}>

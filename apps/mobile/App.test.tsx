@@ -178,16 +178,19 @@ describe("ExplorerWorkspace species flow", () => {
       </SpeciesProvider>,
     );
     await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+    expect(screen.getByTestId("state-count-4").props.children).toBe("4");
 
     await fireEvent.press(screen.getByRole("button", { name: "2024" }));
     await waitFor(() => expect(screen.getByText("3 sightings found")).toBeTruthy());
     await fireEvent.press(screen.getByRole("button", { name: "June" }));
     await waitFor(() => expect(screen.getByText("1 sighting found")).toBeTruthy());
+    expect(screen.getByTestId("state-count-4").props.children).toBe("1");
     await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
     await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+    expect(screen.getByTestId("state-count-4").props.children).toBe("4");
     expect(readAsset).toHaveBeenCalledTimes(1);
     warning.mockRestore();
   });
