@@ -4,6 +4,7 @@ import {
   countClusteredRecords,
   getClusterPressTarget,
   getResponsiveMapHeight,
+  MAP_GLYPHS_URL,
   OccurrenceMap,
 } from "./OccurrenceMap";
 
@@ -82,6 +83,15 @@ describe("OccurrenceMap", () => {
     expect(camera.props.maxBounds).toEqual([110, -45, 155, -6]);
   });
 
+  it("provides an absolute glyph source for cluster-count labels", async () => {
+    const { getByTestId } = await render(<OccurrenceMap speciesName="Koala" />);
+
+    expect(getByTestId("occurrence-map").props.mapStyle).toMatchObject({
+      glyphs: MAP_GLYPHS_URL,
+    });
+    expect(MAP_GLYPHS_URL).toMatch(/^https:\/\//);
+  });
+
   it("shows loading and error states and supports retry", async () => {
     const { getByRole, getByTestId } = await render(<OccurrenceMap speciesName="Koala" />);
 
@@ -140,6 +150,7 @@ describe("OccurrenceMap", () => {
     ]);
     expect(getByTestId("layer-occurrence-cluster-counts").props.layout).toMatchObject({
       "text-field": ["to-string", ["get", "point_count"]],
+      "text-font": ["Open Sans Regular"],
     });
     expect(getByTestId("layer-occurrence-points").props.filter).toEqual([
       "!",

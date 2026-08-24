@@ -26,6 +26,8 @@ import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 
 const AUSTRALIA_CENTRE: LngLat = [134.5, -25.5];
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
+export const MAP_GLYPHS_URL =
+  "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
 TransformRequestManager.addHeader({
   id: "ausmammal-osm-user-agent",
@@ -37,6 +39,7 @@ TransformRequestManager.addHeader({
 
 const OPENSTREETMAP_STYLE: StyleSpecification = {
   version: 8,
+  glyphs: MAP_GLYPHS_URL,
   sources: {
     openStreetMap: {
       type: "raster",
@@ -208,6 +211,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
               filter={["has", "point_count"]}
               layout={{
                 "text-field": ["to-string", ["get", "point_count"]],
+                "text-font": ["Open Sans Regular"],
                 "text-size": 12,
               }}
               paint={{ "text-color": "#ffffff" }}
