@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "expo start --dev-client",
+    "start:demo": "expo start --dev-client --no-dev --minify",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit --pretty false",

@@ -26,6 +26,7 @@ describe("SpeciesSelector", () => {
 
     expect(screen.getByLabelText("AusMammal")).toBeTruthy();
     expect(screen.queryByText("Australian Mammal Explorer")).toBeNull();
+    expect(screen.queryByText(/want to observe/i)).toBeNull();
   });
 
   it("shows all seven agreed MVP species", async () => {

@@ -24,7 +24,12 @@ npm ci
 npm run ios       # macOS with Xcode
 npm run android   # Android Studio and an emulator/device
 npm run start     # reconnect an installed development build to Metro
+npm run start:demo # production-mode bundle without Fast Refresh banners
 ```
+
+Use `npm run start:demo` for presentations. The blue `Refreshing...` banner belongs to
+Expo Fast Refresh in development mode; it is not rendered by the app or included in a
+production build.
 
 The bundled sample is the default. To test the complete frozen snapshot instead, copy
 the seven full GeoJSON files from the project's `Datasets` Drive folder into
