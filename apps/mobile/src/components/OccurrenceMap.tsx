@@ -211,7 +211,7 @@ export function OccurrenceMap({ speciesName, collection }: OccurrenceMapProps) {
               filter={["has", "point_count"]}
               layout={{
                 "text-field": ["to-string", ["get", "point_count"]],
-                "text-font": ["Open Sans Regular"],
+                "text-font": ["Open Sans Semibold"],
                 "text-size": 12,
               }}
               paint={{ "text-color": "#ffffff" }}

@@ -154,7 +154,7 @@ describe("OccurrenceMap", () => {
     ]);
     expect(getByTestId("layer-occurrence-cluster-counts").props.layout).toMatchObject({
       "text-field": ["to-string", ["get", "point_count"]],
-      "text-font": ["Open Sans Regular"],
+      "text-font": ["Open Sans Semibold"],
     });
     expect(getByTestId("layer-occurrence-points").props.filter).toEqual([
       "!",
