@@ -105,6 +105,15 @@ RTM-4 ranks the filtered records by state or territory. Point-to-state assignmen
 the compact, bundled ABS ASGS Edition 3 (2021) state boundaries in
 `src/data/absStates2021.json`; records outside those boundaries are reported separately.
 
+The Insights tab calculates the selected species' monthly pattern from the loaded ALA
+records. Its temperature and rainfall charts use NASA POWER 2001–2020 climate normals,
+averaged across 12 public Australian city locations; they are an Australia-wide reference,
+not weather measured at occurrence coordinates.
+
+Until the planned habitat-suitability model is shipped, Prediction visualises historical
+occurrence density as a heatmap. The interface labels it as record density and does not
+present it as a guaranteed sighting or a model probability.
+
 The current standard OpenStreetMap raster endpoint is for modest, interactive MVP use
 only. It is identified with the app's user agent and must not be used for bulk or
 offline downloads. Choose an appropriate hosted or self-managed tile provider before a

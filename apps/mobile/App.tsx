@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { AboutOccurrenceData } from "./src/components/AboutOccurrenceData";
+import { EnvironmentalInsights } from "./src/components/EnvironmentalInsights";
 import { OccurrenceDataStatus } from "./src/components/OccurrenceDataStatus";
 import {
   OccurrenceMap,
@@ -51,6 +52,36 @@ const TABS: { id: ExplorerTab; label: string }[] = [
   { id: "prediction", label: "Prediction" },
   { id: "insights", label: "Insights" },
 ];
+
+type ExplorerTabsProps = {
+  activeTab: ExplorerTab;
+  onChange: (tab: ExplorerTab) => void;
+};
+
+function ExplorerTabs({ activeTab, onChange }: ExplorerTabsProps) {
+  return (
+    <View accessibilityRole="tablist" style={styles.tabBar}>
+      {TABS.map((tab) => {
+        const selected = activeTab === tab.id;
+        return (
+          <Pressable
+            key={tab.id}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(tab.id)}
+            style={({ pressed }) => [
+              styles.tab,
+              selected && styles.activeTab,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.tabText, selected && styles.activeTabText]}>{tab.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export function ExplorerWorkspace({
   dateRange,
@@ -105,6 +136,7 @@ export function ExplorerWorkspace({
           ref={mapRef}
           collection={occurrenceState.records?.collection}
           fullScreen
+          mode={activeTab === "prediction" ? "prediction" : "records"}
           showRecordCount={false}
           speciesName={selectedSpecies.commonName}
         />
@@ -154,99 +186,88 @@ export function ExplorerWorkspace({
             </View>
           </View>
 
-          <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
-            <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
-          </View>
-
-          <View style={[styles.bottomSheet, { height: sheetHeight }]}>
-            <View style={styles.sheetHandle} />
-            <View accessibilityRole="tablist" style={styles.tabBar}>
-              {TABS.map((tab) => {
-                const selected = activeTab === tab.id;
-                return (
-                  <Pressable
-                    key={tab.id}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected }}
-                    onPress={() => setActiveTab(tab.id)}
-                    style={({ pressed }) => [
-                      styles.tab,
-                      selected && styles.activeTab,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={[styles.tabText, selected && styles.activeTabText]}>
-                      {tab.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {activeTab === "records" ? (
-              <ScrollView
-                contentContainerStyle={styles.sheetScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <TemporalFilters
-                  coverage={manifest.files[selectedSpecies.id].coverage}
-                  onChange={setTemporalFilter}
-                  value={temporalFilter}
-                />
-                <OccurrenceDataStatus
-                  speciesName={selectedSpecies.commonName}
-                  state={occurrenceState}
-                />
-                <Pressable
-                  accessibilityLabel="About this data"
-                  accessibilityRole="button"
-                  onPress={() => setAboutOpen(true)}
-                  style={({ pressed }) => [styles.aboutButton, pressed && styles.pressed]}
-                >
-                  <Text style={styles.infoIcon}>ⓘ</Text>
-                  <Text style={styles.aboutButtonText}>About this data</Text>
-                </Pressable>
-              </ScrollView>
-            ) : null}
-
-            {activeTab === "prediction" ? (
-              <View style={styles.predictionPanel}>
-                <Text style={styles.panelEyebrow}>FUTURE FEATURE</Text>
-                <Text accessibilityRole="header" style={styles.panelTitle}>
-                  Potential observation areas
-                </Text>
-                <Text style={styles.panelDescription}>
-                  A pre-computed suitability estimate is planned for a later sprint. It will not
-                  guarantee a sighting.
-                </Text>
-                <View accessibilityLabel="Suitability legend preview" style={styles.legendCard}>
-                  <View style={styles.legendLabels}>
-                    <Text style={styles.legendLabel}>Lower</Text>
-                    <Text style={styles.legendLabel}>Higher</Text>
-                  </View>
-                  <View style={styles.legendBar}>
-                    {["#6196c9", "#75c5a1", "#a4e66f", "#ecea72", "#ee956d"].map((color) => (
-                      <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
-                    ))}
-                  </View>
-                </View>
+          {activeTab === "prediction" ? (
+            <View accessibilityLabel="Historical density legend" style={styles.predictionLegend}>
+              <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
+                Potential observation areas
+              </Text>
+              <View style={styles.legendLabels}>
+                <Text style={styles.legendLabel}>Lower</Text>
+                <Text style={styles.legendLabel}>Higher</Text>
               </View>
-            ) : null}
+              <View style={styles.legendBar}>
+                {["#4f8fd2", "#52cf9a", "#a4eb66", "#f2dc5f", "#ee7c58"].map(
+                  (color) => (
+                    <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
+                  ),
+                )}
+              </View>
+              <Text style={styles.predictionLegendNote}>
+                Historical record density · not a sighting guarantee
+              </Text>
+            </View>
+          ) : (
+            <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
+              <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
+            </View>
+          )}
 
-            {activeTab === "insights" ? (
-              <ScrollView
-                contentContainerStyle={styles.sheetScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
-                <StateRanking
-                  collection={occurrenceState.records?.collection}
-                  speciesName={selectedSpecies.commonName}
-                  status={occurrenceState.status}
-                />
-              </ScrollView>
-            ) : null}
-          </View>
+          {activeTab === "prediction" ? (
+            <View style={styles.predictionDock}>
+              <View style={styles.sheetHandle} />
+              <ExplorerTabs activeTab={activeTab} onChange={setActiveTab} />
+            </View>
+          ) : (
+            <View style={[styles.bottomSheet, { height: sheetHeight }]}>
+              <View style={styles.sheetHandle} />
+              <ExplorerTabs activeTab={activeTab} onChange={setActiveTab} />
+
+              {activeTab === "records" ? (
+                <ScrollView
+                  contentContainerStyle={styles.sheetScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <TemporalFilters
+                    coverage={manifest.files[selectedSpecies.id].coverage}
+                    onChange={setTemporalFilter}
+                    value={temporalFilter}
+                  />
+                  <OccurrenceDataStatus
+                    speciesName={selectedSpecies.commonName}
+                    state={occurrenceState}
+                  />
+                  <Pressable
+                    accessibilityLabel="About this data"
+                    accessibilityRole="button"
+                    onPress={() => setAboutOpen(true)}
+                    style={({ pressed }) => [styles.aboutButton, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.infoIcon}>ⓘ</Text>
+                    <Text style={styles.aboutButtonText}>About this data</Text>
+                  </Pressable>
+                </ScrollView>
+              ) : null}
+
+              {activeTab === "insights" ? (
+                <ScrollView
+                  contentContainerStyle={styles.sheetScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <EnvironmentalInsights
+                    collection={occurrenceState.records?.collection}
+                    speciesName={selectedSpecies.commonName}
+                    status={occurrenceState.status}
+                  />
+                  <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
+                  <StateRanking
+                    collection={occurrenceState.records?.collection}
+                    speciesName={selectedSpecies.commonName}
+                    status={occurrenceState.status}
+                  />
+                </ScrollView>
+              ) : null}
+            </View>
+          )}
         </View>
       </View>
 
@@ -431,22 +452,49 @@ const styles = StyleSheet.create({
   },
   infoIcon: { color: "#3e89f7", fontSize: 15, fontWeight: "600" },
   aboutButtonText: { color: "#3e89f7", fontSize: 12, fontWeight: "700" },
-  predictionPanel: { paddingHorizontal: 8, paddingTop: 24 },
-  panelEyebrow: { color: "#778079", fontSize: 10, fontWeight: "700", letterSpacing: 1.2 },
-  panelTitle: { marginTop: 7, color: "#1d2521", fontSize: 22, fontWeight: "700" },
-  panelDescription: { marginTop: 8, color: "#5d6761", fontSize: 13, lineHeight: 19 },
-  legendCard: {
-    marginTop: 20,
-    padding: 14,
+  predictionLegend: {
+    position: "absolute",
+    top: 72,
+    right: 22,
+    left: 22,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 9,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.8)",
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.62)",
+    borderColor: "rgba(255,255,255,0.78)",
+    borderRadius: 24,
+    backgroundColor: "rgba(250,252,250,0.89)",
+    shadowColor: "#54645b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  legendLabels: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  legendLabel: { color: "#39443e", fontSize: 12, fontWeight: "600" },
-  legendBar: { height: 22, flexDirection: "row", overflow: "hidden", borderRadius: 11 },
+  predictionLegendTitle: { color: "#26342d", fontSize: 15, fontWeight: "600", textAlign: "center" },
+  legendLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 7, marginBottom: 4 },
+  legendLabel: { color: "#53605a", fontSize: 10, fontWeight: "500" },
+  legendBar: { height: 15, flexDirection: "row", overflow: "hidden", borderRadius: 8 },
   legendSegment: { flex: 1 },
+  predictionLegendNote: { marginTop: 6, color: "#6b746f", fontSize: 9, textAlign: "center" },
+  predictionDock: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    left: 12,
+    overflow: "hidden",
+    paddingTop: 7,
+    paddingHorizontal: 10,
+    paddingBottom: 9,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.76)",
+    borderRadius: 28,
+    backgroundColor: "rgba(242,247,244,0.91)",
+    shadowColor: "#4e5d55",
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.17,
+    shadowRadius: 17,
+    elevation: 14,
+  },
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(23,31,27,0.30)" },
   aboutSheet: {
     height: "78%",

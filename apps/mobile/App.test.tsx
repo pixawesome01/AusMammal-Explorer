@@ -211,4 +211,38 @@ describe("ExplorerWorkspace species flow", () => {
     expect(readAsset).toHaveBeenCalledTimes(1);
     warning.mockRestore();
   });
+
+  it("collapses prediction into a map overlay and exposes the insights charts", async () => {
+    const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
+      type: "FeatureCollection",
+      features: [featureFor(file.scientificName, 1)],
+    }));
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: 1 },
+      },
+    };
+
+    await render(
+      <SpeciesProvider>
+        <ExplorerWorkspace readAsset={readAsset} manifest={manifest} />
+      </SpeciesProvider>,
+    );
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    await waitFor(() => expect(screen.getByTestId("source-occurrence-records")).toBeTruthy());
+
+    await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
+    expect(screen.getByLabelText("Historical density legend")).toBeTruthy();
+    expect(screen.getByTestId("source-prediction-density")).toBeTruthy();
+    expect(screen.queryByText("FUTURE FEATURE")).toBeNull();
+
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.getByLabelText("Monthly occurrence pattern for Koala")).toBeTruthy();
+    expect(screen.getByLabelText("Typical monthly temperature chart")).toBeTruthy();
+    expect(screen.getByLabelText("Typical daily rainfall chart")).toBeTruthy();
+    warning.mockRestore();
+  });
 });

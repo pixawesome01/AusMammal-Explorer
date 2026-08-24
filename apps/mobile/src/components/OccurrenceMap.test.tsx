@@ -180,6 +180,40 @@ describe("OccurrenceMap", () => {
     ]);
   });
 
+  it("switches records to a historical density heatmap in prediction mode", async () => {
+    const collection = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          id: "0123456789abcdef",
+          geometry: {
+            type: "Point" as const,
+            coordinates: [153.0281, -27.4705] as [number, number],
+          },
+          properties: {
+            species: "Phascolarctos cinereus",
+            eventDate: "2026-08-04",
+            basisOfRecord: "HUMAN_OBSERVATION",
+            license: "CC-BY 4.0 (Int)",
+            coordinateUncertaintyM: 10,
+            uncertaintyUnknown: false,
+            observationCount: 1,
+            geographicOutlier: false,
+          },
+        },
+      ],
+    };
+    const { getByLabelText, getByTestId, queryByTestId } = await render(
+      <OccurrenceMap collection={collection} mode="prediction" speciesName="Koala" />,
+    );
+
+    expect(getByLabelText("Historical density map for Koala")).toBeTruthy();
+    expect(getByTestId("source-prediction-density").props.data).toBe(collection);
+    expect(getByTestId("layer-prediction-heatmap").props.type).toBe("heatmap");
+    expect(queryByTestId("source-occurrence-records")).toBeNull();
+  });
+
   it("zooms to the native expansion level when a cluster is pressed", async () => {
     const collection = {
       type: "FeatureCollection" as const,

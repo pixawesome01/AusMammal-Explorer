@@ -64,6 +64,7 @@ type OccurrenceMapProps = {
   speciesName: string;
   collection?: OccurrenceFeatureCollection;
   fullScreen?: boolean;
+  mode?: "records" | "prediction";
   showRecordCount?: boolean;
 };
 
@@ -120,7 +121,13 @@ export function getResponsiveMapHeight(windowHeight: number) {
 
 export const OccurrenceMap = forwardRef<OccurrenceMapHandle, OccurrenceMapProps>(
 function OccurrenceMap(
-  { speciesName, collection, fullScreen = false, showRecordCount = true },
+  {
+    speciesName,
+    collection,
+    fullScreen = false,
+    mode = "records",
+    showRecordCount = true,
+  },
   ref,
 ) {
   const { height: windowHeight } = useWindowDimensions();
@@ -172,7 +179,11 @@ function OccurrenceMap(
 
   return (
     <View
-      accessibilityLabel={`Occurrence map for ${speciesName}`}
+      accessibilityLabel={
+        mode === "prediction"
+          ? `Historical density map for ${speciesName}`
+          : `Occurrence map for ${speciesName}`
+      }
       style={[
         styles.container,
         fullScreen ? styles.fullScreenContainer : { height: mapHeight },
@@ -184,7 +195,7 @@ function OccurrenceMap(
         style={styles.map}
         mapStyle={OPENSTREETMAP_STYLE}
         attribution
-        attributionPosition={{ bottom: 34, right: 8 }}
+        attributionPosition={{ bottom: mode === "prediction" ? 82 : 34, right: 8 }}
         compass
         compassPosition={{ top: 8, right: 8 }}
         logo={false}
@@ -204,7 +215,47 @@ function OccurrenceMap(
           maxZoom={16}
           maxBounds={AUSTRALIA_BOUNDS}
         />
-        {collection && collection.features.length > 0 ? (
+        {collection && collection.features.length > 0 && mode === "prediction" ? (
+          <GeoJSONSource id="prediction-density" data={collection}>
+            <Layer
+              id="prediction-heatmap"
+              type="heatmap"
+              maxzoom={13}
+              paint={{
+                "heatmap-weight": [
+                  "interpolate",
+                  ["linear"],
+                  ["get", "observationCount"],
+                  1,
+                  0.45,
+                  5,
+                  1,
+                ],
+                "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.65, 10, 1.5],
+                "heatmap-color": [
+                  "interpolate",
+                  ["linear"],
+                  ["heatmap-density"],
+                  0,
+                  "rgba(68,130,205,0)",
+                  0.12,
+                  "#4f8fd2",
+                  0.34,
+                  "#52cf9a",
+                  0.55,
+                  "#a4eb66",
+                  0.75,
+                  "#f2dc5f",
+                  1,
+                  "#ee7c58",
+                ],
+                "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 15, 10, 38],
+                "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.82, 13, 0.58],
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
+        {collection && collection.features.length > 0 && mode === "records" ? (
           <GeoJSONSource
             ref={occurrenceSourceRef}
             id="occurrence-records"
@@ -299,7 +350,7 @@ function OccurrenceMap(
       <Pressable
         accessibilityRole="link"
         onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright")}
-        style={styles.attribution}
+        style={[styles.attribution, mode === "prediction" && styles.predictionAttribution]}
       >
         <Text style={styles.attributionText}>© OpenStreetMap contributors</Text>
       </Pressable>
@@ -383,6 +434,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.9)",
     borderRadius: 4,
   },
+  predictionAttribution: { bottom: 76 },
   attributionText: {
     color: "#243c31",
     fontSize: 10,
