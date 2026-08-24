@@ -109,4 +109,48 @@ describe("ExplorerWorkspace species flow", () => {
 
     warning.mockRestore();
   });
+
+  it("keeps a representative time slice consistent across the map and counts", async () => {
+    const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const dates = ["2024-01-15", "2024-06-15", "2025-01-15"];
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: dates.length },
+      },
+    };
+    const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
+      type: "FeatureCollection",
+      features: dates.map((eventDate, index) => ({
+        ...featureFor(file.scientificName, index + 1),
+        properties: {
+          ...featureFor(file.scientificName, index + 1).properties,
+          eventDate,
+        },
+      })),
+    }));
+
+    await render(
+      <SpeciesProvider>
+        <ExplorerWorkspace
+          dateRange={{ from: "2024-01-01", to: "2024-12-31" }}
+          readAsset={readAsset}
+          manifest={manifest}
+        />
+      </SpeciesProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("2 sightings found")).toBeTruthy());
+
+    const mappedFeatures = screen.getByTestId("source-occurrence-records").props.data.features;
+    expect(mappedFeatures.map((item: OccurrenceFeature) => item.properties.eventDate)).toEqual([
+      "2024-01-15",
+      "2024-06-15",
+    ]);
+    expect(screen.getByTestId("map-record-count").props.children).toEqual(["2", " mapped"]);
+    expect(screen.getByTestId("mapped-record-count").props.children).toBe("2");
+
+    warning.mockRestore();
+  });
 });

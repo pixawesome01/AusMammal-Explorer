@@ -7,6 +7,7 @@ import { OccurrenceMap } from "./src/components/OccurrenceMap";
 import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { createRuntimeOccurrenceAssetReader } from "./src/data/occurrenceAssetReader";
+import type { OccurrenceDateRange } from "./src/data/occurrenceFilter";
 import type { OccurrenceAssetReader } from "./src/data/occurrenceLoader";
 import {
   OCCURRENCE_SNAPSHOT,
@@ -18,17 +19,20 @@ import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
 
 type ExplorerWorkspaceProps = {
+  dateRange?: OccurrenceDateRange;
   readAsset?: OccurrenceAssetReader;
   manifest?: OccurrenceSnapshotManifest;
 };
 
 export function ExplorerWorkspace({
+  dateRange,
   readAsset = runtimeOccurrenceAssetReader,
   manifest = OCCURRENCE_SNAPSHOT,
 }: ExplorerWorkspaceProps) {
   const { selectedSpecies } = useSpeciesSelection();
   const occurrenceState = useOccurrenceRecords({
     speciesId: selectedSpecies.id,
+    dateRange,
     readAsset,
     manifest,
   });
