@@ -97,6 +97,14 @@ endpoint. KAN-26 should supply the loader with bundled assets or an approved hos
 URL, then pass the filtered collection into the MapLibre occurrence layer. This keeps
 the app independent of live ALA requests and avoids committing the large GeoJSON files.
 
+RTM-3 adds combinable year, month, and Australian-season filters. Filters reuse the
+loaded species snapshot and update the map, visible count, summary, and rankings without
+fetching the asset again. Clearing the controls restores the complete species snapshot.
+
+RTM-4 ranks the filtered records by state or territory. Point-to-state assignment uses
+the compact, bundled ABS ASGS Edition 3 (2021) state boundaries in
+`src/data/absStates2021.json`; records outside those boundaries are reported separately.
+
 The current standard OpenStreetMap raster endpoint is for modest, interactive MVP use
 only. It is identified with the app's user agent and must not be used for bulk or
 offline downloads. Choose an appropriate hosted or self-managed tile provider before a
