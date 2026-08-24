@@ -65,6 +65,38 @@ describe("useOccurrenceRecords", () => {
     expect(result.current.records?.collection.features).toEqual([]);
   });
 
+  it("re-filters the loaded snapshot without downloading it again", async () => {
+    const dates = ["2024-01-15", "2024-06-15", "2025-06-15"];
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: dates.length },
+      },
+    };
+    const features = dates.map((eventDate, index) => ({
+      ...FEATURE,
+      id: (index + 1).toString(16).padStart(16, "0"),
+      properties: { ...FEATURE.properties, eventDate },
+    }));
+    const readAsset = jest.fn().mockResolvedValue({ type: "FeatureCollection", features });
+    const { result, rerender } = await renderHook(
+      ({ year, month }: { year?: number; month?: number }) =>
+        useOccurrenceRecords({
+          speciesId: "koala",
+          temporalFilter: { year, month },
+          readAsset,
+          manifest,
+        }),
+      { initialProps: { year: 2024 as number | undefined, month: undefined as number | undefined } },
+    );
+
+    await waitFor(() => expect(result.current.records?.collection.features).toHaveLength(2));
+    await act(async () => rerender({ year: undefined, month: 6 }));
+    expect(result.current.records?.collection.features).toHaveLength(2);
+    expect(readAsset).toHaveBeenCalledTimes(1);
+  });
+
   it("returns the validation error for an invalid frozen asset", async () => {
     const readAsset = jest
       .fn()

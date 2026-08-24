@@ -20,6 +20,8 @@ export type OccurrenceFilter = {
   season?: OccurrenceSeason;
 };
 
+export type OccurrenceTemporalFilter = Pick<OccurrenceFilter, "year" | "month" | "season">;
+
 export class OccurrenceFilterError extends Error {
   constructor(message: string) {
     super(message);

@@ -4,6 +4,7 @@ import type { SpeciesId } from "../species";
 import {
   filterOccurrenceRecords,
   type OccurrenceDateRange,
+  type OccurrenceTemporalFilter,
 } from "./occurrenceFilter";
 import {
   loadOccurrenceRecords,
@@ -23,6 +24,7 @@ export type OccurrenceRecordsState =
 export type UseOccurrenceRecordsOptions = {
   speciesId: SpeciesId;
   dateRange?: OccurrenceDateRange;
+  temporalFilter?: OccurrenceTemporalFilter;
   readAsset: OccurrenceAssetReader;
   manifest?: OccurrenceSnapshotManifest;
 };
@@ -45,6 +47,7 @@ type RequestBoundState = {
 export function useOccurrenceRecords({
   speciesId,
   dateRange,
+  temporalFilter,
   readAsset,
   manifest = OCCURRENCE_SNAPSHOT,
 }: UseOccurrenceRecordsOptions): UseOccurrenceRecordsResult {
@@ -52,7 +55,7 @@ export function useOccurrenceRecords({
   const retry = useCallback(() => setRequestVersion((version) => version + 1), []);
   const fromDate = dateRange?.from;
   const toDate = dateRange?.to;
-  const requestKey = `${speciesId}:${fromDate ?? ""}:${toDate ?? ""}:${requestVersion}`;
+  const requestKey = `${speciesId}:${requestVersion}`;
   const [state, setState] = useState<RequestBoundState>({
     requestKey,
     result: LOADING_STATE,
@@ -65,21 +68,15 @@ export function useOccurrenceRecords({
     const load = async () => {
       try {
         const loaded = await loadOccurrenceRecords(speciesId, readAsset, manifest);
-        const collection = filterOccurrenceRecords(loaded.collection, {
-          speciesId,
-          dateRange: { from: fromDate, to: toDate },
-        });
-
         if (!isCurrentRequest) {
           return;
         }
 
-        const records = { ...loaded, collection };
         setState({
           requestKey,
           result: {
-            status: collection.features.length === 0 ? "empty" : "ready",
-            records,
+            status: "ready",
+            records: loaded,
             error: null,
           },
         });
@@ -101,10 +98,29 @@ export function useOccurrenceRecords({
     return () => {
       isCurrentRequest = false;
     };
-  }, [fromDate, manifest, readAsset, requestKey, speciesId, toDate]);
+  }, [manifest, readAsset, requestKey, speciesId]);
 
-  return useMemo(
-    () => ({ ...(state.requestKey === requestKey ? state.result : LOADING_STATE), retry }),
-    [requestKey, retry, state],
-  );
+  return useMemo(() => {
+    const loadedState = state.requestKey === requestKey ? state.result : LOADING_STATE;
+    if (!loadedState.records) {
+      return { ...loadedState, retry };
+    }
+
+    try {
+      const collection = filterOccurrenceRecords(loadedState.records.collection, {
+        speciesId,
+        dateRange: { from: fromDate, to: toDate },
+        ...temporalFilter,
+      });
+      return {
+        status: collection.features.length === 0 ? "empty" : "ready",
+        records: { ...loadedState.records, collection },
+        error: null,
+        retry,
+      } satisfies UseOccurrenceRecordsResult;
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error("Occurrence data could not filter.");
+      return { status: "error", records: null, error, retry };
+    }
+  }, [fromDate, requestKey, retry, speciesId, state, temporalFilter, toDate]);
 }
