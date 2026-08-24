@@ -125,9 +125,6 @@ export function SpeciesSelector({
                 <Text style={styles.scientificName}>{species.scientificName}</Text>
                 <Text style={styles.recordCount}>{recordCount.toLocaleString()} records</Text>
               </View>
-              <View style={[styles.arrowCircle, { borderColor: species.accent }]}>
-                <Text style={[styles.arrow, { color: species.accent }]}>›</Text>
-              </View>
             </Pressable>
           );
         })}
@@ -188,11 +185,6 @@ const styles = StyleSheet.create({
   commonName: { color: "#ffffff", fontSize: 14, fontWeight: "600" },
   scientificName: { marginTop: 3, color: "#b8c0c8", fontSize: 11, fontStyle: "italic" },
   recordCount: { marginTop: 5, color: "#dce1e6", fontSize: 11 },
-  arrowCircle: {
-    width: 30, height: 30, alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  arrow: { marginTop: -2, fontSize: 25, lineHeight: 27 },
   emptyState: {
     padding: 26, alignItems: "center", borderWidth: 1,
     borderColor: "rgba(255,255,255,0.16)", borderRadius: 18,
