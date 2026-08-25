@@ -26,7 +26,7 @@ describe("TemporalFilters", () => {
     }
   }
 
-  it("selects combinable year, month and season values", async () => {
+  it("selects combinable year and month values without seasonal controls", async () => {
     await render(<Harness />);
 
     expect(screen.queryByText("Combine filters · Australian seasons")).toBeNull();
@@ -34,22 +34,19 @@ describe("TemporalFilters", () => {
 
     await incrementSlider("Year", 5);
     await incrementSlider("Month", 6);
-    await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
 
     expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2024");
     expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("June");
-    expect(screen.getByRole("button", { name: "Winter" }).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.queryByRole("button", { name: "Winter" })).toBeNull();
   });
 
   it("clears every active filter", async () => {
     await render(<Harness />);
     await incrementSlider("Year", 6);
     await incrementSlider("Month", 1);
-    await fireEvent.press(screen.getByRole("button", { name: "Summer" }));
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
 
     expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("All years");
     expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("All months");
-    expect(screen.getByRole("button", { name: "All seasons" }).props.accessibilityState).toEqual({ selected: true });
   });
 });

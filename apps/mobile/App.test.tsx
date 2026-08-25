@@ -214,7 +214,6 @@ describe("ExplorerWorkspace species flow", () => {
     await waitFor(() => expect(screen.getByText("3 records shown")).toBeTruthy());
     await incrementSlider("Month", 6);
     await waitFor(() => expect(screen.getByText("1 record shown")).toBeTruthy());
-    await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));

@@ -145,7 +145,7 @@ export function ExplorerWorkspace({
         : mappedCount === 0
           ? "No records shown"
           : `${mappedCount?.toLocaleString()} ${mappedCount === 1 ? "record" : "records"} shown`;
-  const compactSheetHeight = Math.min(470, Math.max(340, Math.round(windowHeight * 0.45)));
+  const compactSheetHeight = Math.min(310, Math.max(250, Math.round(windowHeight * 0.34)));
   const insightsSheetHeight = Math.min(
     windowHeight - 112,
     Math.max(560, Math.round(windowHeight * 0.84)),
@@ -178,7 +178,7 @@ export function ExplorerWorkspace({
       </SafeAreaView>
 
       {isExplorerOpen ? (
-        <SafeAreaView style={styles.explorerSafeArea}>
+        <View style={styles.explorerLayer}>
           <View style={styles.explorerScreen}>
         <OccurrenceMap
           ref={mapRef}
@@ -190,7 +190,8 @@ export function ExplorerWorkspace({
         />
 
         <View pointerEvents="box-none" style={styles.mapUi}>
-          <View style={styles.topControl}>
+          <SafeAreaView pointerEvents="box-none" style={styles.topSafeArea}>
+            <View style={styles.topControl}>
             <Pressable
               accessibilityLabel="Back to species selection"
               accessibilityRole="button"
@@ -231,7 +232,7 @@ export function ExplorerWorkspace({
                 <Text style={styles.zoomText}>+</Text>
               </Pressable>
             </View>
-          </View>
+            </View>
 
           {activeTab === "prediction" ? (
             <View accessibilityLabel="Historical density legend" style={styles.predictionLegend}>
@@ -258,6 +259,7 @@ export function ExplorerWorkspace({
               <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
             </View>
           )}
+          </SafeAreaView>
 
           {activeTab === "prediction" ? (
             <View style={styles.predictionDock}>
@@ -347,7 +349,7 @@ export function ExplorerWorkspace({
               </SafeAreaView>
             </View>
           </Modal>
-        </SafeAreaView>
+        </View>
       ) : null}
     </View>
   );
@@ -364,15 +366,14 @@ export default function App() {
 const styles = StyleSheet.create({
   workspace: { flex: 1, position: "relative", backgroundColor: "#27313b" },
   selectorSafeArea: { flex: 1, backgroundColor: "#27313b" },
-  explorerSafeArea: { ...StyleSheet.absoluteFill, backgroundColor: "#dce8e0" },
+  explorerLayer: { ...StyleSheet.absoluteFill },
   explorerScreen: { flex: 1, position: "relative", overflow: "hidden" },
   mapUi: { ...StyleSheet.absoluteFill },
+  topSafeArea: { position: "absolute", top: 0, right: 0, left: 0 },
   topControl: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    right: 12,
     height: 50,
+    marginTop: 12,
+    marginHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     padding: 4,
@@ -419,9 +420,8 @@ const styles = StyleSheet.create({
   zoomText: { color: "#273239", fontSize: 23, fontWeight: "500" },
   pressed: { opacity: 0.68 },
   mapCountPill: {
-    position: "absolute",
-    top: 72,
     alignSelf: "center",
+    marginTop: 10,
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderWidth: 1,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     overflow: "hidden",
-    paddingTop: 8,
+    paddingTop: 6,
     paddingHorizontal: 13,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: 46,
     height: 5,
-    marginBottom: 9,
+    marginBottom: 6,
     borderRadius: 3,
     backgroundColor: "rgba(255,255,255,0.76)",
     shadowColor: "#4c5650",
@@ -467,14 +467,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   tabBar: {
-    height: 42,
+    height: 36,
     flexDirection: "row",
     gap: 4,
     overflow: "hidden",
-    padding: 4,
+    padding: 3,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.56)",
-    borderRadius: 22,
+    borderRadius: 19,
     backgroundColor: "rgba(228,239,233,0.06)",
     shadowColor: "#65746c",
     shadowOffset: { width: 0, height: 4 },
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   tabBarGlass: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 22,
+    borderRadius: 19,
   },
   tabBarGlassFallback: {
     backgroundColor: "rgba(226,237,231,0.38)",
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.46)",
-    borderRadius: 18,
+    borderRadius: 15,
     shadowColor: "#607168",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   tabGlass: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 18,
+    borderRadius: 15,
   },
   tabGlassFallback: {
     backgroundColor: "rgba(255,255,255,0.10)",
@@ -531,25 +531,23 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  tabText: { color: "#343d39", fontSize: 12, fontWeight: "600" },
+  tabText: { color: "#343d39", fontSize: 11, fontWeight: "600" },
   activeTabText: { color: "#111714", fontWeight: "700" },
-  sheetScrollContent: { paddingTop: 12, paddingBottom: 26 },
+  sheetScrollContent: { paddingTop: 6, paddingBottom: 14 },
   aboutButton: {
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 14,
+    marginTop: 3,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   infoIcon: { color: "#3e89f7", fontSize: 15, fontWeight: "600" },
   aboutButtonText: { color: "#3e89f7", fontSize: 12, fontWeight: "700" },
   predictionLegend: {
-    position: "absolute",
-    top: 72,
-    right: 22,
-    left: 22,
+    marginTop: 10,
+    marginHorizontal: 22,
     paddingHorizontal: 15,
     paddingTop: 10,
     paddingBottom: 9,
