@@ -24,9 +24,6 @@ export function StateRanking({ speciesName, status, collection }: StateRankingPr
     <View accessibilityLabel={`State ranking for ${speciesName}`} style={styles.card}>
       <Text style={styles.eyebrow}>State summary</Text>
       <Text accessibilityRole="header" style={styles.title}>Where records are concentrated</Text>
-      <Text style={styles.description}>
-        {speciesName} records in the active time filters, grouped by Australian state or territory.
-      </Text>
 
       {status === "loading" ? <Text style={styles.message}>Calculating state ranking…</Text> : null}
       {status === "error" ? (
@@ -67,12 +64,6 @@ export function StateRanking({ speciesName, status, collection }: StateRankingPr
           ))
         : null}
 
-      {result && result.unassignedCount > 0 ? (
-        <Text style={styles.missing}>
-          {result.unassignedCount.toLocaleString()} {result.unassignedCount === 1 ? "record" : "records"} could not be assigned because the coordinates fall outside the supplied state polygons.
-        </Text>
-      ) : null}
-
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL(STATE_BOUNDARY_SOURCE.url)}>
         <Text style={styles.source}>Boundaries: ABS ASGS Edition 3 (2021)</Text>
       </Pressable>
@@ -97,7 +88,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   title: { marginTop: 5, color: "#163c2c", fontSize: 21, fontWeight: "700" },
-  description: { marginTop: 7, color: "#5a685f", fontSize: 13, lineHeight: 19 },
   message: {
     marginTop: 16,
     padding: 13,
@@ -121,6 +111,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#dfe8e1",
   },
   bar: { height: "100%", borderRadius: 4, backgroundColor: "#2b7652" },
-  missing: { marginTop: 16, color: "#775338", fontSize: 12, lineHeight: 18 },
   source: { marginTop: 16, color: "#236848", fontSize: 12, textDecorationLine: "underline" },
 });

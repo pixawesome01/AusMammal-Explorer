@@ -19,6 +19,8 @@ describe("TemporalFilters", () => {
   it("selects combinable year, month and season values", async () => {
     await render(<Harness />);
 
+    expect(screen.queryByText("Combine filters · Australian seasons")).toBeNull();
+
     await fireEvent.press(screen.getByRole("button", { name: "2024" }));
     await fireEvent.press(screen.getByRole("button", { name: "June" }));
     await fireEvent.press(screen.getByRole("button", { name: "Winter" }));

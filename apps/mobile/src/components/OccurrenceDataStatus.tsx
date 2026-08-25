@@ -63,7 +63,6 @@ export function OccurrenceDataStatus({ speciesName, state }: OccurrenceDataStatu
       <Text style={styles.title}>
         {recordCount.toLocaleString()} {recordCount === 1 ? "sighting" : "sightings"} found
       </Text>
-      <Text style={styles.description}>Frozen snapshot: {state.records.snapshotId}</Text>
     </View>
   );
 }

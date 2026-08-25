@@ -84,7 +84,6 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
           <Text accessibilityRole="header" style={styles.title}>Filter by time</Text>
-          <Text style={styles.helper}>Combine filters · Australian seasons</Text>
         </View>
         {hasActiveFilter ? (
           <Pressable accessibilityRole="button" onPress={() => onChange({})}>
@@ -162,7 +161,6 @@ const styles = StyleSheet.create({
   },
   headingCopy: { flex: 1 },
   title: { color: "#1c242a", fontSize: 17, fontWeight: "700" },
-  helper: { marginTop: 2, color: "#71797e", fontSize: 11 },
   clearText: { color: "#3783ee", fontSize: 12, fontWeight: "700" },
   label: {
     marginTop: 13,

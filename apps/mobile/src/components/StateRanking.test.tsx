@@ -22,7 +22,7 @@ function feature(id: number, coordinates: [number, number]): OccurrenceFeature {
 }
 
 describe("StateRanking", () => {
-  it("renders descending state counts and explains unassigned coordinates", async () => {
+  it("renders descending state counts without explanatory copy", async () => {
     const collection: OccurrenceFeatureCollection = {
       type: "FeatureCollection",
       features: [
@@ -36,7 +36,8 @@ describe("StateRanking", () => {
 
     expect(screen.getByTestId("state-count-1").props.children).toBe("2");
     expect(screen.getByTestId("state-count-2").props.children).toBe("1");
-    expect(screen.getByText(/1 record could not be assigned/)).toBeTruthy();
+    expect(screen.queryByText(/record could not be assigned/)).toBeNull();
+    expect(screen.queryByText(/active time filters/)).toBeNull();
   });
 
   it("explains an empty active time window", async () => {

@@ -50,7 +50,7 @@ describe("OccurrenceDataStatus", () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it("reports the loaded count and snapshot", async () => {
+  it("reports only the loaded count", async () => {
     const records: LoadedOccurrenceRecords = {
       ...RECORDS,
       collection: {
@@ -77,6 +77,6 @@ describe("OccurrenceDataStatus", () => {
     await renderStatus({ status: "ready", records, error: null, retry });
 
     expect(screen.getByText("1 sighting found")).toBeTruthy();
-    expect(screen.getByText(`Frozen snapshot: ${records.snapshotId}`)).toBeTruthy();
+    expect(screen.queryByText(/Frozen snapshot:/)).toBeNull();
   });
 });
