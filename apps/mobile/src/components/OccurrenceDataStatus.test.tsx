@@ -50,7 +50,7 @@ describe("OccurrenceDataStatus", () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it("reports only the loaded count", async () => {
+  it("stays hidden after records load", async () => {
     const records: LoadedOccurrenceRecords = {
       ...RECORDS,
       collection: {
@@ -74,9 +74,9 @@ describe("OccurrenceDataStatus", () => {
         ],
       },
     };
-    await renderStatus({ status: "ready", records, error: null, retry });
+    const view = await renderStatus({ status: "ready", records, error: null, retry });
 
-    expect(screen.getByText("1 sighting found")).toBeTruthy();
-    expect(screen.queryByText(/Frozen snapshot:/)).toBeNull();
+    expect(view.toJSON()).toBeNull();
+    expect(screen.queryByTestId("occurrence-ready-state")).toBeNull();
   });
 });

@@ -74,6 +74,16 @@ async function returnToSpeciesSelector() {
   });
 }
 
+async function incrementSlider(label: "Year" | "Month", count: number) {
+  for (let index = 0; index < count; index += 1) {
+    await fireEvent(
+      screen.getByRole("adjustable", { name: label }),
+      "accessibilityAction",
+      { nativeEvent: { actionName: "increment" } },
+    );
+  }
+}
+
 describe("ExplorerWorkspace species flow", () => {
   it("updates the map, summary and data provenance for all seven species", async () => {
     const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -100,7 +110,9 @@ describe("ExplorerWorkspace species flow", () => {
       await waitFor(() =>
         expect(screen.getByLabelText(`Occurrence map for ${species.commonName}`)).toBeTruthy(),
       );
-      expect(screen.getByText(`${index + 1} records shown`)).toBeTruthy();
+      expect(
+        screen.getByText(`${index + 1} ${index === 0 ? "record" : "records"} shown`),
+      ).toBeTruthy();
       expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(
         index + 1,
       );
@@ -158,7 +170,7 @@ describe("ExplorerWorkspace species flow", () => {
 
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
 
-    await waitFor(() => expect(screen.getByText("2 sightings found")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("2 records shown")).toBeTruthy());
 
     const mappedFeatures = screen.getByTestId("source-occurrence-records").props.data.features;
     expect(mappedFeatures.map((item: OccurrenceFeature) => item.properties.eventDate)).toEqual([
@@ -196,23 +208,23 @@ describe("ExplorerWorkspace species flow", () => {
       </SpeciesProvider>,
     );
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
-    await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("4 records shown")).toBeTruthy());
 
-    await fireEvent.press(screen.getByRole("button", { name: "2024" }));
-    await waitFor(() => expect(screen.getByText("3 sightings found")).toBeTruthy());
-    await fireEvent.press(screen.getByRole("button", { name: "June" }));
-    await waitFor(() => expect(screen.getByText("1 sighting found")).toBeTruthy());
+    await incrementSlider("Year", 5);
+    await waitFor(() => expect(screen.getByText("3 records shown")).toBeTruthy());
+    await incrementSlider("Month", 6);
+    await waitFor(() => expect(screen.getByText("1 record shown")).toBeTruthy());
     await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-    expect(screen.getByTestId("state-count-4").props.children).toBe("1");
+    expect(screen.getByTestId("mapped-record-count").props.children).toBe("1");
     await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
-    await waitFor(() => expect(screen.getByText("4 sightings found")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("4 records shown")).toBeTruthy());
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-    expect(screen.getByTestId("state-count-4").props.children).toBe("4");
+    expect(screen.getByTestId("mapped-record-count").props.children).toBe("4");
     expect(readAsset).toHaveBeenCalledTimes(1);
     warning.mockRestore();
   });

@@ -22,7 +22,6 @@ import {
 } from "./src/components/OccurrenceMap";
 import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
-import { StateRanking } from "./src/components/StateRanking";
 import { TemporalFilters } from "./src/components/TemporalFilters";
 import {
   createRuntimeOccurrenceAssetReader,
@@ -70,7 +69,7 @@ function ExplorerTabs({ activeTab, onChange }: ExplorerTabsProps) {
           glassEffectStyle="clear"
           pointerEvents="none"
           style={styles.tabBarGlass}
-          tintColor="rgba(226,242,235,0.20)"
+          tintColor="rgba(226,242,235,0.10)"
         />
       ) : (
         <View pointerEvents="none" style={[styles.tabBarGlass, styles.tabBarGlassFallback]} />
@@ -92,11 +91,11 @@ function ExplorerTabs({ activeTab, onChange }: ExplorerTabsProps) {
             {useNativeGlass ? (
               <GlassView
                 colorScheme="light"
-                glassEffectStyle={selected ? "regular" : "clear"}
+                glassEffectStyle="clear"
                 isInteractive
                 pointerEvents="none"
                 style={styles.tabGlass}
-                tintColor={selected ? "rgba(255,255,255,0.54)" : "rgba(238,248,243,0.18)"}
+                tintColor={selected ? "rgba(255,255,255,0.30)" : "rgba(238,248,243,0.08)"}
               />
             ) : (
               <View
@@ -145,8 +144,13 @@ export function ExplorerWorkspace({
         ? "Records unavailable"
         : mappedCount === 0
           ? "No records shown"
-          : `${mappedCount?.toLocaleString()} records shown`;
-  const sheetHeight = Math.min(470, Math.max(340, Math.round(windowHeight * 0.45)));
+          : `${mappedCount?.toLocaleString()} ${mappedCount === 1 ? "record" : "records"} shown`;
+  const compactSheetHeight = Math.min(470, Math.max(340, Math.round(windowHeight * 0.45)));
+  const insightsSheetHeight = Math.min(
+    windowHeight - 112,
+    Math.max(560, Math.round(windowHeight * 0.84)),
+  );
+  const sheetHeight = activeTab === "insights" ? insightsSheetHeight : compactSheetHeight;
   const closeExplorer = () => {
     setExplorerOpen(false);
     requestAnimationFrame(() => {
@@ -302,11 +306,6 @@ export function ExplorerWorkspace({
                     status={occurrenceState.status}
                   />
                   <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
-                  <StateRanking
-                    collection={occurrenceState.records?.collection}
-                    speciesName={selectedSpecies.commonName}
-                    status={occurrenceState.status}
-                  />
                 </ScrollView>
               ) : null}
             </View>
@@ -449,7 +448,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderBottomWidth: 0,
     borderColor: "rgba(255,255,255,0.74)",
-    backgroundColor: "rgba(247,249,247,0.93)",
+    backgroundColor: "rgba(247,249,247,0.80)",
     shadowColor: "#4e5d55",
     shadowOffset: { width: 0, height: -7 },
     shadowOpacity: 0.18,
@@ -462,7 +461,7 @@ const styles = StyleSheet.create({
     height: 5,
     marginBottom: 9,
     borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "rgba(255,255,255,0.76)",
     shadowColor: "#4c5650",
     shadowOpacity: 0.18,
     shadowRadius: 3,
@@ -474,9 +473,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 4,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.78)",
+    borderColor: "rgba(255,255,255,0.56)",
     borderRadius: 22,
-    backgroundColor: "rgba(228,239,233,0.18)",
+    backgroundColor: "rgba(228,239,233,0.06)",
     shadowColor: "#65746c",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.16,
@@ -488,7 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   tabBarGlassFallback: {
-    backgroundColor: "rgba(226,237,231,0.62)",
+    backgroundColor: "rgba(226,237,231,0.38)",
   },
   tab: {
     position: "relative",
@@ -497,7 +496,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.62)",
+    borderColor: "rgba(255,255,255,0.46)",
     borderRadius: 18,
     shadowColor: "#607168",
     shadowOffset: { width: 0, height: 2 },
@@ -510,10 +509,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   tabGlassFallback: {
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.10)",
   },
   activeTabGlassFallback: {
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: "rgba(255,255,255,0.54)",
   },
   tabHighlight: {
     position: "absolute",
@@ -522,10 +521,10 @@ const styles = StyleSheet.create({
     left: 6,
     height: 10,
     borderRadius: 9,
-    backgroundColor: "rgba(255,255,255,0.30)",
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
   activeTab: {
-    borderColor: "rgba(255,255,255,0.94)",
+    borderColor: "rgba(255,255,255,0.72)",
     shadowColor: "#79817d",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.20,

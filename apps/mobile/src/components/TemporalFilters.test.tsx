@@ -16,29 +16,40 @@ function Harness() {
 }
 
 describe("TemporalFilters", () => {
+  async function incrementSlider(label: "Year" | "Month", count: number) {
+    for (let index = 0; index < count; index += 1) {
+      await fireEvent(
+        screen.getByRole("adjustable", { name: label }),
+        "accessibilityAction",
+        { nativeEvent: { actionName: "increment" } },
+      );
+    }
+  }
+
   it("selects combinable year, month and season values", async () => {
     await render(<Harness />);
 
     expect(screen.queryByText("Combine filters · Australian seasons")).toBeNull();
+    expect(screen.queryByText("Filter by time")).toBeNull();
 
-    await fireEvent.press(screen.getByRole("button", { name: "2024" }));
-    await fireEvent.press(screen.getByRole("button", { name: "June" }));
+    await incrementSlider("Year", 5);
+    await incrementSlider("Month", 6);
     await fireEvent.press(screen.getByRole("button", { name: "Winter" }));
 
-    expect(screen.getByRole("button", { name: "2024" }).props.accessibilityState).toEqual({ selected: true });
-    expect(screen.getByRole("button", { name: "June" }).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2024");
+    expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("June");
     expect(screen.getByRole("button", { name: "Winter" }).props.accessibilityState).toEqual({ selected: true });
   });
 
   it("clears every active filter", async () => {
     await render(<Harness />);
-    await fireEvent.press(screen.getByRole("button", { name: "2025" }));
-    await fireEvent.press(screen.getByRole("button", { name: "January" }));
+    await incrementSlider("Year", 6);
+    await incrementSlider("Month", 1);
     await fireEvent.press(screen.getByRole("button", { name: "Summer" }));
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
 
-    expect(screen.getByRole("button", { name: "All years" }).props.accessibilityState).toEqual({ selected: true });
-    expect(screen.getByRole("button", { name: "All months" }).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("All years");
+    expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("All months");
     expect(screen.getByRole("button", { name: "All seasons" }).props.accessibilityState).toEqual({ selected: true });
   });
 });

@@ -56,15 +56,7 @@ export function OccurrenceDataStatus({ speciesName, state }: OccurrenceDataStatu
     );
   }
 
-  const recordCount = state.records.collection.features.length;
-
-  return (
-    <View accessibilityLiveRegion="polite" style={styles.card} testID="occurrence-ready-state">
-      <Text style={styles.title}>
-        {recordCount.toLocaleString()} {recordCount === 1 ? "sighting" : "sightings"} found
-      </Text>
-    </View>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({
