@@ -14,16 +14,17 @@ hosted publicly without authentication on AWS Open Data
 SILO is the standard freely-accessible surrogate built from the same station
 network and is widely used in Australian ecological modelling.
 
-Two series are produced:
-  - "months": a coarse sample-grid mean across the whole continent.
-  - "bySpecies": for any species whose cleaned occurrence GeoJSON
+Written as one flat CSV, combining two kinds of rows distinguished by the
+`series` column:
+  - series="australia": a coarse sample-grid mean across the whole
+    continent, one row per complete month.
+  - series=<species-id>: for any species whose cleaned occurrence GeoJSON
     (Data Cleaning Pipeline for MapLibre.py's output) is found alongside
     this script, the same computation but sampled at that species' own
     occurrence coordinates instead of a flat grid - so a narrow-range
     species (e.g. Tasmania-only) gets climate context from where it's
     actually recorded, not a continental average. Species with no cleaned
-    file present locally are simply omitted from "bySpecies", not treated
-    as an error.
+    file present locally simply get no rows, not an error.
 
 Reruns are incremental: months already present in `output_path` from a
 prior run are reused as-is, except for the current year (whose SILO files
@@ -31,6 +32,7 @@ can still be revised/appended), so a routine refresh only downloads and
 recomputes what might actually have changed.
 """
 import calendar
+import csv
 import json
 import math
 import shutil
@@ -107,6 +109,26 @@ SILO_BUCKET_URL = (
 # regardless.
 CACHE_DIR = Path(__file__).resolve().parents[1] / "raw" / "silo_cache"
 
+# Repo root, so PROCESSED_DIR (where _discover_species_occurrence_files
+# looks for cleaned per-species GeoJSON files - see that function's call
+# site) and the default output path both resolve correctly no matter what
+# directory this script is launched from, matching the other pipelines
+# (e.g. Data Cleaning Pipeline for MapLibre.py). Species-file discovery is
+# deliberately tied to PROCESSED_DIR directly rather than derived from
+# output_path's own location: the two can legitimately differ (the output
+# lives in data/metadata/, tracked by git; the GeoJSON files it reads live
+# in data/processed/, which isn't), and coupling them previously meant
+# changing where the output was saved would silently break species
+# discovery too.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PROCESSED_DIR = REPO_ROOT / "data" / "processed"
+# Species occurrence GeoJSON files always live in PROCESSED_DIR (that's
+# where Data Cleaning Pipeline for MapLibre.py writes them), independent
+# of wherever this pipeline's own output is saved - see
+# _discover_species_occurrence_files's call site below, which uses this
+# constant directly rather than deriving it from output_path.
+METADATA_DIR = REPO_ROOT / "data" / "metadata"
+
 PLAUSIBLE_RANGES = {
     "temperatureC": (-15.0, 40.0),
     "precipitationMm": (0.0, 1200.0),
@@ -122,6 +144,18 @@ HTTP_TIMEOUT_SECONDS = 60
 # what this pipeline expects before it's treated as a band-to-date mapping
 # change rather than float-formatting noise. See _expected_time_offset.
 BAND_TIME_TOLERANCE_DAYS = 0.5
+
+# One flat CSV holds every series (the Australia-wide one plus one per
+# species), distinguished by the "series" column ("australia" or a
+# species id) - samplePointCount/sourceFile repeat per row rather than
+# living in a separate header, since a CSV has no natural place for
+# per-series metadata that isn't itself a row.
+CSV_FIELDNAMES = [
+    "series", "samplePointCount", "sourceFile",
+    "year", "month", "monthName",
+    "temperatureC", "precipitationMm",
+    "validTemperaturePointCount", "validRainfallPointCount",
+]
 
 
 def _sample_points():
@@ -396,9 +430,9 @@ def _monthly_summary(year, month, get_year_file, points, latitudes):
     Returns one month's {temperatureC, precipitationMm, ...valid point
     counts} at `points`, raising if a result is missing (NaN), outside the
     physically plausible range for Australia, or backed by too few valid
-    sample points - rather than letting a bad value reach the JSON output.
-    A NaN would also serialise as an invalid (non-RFC-8259) JSON token that
-    breaks strict JS parsers.
+    sample points - rather than letting a bad value reach the output file,
+    where a literal "nan" cell would silently corrupt any downstream sum
+    or average a consumer computes over the column.
     """
     temperature_c, valid_temperature_points = _monthly_mean_temperature_c(
         year, month, get_year_file, points, latitudes
@@ -424,31 +458,30 @@ def _monthly_summary(year, month, get_year_file, points, latitudes):
     }
 
 
-def _index_months_by_key(month_entries):
-    """Maps a list of month dicts to {(year, month): entry} for O(1) reuse lookups."""
-    indexed = {}
-    for entry in month_entries:
-        try:
-            indexed[(entry["year"], entry["month"])] = entry
-        except (KeyError, TypeError):
-            continue
-    return indexed
-
-
-def _load_json(path):
-    """Loads a JSON file, returning None (not raising) if it's missing or
-    unreadable - a missing or corrupt prior output just means a full
-    rebuild, not a hard failure."""
+def _load_existing_rows(path):
+    """Loads a prior run's CSV output, grouped by series -> {(year, month):
+    row}, for O(1) reuse lookups in _build_month_series. Returns {} if the
+    file is missing or unreadable - a missing or corrupt prior output just
+    means a full rebuild, not a hard failure."""
     path = Path(path)
     if not path.exists():
-        return None
+        return {}
     try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError) as exc:
+        with open(path, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+    except (OSError, csv.Error) as exc:
         print(f"  NOTE: could not read existing output at '{path}' ({exc}); "
               "doing a full rebuild.")
-        return None
+        return {}
+
+    grouped = {}
+    for row in rows:
+        try:
+            key = (int(row["year"]), int(row["month"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+        grouped.setdefault(row.get("series", ""), {})[key] = row
+    return grouped
 
 
 def _build_month_series(existing_months_by_key, compute_month, today, end_year, end_month, label):
@@ -536,7 +569,7 @@ def build_monthly_climate_context(output_path, today=None):
     end_year, end_month = _last_complete_month(today)
     output_path = Path(output_path)
 
-    existing_document = _load_json(output_path) or {}
+    existing_by_series = _load_existing_rows(output_path)
 
     # Downloads each (variable, year) file at most once per run, shared
     # across the Australia-wide series and every per-species series: e.g.
@@ -564,6 +597,9 @@ def build_monthly_climate_context(output_path, today=None):
               f"{summary['precipitationMm']:.1f} mm "
               f"({summary['validRainfallPointCount']} valid pts)")
         return {
+            "series": "australia",
+            "samplePointCount": len(SAMPLE_POINTS),
+            "sourceFile": "",
             "year": year,
             "month": month,
             "monthName": MONTH_NAMES[month - 1],
@@ -573,19 +609,15 @@ def build_monthly_climate_context(output_path, today=None):
             "validRainfallPointCount": summary["validRainfallPointCount"],
         }
 
-    existing_au_months = _index_months_by_key(existing_document.get("months", []))
-    months = _build_month_series(
-        existing_au_months, au_compute_month, today, end_year, end_month,
+    all_rows = _build_month_series(
+        existing_by_series.get("australia", {}), au_compute_month, today, end_year, end_month,
         label="Australia-wide",
     )
 
-    processed_dir = output_path.parent
-    species_files = _discover_species_occurrence_files(processed_dir)
-    existing_by_species = existing_document.get("bySpecies", {})
-    by_species = {}
+    species_files = _discover_species_occurrence_files(PROCESSED_DIR)
 
     if not species_files:
-        print(f"  No cleaned occurrence GeoJSON files found in '{processed_dir}'; "
+        print(f"  No cleaned occurrence GeoJSON files found in '{PROCESSED_DIR}'; "
               "skipping per-species climate context (run Data Cleaning Pipeline "
               "for MapLibre.py first to enable it).")
     else:
@@ -598,13 +630,18 @@ def build_monthly_climate_context(output_path, today=None):
                       f"'{geojson_path.name}'.")
                 continue
             species_latitudes = np.array([lat for _, lat in species_points])
+            source_file = geojson_path.name
 
             def species_compute_month(year, month, _species_id=species_id,
-                                       _points=species_points, _lats=species_latitudes):
+                                       _points=species_points, _lats=species_latitudes,
+                                       _source_file=source_file):
                 print(f"Fetching {MONTH_NAMES[month - 1]} {year} climate summary for "
                       f"{_species_id} ({len(_points)} occurrence-based sample points)...")
                 summary = _monthly_summary(year, month, get_year_file, _points, _lats)
                 return {
+                    "series": _species_id,
+                    "samplePointCount": len(_points),
+                    "sourceFile": _source_file,
                     "year": year,
                     "month": month,
                     "monthName": MONTH_NAMES[month - 1],
@@ -614,43 +651,35 @@ def build_monthly_climate_context(output_path, today=None):
                     "validRainfallPointCount": summary["validRainfallPointCount"],
                 }
 
-            existing_species_months = _index_months_by_key(
-                existing_by_species.get(species_id, {}).get("months", [])
-            )
-            species_months = _build_month_series(
-                existing_species_months, species_compute_month, today, end_year, end_month,
-                label=species_id,
-            )
-            by_species[species_id] = {
-                "samplePointCount": len(species_points),
-                "sourceFile": geojson_path.name,
-                "months": species_months,
-            }
+            all_rows.extend(_build_month_series(
+                existing_by_series.get(species_id, {}), species_compute_month,
+                today, end_year, end_month, label=species_id,
+            ))
 
-    summary_document = {
-        "source": "SILO (Queensland Government DES, from Bureau of Meteorology "
-                   "station observations; Jeffrey et al., 2001)",
-        "coveragePeriod": f"{COVERAGE_START_YEAR}-{COVERAGE_START_MONTH:02d} to "
-                           f"{end_year}-{end_month:02d}",
-        "region": "Australia (bounding box lat -44 to -10, lon 112 to 154 - "
-                  "SILO's own grid extent)",
-        "sampleGridStepDegrees": SAMPLE_GRID_STEP_DEG,
-        "nominalSamplePointCount": len(SAMPLE_POINTS),
-        "minimumValidSampleFraction": MIN_VALID_SAMPLE_FRACTION,
-        "generatedAt": datetime.now(UTC).isoformat(),
-        "months": months,
-        "bySpecies": by_species,
-    }
+    # Run-level metadata (source, coverage, sample-grid settings) has no
+    # natural per-row home in a flat CSV, so it's logged to the console
+    # instead of duplicated onto every row or split into a second file.
+    print(f"Source: SILO (Queensland Government DES, from Bureau of Meteorology "
+          f"station observations; Jeffrey et al., 2001). Coverage: "
+          f"{COVERAGE_START_YEAR}-{COVERAGE_START_MONTH:02d} to {end_year}-{end_month:02d}. "
+          f"Australia-wide sample grid: {SAMPLE_GRID_STEP_DEG} deg step, "
+          f"{len(SAMPLE_POINTS)} nominal points, "
+          f"minimum valid fraction {MIN_VALID_SAMPLE_FRACTION}. "
+          f"Generated at {datetime.now(UTC).isoformat()}.")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_output_path = output_path.with_name(output_path.name + ".part")
-    with open(tmp_output_path, "w", encoding="utf-8") as f:
-        json.dump(summary_document, f, indent=2, allow_nan=False)
+    with open(tmp_output_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_FIELDNAMES)
+        writer.writeheader()
+        writer.writerows(all_rows)
     tmp_output_path.replace(output_path)
 
-    print(f"Monthly climate context saved to '{output_path}'.")
+    print(f"Monthly climate context saved to '{output_path}' ({len(all_rows)} rows).")
 
 
 if __name__ == "__main__":
-    OUTPUT_PATH = "environmental_context_au.json"
+    # data/metadata/ (not data/processed/, which is gitignored) so this
+    # summary is committed like the snapshot manifests it sits alongside.
+    OUTPUT_PATH = METADATA_DIR / "environmental_context_au.csv"
     build_monthly_climate_context(OUTPUT_PATH)
