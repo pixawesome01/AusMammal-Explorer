@@ -1,7 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import {
-  Image,
   Modal,
   Pressable,
   SafeAreaView,
@@ -160,7 +159,6 @@ export function ExplorerWorkspace({
               onPress={() => setExplorerOpen(false)}
               style={({ pressed }) => [styles.speciesControl, pressed && styles.pressed]}
             >
-              <Image source={selectedSpecies.image} style={styles.speciesThumb} />
               <Text numberOfLines={1} style={styles.speciesControlText}>
                 {selectedSpecies.commonName}
               </Text>
@@ -362,10 +360,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    paddingHorizontal: 7,
+    gap: 5,
+    paddingHorizontal: 12,
   },
-  speciesThumb: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#d9dfdb" },
   speciesControlText: { maxWidth: 155, color: "#1d262b", fontSize: 15, fontWeight: "700" },
   chevron: { marginTop: -2, color: "#445057", fontSize: 14, fontWeight: "600" },
   zoomControls: {
