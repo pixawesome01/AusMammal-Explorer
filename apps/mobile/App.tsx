@@ -1,7 +1,9 @@
 import { StatusBar } from "expo-status-bar";
+import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
 import { useRef, useState } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -58,8 +60,21 @@ type ExplorerTabsProps = {
 };
 
 function ExplorerTabs({ activeTab, onChange }: ExplorerTabsProps) {
+  const useNativeGlass = Platform.OS === "ios" && isGlassEffectAPIAvailable();
+
   return (
     <View accessibilityRole="tablist" style={styles.tabBar}>
+      {useNativeGlass ? (
+        <GlassView
+          colorScheme="light"
+          glassEffectStyle="clear"
+          pointerEvents="none"
+          style={styles.tabBarGlass}
+          tintColor="rgba(226,242,235,0.20)"
+        />
+      ) : (
+        <View pointerEvents="none" style={[styles.tabBarGlass, styles.tabBarGlassFallback]} />
+      )}
       {TABS.map((tab) => {
         const selected = activeTab === tab.id;
         return (
@@ -74,6 +89,26 @@ function ExplorerTabs({ activeTab, onChange }: ExplorerTabsProps) {
               pressed && styles.pressed,
             ]}
           >
+            {useNativeGlass ? (
+              <GlassView
+                colorScheme="light"
+                glassEffectStyle={selected ? "regular" : "clear"}
+                isInteractive
+                pointerEvents="none"
+                style={styles.tabGlass}
+                tintColor={selected ? "rgba(255,255,255,0.54)" : "rgba(238,248,243,0.18)"}
+              />
+            ) : (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.tabGlass,
+                  styles.tabGlassFallback,
+                  selected && styles.activeTabGlassFallback,
+                ]}
+              />
+            )}
+            <View pointerEvents="none" style={styles.tabHighlight} />
             <Text style={[styles.tabText, selected && styles.activeTabText]}>{tab.label}</Text>
           </Pressable>
         );
@@ -435,18 +470,67 @@ const styles = StyleSheet.create({
   tabBar: {
     height: 42,
     flexDirection: "row",
-    padding: 3,
+    gap: 4,
+    overflow: "hidden",
+    padding: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.78)",
     borderRadius: 22,
-    backgroundColor: "rgba(216,222,217,0.78)",
+    backgroundColor: "rgba(228,239,233,0.18)",
+    shadowColor: "#65746c",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  tab: { flex: 1, alignItems: "center", justifyContent: "center", borderRadius: 19 },
+  tabBarGlass: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 22,
+  },
+  tabBarGlassFallback: {
+    backgroundColor: "rgba(226,237,231,0.62)",
+  },
+  tab: {
+    position: "relative",
+    flex: 1,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.62)",
+    borderRadius: 18,
+    shadowColor: "#607168",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  tabGlass: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 18,
+  },
+  tabGlassFallback: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
+  activeTabGlassFallback: {
+    backgroundColor: "rgba(255,255,255,0.78)",
+  },
+  tabHighlight: {
+    position: "absolute",
+    top: 1,
+    right: 6,
+    left: 6,
+    height: 10,
+    borderRadius: 9,
+    backgroundColor: "rgba(255,255,255,0.30)",
+  },
   activeTab: {
-    backgroundColor: "rgba(255,255,255,0.96)",
+    borderColor: "rgba(255,255,255,0.94)",
     shadowColor: "#79817d",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.14,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.20,
+    shadowRadius: 8,
+    elevation: 3,
   },
   tabText: { color: "#343d39", fontSize: 12, fontWeight: "600" },
   activeTabText: { color: "#111714", fontWeight: "700" },

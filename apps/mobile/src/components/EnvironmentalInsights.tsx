@@ -36,6 +36,7 @@ const RADIAL_CENTRE_SIZE = 40;
 const RADIAL_CHART_CENTRE = RADIAL_CHART_SIZE / 2;
 const RADIAL_CENTRE_OFFSET = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
 const RADIAL_LABEL_RADIUS = 122;
+const RADIAL_MAX_PETAL_HEIGHT = 104;
 
 type ClimateBarChartProps = {
   accessibilityLabel: string;
@@ -130,7 +131,7 @@ export function EnvironmentalInsights({
             <View style={styles.radialChart}>
               {monthlySeries.map((item, index) => {
                 const height = 52 + (item.count / largestMonthlyCount) * 52;
-                const halfWidth = height * 0.245;
+                const halfWidth = height * Math.tan(Math.PI / 12);
                 return (
                   <View
                     key={item.month}
@@ -151,6 +152,18 @@ export function EnvironmentalInsights({
                   </View>
                 );
               })}
+              {monthlySeries.map((item, index) => (
+                <View
+                  key={`separator-${item.month}`}
+                  pointerEvents="none"
+                  style={[
+                    styles.radialSpoke,
+                    { transform: [{ rotate: `${index * 30 + 15}deg` }] },
+                  ]}
+                >
+                  <View style={styles.radialSeparator} />
+                </View>
+              ))}
               <View style={styles.radialCentre} />
               {peakMonths.map((item) => {
                 const angle = ((item.month - 1) * 30 * Math.PI) / 180;
@@ -287,6 +300,13 @@ const styles = StyleSheet.create({
     height: 0,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
+  },
+  radialSeparator: {
+    position: "absolute",
+    top: RADIAL_CHART_CENTRE - RADIAL_MAX_PETAL_HEIGHT,
+    width: 2,
+    height: RADIAL_MAX_PETAL_HEIGHT,
+    backgroundColor: "rgba(255,255,255,0.94)",
   },
   radialCentre: {
     position: "absolute",
