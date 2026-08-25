@@ -118,7 +118,11 @@ export function SpeciesSelector({
                 pressed && styles.pressed,
               ]}
             >
-              <Image source={species.image} style={styles.photo} />
+              <Image
+                accessibilityLabel={`${species.commonName} photo`}
+                source={species.image}
+                style={styles.photo}
+              />
               <View style={styles.optionText}>
                 <Text style={styles.commonName}>{species.commonName}</Text>
                 <Text style={styles.scientificName}>{species.scientificName}</Text>

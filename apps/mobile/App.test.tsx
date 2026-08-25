@@ -245,4 +245,39 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.getByLabelText("Typical daily rainfall chart")).toBeTruthy();
     warning.mockRestore();
   });
+
+  it("keeps selector images mounted while the map is open", async () => {
+    const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
+      type: "FeatureCollection",
+      features: [featureFor(file.scientificName, 1)],
+    }));
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: 1 },
+      },
+    };
+
+    await render(
+      <SpeciesProvider>
+        <ExplorerWorkspace readAsset={readAsset} manifest={manifest} />
+      </SpeciesProvider>,
+    );
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    await waitFor(() => expect(screen.getByLabelText("Occurrence map for Koala")).toBeTruthy());
+
+    expect(
+      screen.getByLabelText("AusMammal", { includeHiddenElements: true }),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText("Koala photo", { includeHiddenElements: true }),
+    ).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Back to species selection" }));
+    expect(screen.getByLabelText("AusMammal")).toBeTruthy();
+    expect(screen.getByLabelText("Koala photo")).toBeTruthy();
+    warning.mockRestore();
+  });
 });

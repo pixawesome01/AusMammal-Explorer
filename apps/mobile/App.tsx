@@ -113,10 +113,15 @@ export function ExplorerWorkspace({
           : `${mappedCount?.toLocaleString()} records shown`;
   const sheetHeight = Math.min(470, Math.max(340, Math.round(windowHeight * 0.45)));
 
-  if (!isExplorerOpen) {
-    return (
-      <SafeAreaView style={styles.selectorSafeArea}>
-        <StatusBar style="light" />
+  return (
+    <View style={styles.workspace}>
+      <StatusBar style={isExplorerOpen ? "dark" : "light"} />
+      <SafeAreaView
+        accessibilityElementsHidden={isExplorerOpen}
+        importantForAccessibility={isExplorerOpen ? "no-hide-descendants" : "auto"}
+        pointerEvents={isExplorerOpen ? "none" : "auto"}
+        style={styles.selectorSafeArea}
+      >
         <SpeciesSelector
           onSpeciesPress={(_species, month) => {
             setTemporalFilter(month === undefined ? {} : { month });
@@ -125,13 +130,10 @@ export function ExplorerWorkspace({
           }}
         />
       </SafeAreaView>
-    );
-  }
 
-  return (
-    <SafeAreaView style={styles.explorerSafeArea}>
-      <StatusBar style="dark" />
-      <View style={styles.explorerScreen}>
+      {isExplorerOpen ? (
+        <SafeAreaView style={styles.explorerSafeArea}>
+          <View style={styles.explorerScreen}>
         <OccurrenceMap
           ref={mapRef}
           collection={occurrenceState.records?.collection}
@@ -269,43 +271,45 @@ export function ExplorerWorkspace({
             </View>
           )}
         </View>
-      </View>
+          </View>
 
-      <Modal
-        animationType="slide"
-        onRequestClose={() => setAboutOpen(false)}
-        presentationStyle="overFullScreen"
-        transparent
-        visible={aboutOpen}
-      >
-        <View style={styles.modalBackdrop}>
-          <SafeAreaView style={styles.aboutSheet}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.aboutHeader}>
-              <Pressable
-                accessibilityLabel="Close about this data"
-                accessibilityRole="button"
-                onPress={() => setAboutOpen(false)}
-                style={({ pressed }) => [styles.modalBackButton, pressed && styles.pressed]}
-              >
-                <Text style={styles.backIcon}>‹</Text>
-              </Pressable>
-              <Text accessibilityRole="header" style={styles.aboutHeaderTitle}>
-                About this data
-              </Text>
-              <View style={styles.modalHeaderSpacer} />
+          <Modal
+            animationType="slide"
+            onRequestClose={() => setAboutOpen(false)}
+            presentationStyle="overFullScreen"
+            transparent
+            visible={aboutOpen}
+          >
+            <View style={styles.modalBackdrop}>
+              <SafeAreaView style={styles.aboutSheet}>
+                <View style={styles.sheetHandle} />
+                <View style={styles.aboutHeader}>
+                  <Pressable
+                    accessibilityLabel="Close about this data"
+                    accessibilityRole="button"
+                    onPress={() => setAboutOpen(false)}
+                    style={({ pressed }) => [styles.modalBackButton, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.backIcon}>‹</Text>
+                  </Pressable>
+                  <Text accessibilityRole="header" style={styles.aboutHeaderTitle}>
+                    About this data
+                  </Text>
+                  <View style={styles.modalHeaderSpacer} />
+                </View>
+                <ScrollView contentContainerStyle={styles.aboutContent}>
+                  <AboutOccurrenceData species={selectedSpecies} state={occurrenceState} />
+                  <Text style={styles.dataNote}>
+                    Occurrence records show where a species has been recorded. They do not guarantee
+                    a current sighting.
+                  </Text>
+                </ScrollView>
+              </SafeAreaView>
             </View>
-            <ScrollView contentContainerStyle={styles.aboutContent}>
-              <AboutOccurrenceData species={selectedSpecies} state={occurrenceState} />
-              <Text style={styles.dataNote}>
-                Occurrence records show where a species has been recorded. They do not guarantee
-                a current sighting.
-              </Text>
-            </ScrollView>
-          </SafeAreaView>
-        </View>
-      </Modal>
-    </SafeAreaView>
+          </Modal>
+        </SafeAreaView>
+      ) : null}
+    </View>
   );
 }
 
@@ -318,8 +322,9 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  workspace: { flex: 1, position: "relative", backgroundColor: "#27313b" },
   selectorSafeArea: { flex: 1, backgroundColor: "#27313b" },
-  explorerSafeArea: { flex: 1, backgroundColor: "#dce8e0" },
+  explorerSafeArea: { ...StyleSheet.absoluteFill, backgroundColor: "#dce8e0" },
   explorerScreen: { flex: 1, position: "relative", overflow: "hidden" },
   mapUi: { ...StyleSheet.absoluteFill },
   topControl: {
