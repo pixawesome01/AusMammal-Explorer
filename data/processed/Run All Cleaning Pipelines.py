@@ -25,29 +25,31 @@ Python module paths; they're loaded here the same way the project's own
 tests import them (see tests/test_species.py).
 """
 import importlib.util
-import os
 from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
+
+# Keyed by filename so a file loaded for more than one function (the
+# MapLibre pipeline, below, is loaded for both fetch_ala_occurrences and
+# clean_and_format_marsupials) executes its module-level code exactly once
+# per run rather than once per function pulled from it.
+_loaded_modules = {}
 
 
 def _load_function(filename, function_name):
     """Loads a sibling pipeline script by file path (not importable as a
     normal module - its filename isn't a valid Python identifier) and
-    returns one function from it."""
-    module_path = THIS_DIR / filename
-    spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return getattr(module, function_name)
+    returns one function from it. Caches the loaded module per filename."""
+    if filename not in _loaded_modules:
+        module_path = THIS_DIR / filename
+        spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _loaded_modules[filename] = module
+    return getattr(_loaded_modules[filename], function_name)
 
 
 def run_all(email):
-    # Both pipelines write relative-path outputs into their own directory
-    # by convention; running from here regardless of the caller's cwd keeps
-    # that convention working without changing either pipeline's own code.
-    os.chdir(THIS_DIR)
-
     print("=== Fetching from ALA (shared by both pipelines) ===")
     fetch_ala_occurrences = _load_function(
         "Data Cleaning Pipeline for MapLibre.py", "fetch_ala_occurrences"
@@ -58,12 +60,17 @@ def run_all(email):
     clean_and_format_marsupials = _load_function(
         "Data Cleaning Pipeline for MapLibre.py", "clean_and_format_marsupials"
     )
-    clean_and_format_marsupials(doi, raw_df, "cleaned_marsupials_maplibre.geojson")
+    # Absolute, so this pipeline's output lands in the usual place
+    # regardless of the caller's own working directory - no os.chdir needed.
+    clean_and_format_marsupials(
+        doi, raw_df, str(THIS_DIR / "cleaned_marsupials_maplibre.geojson")
+    )
 
     print("\n=== Cleaning for Data Cleaning Pipeline for MaxEnt ===")
     clean_occurrences_for_maxent = _load_function(
         "Data Cleaning Pipeline for MaxEnt.py", "clean_occurrences_for_maxent"
     )
+    # Uses its own absolute default OUTPUT_PATH (models/output/...).
     clean_occurrences_for_maxent(doi, raw_df)
 
     print(f"\nBoth pipelines complete, both derived from DOI: {doi}. "
