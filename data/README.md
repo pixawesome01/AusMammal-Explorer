@@ -110,9 +110,11 @@ Validate a snapshot from a clean checkout with `python -m ausmammal_explorer.sna
 
 `processed/Environmental Context Pipeline for Insights.py` builds an actual (not climatological) month-by-month rainfall/temperature summary for Australia, plus a per-species breakdown for any MVP species with a locally-available cleaned occurrence file, covering every complete calendar month from 2020-01 through the most recently finished month. Used by the app's Insights view (requirement R5 — "summarise when the selected mammal species is most commonly recorded using monthly averages and simple rainfall/temperature context"; see the Mock-up 3 slide). It is independent of the occurrence-cleaning pipeline above and does not need an ALA account or email.
 
+Output lives at `metadata/environmental_context_au.csv`, not under `processed/` — unlike the occurrence pipelines' generated outputs, this file is small and stable enough to commit directly (`data/metadata/` isn't git-ignored), so it's tracked alongside the snapshot manifests rather than treated as ephemeral generated data. Per-species sampling still reads its input GeoJSON files from `processed/` (see "Per-species sampling" below) — the two locations are independent of each other.
+
 Reruns are incremental: months already present in the output file from a prior run are reused as-is, except for the current year (whose SILO files can still be revised), so a routine refresh only downloads and recomputes what might actually have changed instead of rebuilding the entire history every time.
 
-This is visualisation-only — it produces a small JSON summary, not a spatial predictor raster. Environmental data prep for MaxEnt/maxnet training (report Section 4, Phase 2) is a separate, not-yet-built pipeline.
+This is visualisation-only — it produces a flat CSV table, not a spatial predictor raster. Environmental data prep for MaxEnt/maxnet training (report Section 4, Phase 2) is a separate, not-yet-built pipeline.
 
 ### Source
 
@@ -130,34 +132,32 @@ SILO data is distributed under [CC-BY 4.0](https://creativecommons.org/licenses/
 
 ### Pipeline
 
-1. Load the previous run's output (if any) and index its months by `(year, month)`, so already-computed months from a prior year can be reused instead of recomputed (see "Incremental reruns" below).
-2. Build a regular lon/lat sample grid at SILO's own grid extent (lat -44 to -10, lon 112 to 154, 2° spacing) — trimmed slightly inside the occurrence pipeline's Australian bounding box (-45 to -6, 110 to 155), since a sample point outside SILO's coverage would just return nodata. Separately, for each cleaned per-species occurrence file found locally, build a species-specific sample set from that file's own coordinates instead (see "Per-species sampling" above).
+1. Load the previous run's output (if any) and group its rows by `series` and `(year, month)`, so already-computed months from a prior year can be reused instead of recomputed (see "Incremental reruns" below).
+2. Build a regular lon/lat sample grid at SILO's own grid extent (lat -44 to -10, lon 112 to 154, 2° spacing) — trimmed slightly inside the occurrence pipeline's Australian bounding box (-45 to -6, 110 to 155), since a sample point outside SILO's coverage would just return nodata. Separately, for each cleaned per-species occurrence file found in `processed/`, build a species-specific sample set from that file's own coordinates instead (see "Per-species sampling" above).
 3. For each complete month from 2020-01 to the most recently finished month (evaluated in the `Australia/Melbourne` timezone, not UTC, so a UTC date near midnight can't lag Australia's actual calendar month) that isn't being reused from the prior run: download (or reuse/conditionally-refresh the cached) SILO annual file for that year, per variable. Each `(variable, year)` file is fetched at most once per run and shared across the Australia-wide series and every per-species series.
 4. Validate that each requested band's own `NETCDF_DIM_time` metadata matches what the pipeline expects it to represent, and fail loudly if it doesn't — guards against SILO silently changing its band-to-date convention and corrupting the output without warning.
 5. `monthly_rain` is already a monthly product — read the month-numbered band directly. `max_temp`/`min_temp` are daily-only — for each sample point, pair each day's max and min before averaging (so a day with only one of the two recorded doesn't bias the result), then average across the days in that month. Each point's pixel position is looked up once per file and reused across every band read, rather than re-resolving it per point per day.
 6. Convert stored integer values to real-world units using each band's own embedded scale/offset. Points that land in the ocean (or, for a species sample set, outside SILO's grid) return nodata and are dropped from the mean automatically — no separate land mask needed.
 7. Combine sample points into a single value per month using a latitude-weighted mean (a flat mean over a lon/lat grid over-represents higher latitudes, since a degree of longitude covers less ground near the poles than the equator). If fewer than `MIN_VALID_SAMPLE_FRACTION` (30%) of a series' points have valid data for a month, the run fails rather than reporting an unrepresentative average.
-8. Sanity-check each month's result against a physically plausible range for Australia; an out-of-range or missing (NaN) result raises instead of being written to the output, since a NaN would also serialise as invalid (non-RFC-8259) JSON.
-9. Write one JSON summary — atomically, via a temp file + rename — with an entry per complete month for the Australia-wide series and for each per-species series.
+8. Sanity-check each month's result against a physically plausible range for Australia; an out-of-range or missing (NaN) result raises instead of being written to the output, since a literal "nan" cell would silently corrupt any downstream sum or average a consumer computes over the column.
+9. Write one CSV table — atomically, via a temp file + rename — with a row per complete month for the Australia-wide series and for each per-species series. Run-level metadata (source, coverage period, sample-grid settings) is logged to the console rather than embedded in the file, since a flat CSV has no natural per-row home for values that are constant across the whole run.
 
 ### Incremental reruns
 
 A month already present in the loaded prior output is reused verbatim and never recomputed or re-downloaded, *unless* it falls in the current calendar year — SILO's current-year files are appended/revised over time, so those months are always recomputed to pick up any change. This applies independently to the Australia-wide series and to each per-species series (e.g. a species added after the first run only needs its own history built once; later reruns are just as incremental for it as for the Australia-wide series).
 
-### JSON schema
+### CSV schema
 
-`environmental_context_au.json`:
+`metadata/environmental_context_au.csv` — one row per `(series, year, month)`:
 
-| Field | Meaning |
+| Column | Meaning |
 | --- | --- |
-| `source` | `"SILO (Queensland Government DES, from Bureau of Meteorology station observations; Jeffrey et al., 2001)"` |
-| `coveragePeriod` | e.g. `"2020-01 to 2026-07"` — always up to the most recently finished month |
-| `region` | The Australian bounding box used (SILO's own grid extent) |
-| `sampleGridStepDegrees` / `nominalSamplePointCount` | Australia-wide sample grid density, for reproducibility |
-| `minimumValidSampleFraction` | Minimum fraction of a series' points that must have valid data for a month's mean to be trusted |
-| `generatedAt` | ISO 8601 timestamp of the run |
-| `months[]` | Australia-wide series: one entry per complete month — `year`, `month`, `monthName`, `temperatureC`, `precipitationMm`, `validTemperaturePointCount`, `validRainfallPointCount` |
-| `bySpecies` | `{ "<species-id>": { samplePointCount, sourceFile, months[] } }` — one entry per species with a cleaned occurrence file found locally; `months[]` has the same shape as the Australia-wide series but sampled at that species' own occurrence coordinates. Species with no cleaned file present are simply absent from this object. |
+| `series` | `"australia"` for the continent-wide series, or a species id (e.g. `"koala"`) for a per-species series |
+| `samplePointCount` | Number of sample points behind this series' mean (the Australia-wide grid's size, or a species' occurrence-based sample count) |
+| `sourceFile` | For a species series, the `cleaned_marsupials_maplibre_<species-id>.geojson` its sample points were drawn from; empty for the Australia-wide series |
+| `year` / `month` / `monthName` | The calendar month this row summarises |
+| `temperatureC` / `precipitationMm` | This series' latitude-weighted mean for the month |
+| `validTemperaturePointCount` / `validRainfallPointCount` | How many of the series' sample points actually had valid data that month |
 
 ### Manifest
 
@@ -166,7 +166,7 @@ Copy `metadata/snapshot-manifest.example.json` for every run:
 - `source` — `"SILO"`.
 - `query` — `{"variables": ["monthly_rain", "max_temp", "min_temp"], "coverage_start": "2020-01", "sample_grid_step_degrees": 2.0}`.
 - `coverage` — `2020-01-01` to the run's most recently finished month.
-- `files` — one entry for `environmental_context_au.json`, with its sha256 checksum.
+- `files` — one entry for `environmental_context_au.csv`, with its sha256 checksum.
 - `licence_and_attribution` — `CC-BY 4.0`, plus "Jeffrey, S.J., et al. (2001). Using spatial interpolation to construct a comprehensive archive of Australian climate data. Environmental Modelling & Software, 16(4), 309–330."
 - `pipeline_version` — the git commit SHA of `Environmental Context Pipeline for Insights.py` used for that run.
 

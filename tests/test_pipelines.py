@@ -228,30 +228,32 @@ class TestEnvironmentalContextPipelineEstablishment(TestCase):
             except OSError as e:
                 self.fail(f"Cannot write to output directory: {e}")
 
-    def test_output_json_structure(self):
-        """Verify the expected JSON output structure is documented."""
+    def test_output_csv_structure(self):
+        """Verify the expected CSV output columns are documented."""
         with open(self.pipeline_file, encoding='utf-8') as f:
             content = f.read()
-        
-        # Check for expected output fields
+
+        self.assertIn("CSV_FIELDNAMES", content)
+
+        # Check for expected output columns
         expected_fields = [
-            "source",
-            "coveragePeriod",
-            "region",
-            "sampleGridStepDegrees",
-            "nominalSamplePointCount",
-            "minimumValidSampleFraction",
-            "generatedAt",
-            "months",
+            "series",
+            "samplePointCount",
+            "sourceFile",
+            "year",
+            "month",
+            "monthName",
+            "temperatureC",
+            "precipitationMm",
             "validTemperaturePointCount",
             "validRainfallPointCount",
         ]
-        
+
         for field in expected_fields:
             self.assertIn(
                 field,
                 content,
-                f"Expected output field '{field}' not found in pipeline code"
+                f"Expected output column '{field}' not found in pipeline code"
             )
 
 
