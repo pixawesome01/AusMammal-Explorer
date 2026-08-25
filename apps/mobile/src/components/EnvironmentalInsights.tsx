@@ -31,9 +31,11 @@ const MONTH_COLORS = [
   "#8c82ba",
 ] as const;
 
-const RADIAL_CHART_SIZE = 184;
-const RADIAL_CENTRE_SIZE = 36;
-const RADIAL_BAR_ANCHOR = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
+const RADIAL_CHART_SIZE = 270;
+const RADIAL_CENTRE_SIZE = 40;
+const RADIAL_CHART_CENTRE = RADIAL_CHART_SIZE / 2;
+const RADIAL_CENTRE_OFFSET = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
+const RADIAL_LABEL_RADIUS = 122;
 
 type ClimateBarChartProps = {
   accessibilityLabel: string;
@@ -108,7 +110,11 @@ export function EnvironmentalInsights({
         style={[styles.card, styles.monthCard]}
       >
         <View style={styles.cardHeading}>
-          <Text style={styles.icon}>▣</Text>
+          <View style={styles.calendarIcon}>
+            <View style={[styles.calendarRing, styles.calendarRingLeft]} />
+            <View style={[styles.calendarRing, styles.calendarRingRight]} />
+            <View style={styles.calendarHeader} />
+          </View>
           <View style={styles.headingText}>
             <Text style={styles.eyebrow}>Seasonal pattern</Text>
             <Text accessibilityRole="header" style={styles.title}>Records by month</Text>
@@ -123,7 +129,8 @@ export function EnvironmentalInsights({
           <>
             <View style={styles.radialChart}>
               {monthlySeries.map((item, index) => {
-                const height = 12 + (item.count / largestMonthlyCount) * 46;
+                const height = 52 + (item.count / largestMonthlyCount) * 52;
+                const halfWidth = height * 0.245;
                 return (
                   <View
                     key={item.month}
@@ -131,11 +138,13 @@ export function EnvironmentalInsights({
                   >
                     <View
                       style={[
-                        styles.radialBar,
+                        styles.radialPetal,
                         {
-                          height,
-                          top: RADIAL_BAR_ANCHOR - height,
-                          backgroundColor: MONTH_COLORS[index],
+                          top: RADIAL_CHART_CENTRE - height,
+                          borderLeftWidth: halfWidth,
+                          borderRightWidth: halfWidth,
+                          borderTopWidth: height,
+                          borderTopColor: MONTH_COLORS[index],
                         },
                       ]}
                     />
@@ -143,14 +152,24 @@ export function EnvironmentalInsights({
                 );
               })}
               <View style={styles.radialCentre} />
-            </View>
-            <View style={styles.peakMonths}>
-              {peakMonths.map((item) => (
-                <View key={item.month} style={styles.peakPill}>
-                  <Text style={styles.peakMonth}>{item.name}</Text>
-                  <Text style={styles.peakCount}>{item.count.toLocaleString()}</Text>
-                </View>
-              ))}
+              {peakMonths.map((item) => {
+                const angle = ((item.month - 1) * 30 * Math.PI) / 180;
+                return (
+                  <Text
+                    key={item.month}
+                    style={[
+                      styles.peakLabel,
+                      {
+                        left: RADIAL_CHART_CENTRE + Math.sin(angle) * RADIAL_LABEL_RADIUS - 28,
+                        top: RADIAL_CHART_CENTRE - Math.cos(angle) * RADIAL_LABEL_RADIUS - 11,
+                        color: MONTH_COLORS[item.month - 1],
+                      },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                );
+              })}
             </View>
             <Text style={styles.description}>
               Based on {total.toLocaleString()} mapped observations, {speciesName.toLowerCase()} records
@@ -225,6 +244,32 @@ const styles = StyleSheet.create({
   climateCard: { shadowColor: "#83b495", shadowOpacity: 0.15, shadowRadius: 20 },
   cardHeading: { flexDirection: "row", alignItems: "center", gap: 11 },
   icon: { width: 32, color: "#747b78", fontSize: 25, fontWeight: "400", textAlign: "center" },
+  calendarIcon: {
+    width: 29,
+    height: 27,
+    marginHorizontal: 2,
+    borderWidth: 3,
+    borderColor: "#747b78",
+    borderRadius: 5,
+  },
+  calendarRing: {
+    position: "absolute",
+    top: -6,
+    width: 3,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: "#747b78",
+  },
+  calendarRingLeft: { left: 5 },
+  calendarRingRight: { right: 5 },
+  calendarHeader: {
+    position: "absolute",
+    top: 6,
+    left: -1,
+    right: -1,
+    height: 3,
+    backgroundColor: "#747b78",
+  },
   headingText: { flex: 1 },
   eyebrow: { color: "#659477", fontSize: 10, fontWeight: "600", letterSpacing: 1.1, textTransform: "uppercase" },
   title: { marginTop: 2, color: "#34423a", fontSize: 18, fontWeight: "600" },
@@ -236,16 +281,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   radialSpoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
-  radialBar: {
+  radialPetal: {
     position: "absolute",
-    width: 18,
-    borderWidth: 1,
-    borderColor: "rgba(71,88,79,0.28)",
+    width: 0,
+    height: 0,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
   },
   radialCentre: {
     position: "absolute",
-    top: RADIAL_BAR_ANCHOR,
-    left: RADIAL_BAR_ANCHOR,
+    top: RADIAL_CENTRE_OFFSET,
+    left: RADIAL_CENTRE_OFFSET,
     width: RADIAL_CENTRE_SIZE,
     height: RADIAL_CENTRE_SIZE,
     borderWidth: 1,
@@ -253,19 +299,13 @@ const styles = StyleSheet.create({
     borderRadius: RADIAL_CENTRE_SIZE / 2,
     backgroundColor: "#ffffff",
   },
-  peakMonths: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: -2 },
-  peakPill: {
-    minWidth: 65,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: "#edf4ef",
+  peakLabel: {
+    position: "absolute",
+    width: 56,
+    fontSize: 17,
+    fontWeight: "500",
+    textAlign: "center",
   },
-  peakMonth: { color: "#3a7454", fontSize: 11, fontWeight: "600" },
-  peakCount: { color: "#6f7973", fontSize: 11 },
   description: { marginTop: 13, color: "#747b77", fontSize: 13, lineHeight: 19 },
   climateMetric: { marginTop: 18, fontSize: 25, fontWeight: "500", textAlign: "center" },
   barChart: { height: 138, flexDirection: "row", alignItems: "flex-end", gap: 3, marginTop: 5 },
