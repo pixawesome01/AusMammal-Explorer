@@ -31,6 +31,10 @@ const MONTH_COLORS = [
   "#8c82ba",
 ] as const;
 
+const RADIAL_CHART_SIZE = 184;
+const RADIAL_CENTRE_SIZE = 36;
+const RADIAL_BAR_ANCHOR = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
+
 type ClimateBarChartProps = {
   accessibilityLabel: string;
   color: string;
@@ -119,7 +123,7 @@ export function EnvironmentalInsights({
           <>
             <View style={styles.radialChart}>
               {monthlySeries.map((item, index) => {
-                const height = 22 + (item.count / largestMonthlyCount) * 61;
+                const height = 12 + (item.count / largestMonthlyCount) * 46;
                 return (
                   <View
                     key={item.month}
@@ -130,7 +134,7 @@ export function EnvironmentalInsights({
                         styles.radialBar,
                         {
                           height,
-                          top: 111 - 20 - height,
+                          top: RADIAL_BAR_ANCHOR - height,
                           backgroundColor: MONTH_COLORS[index],
                         },
                       ]}
@@ -225,25 +229,28 @@ const styles = StyleSheet.create({
   eyebrow: { color: "#659477", fontSize: 10, fontWeight: "600", letterSpacing: 1.1, textTransform: "uppercase" },
   title: { marginTop: 2, color: "#34423a", fontSize: 18, fontWeight: "600" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
-  radialChart: { alignSelf: "center", width: 222, height: 222, marginTop: 8 },
+  radialChart: {
+    alignSelf: "center",
+    width: RADIAL_CHART_SIZE,
+    height: RADIAL_CHART_SIZE,
+    marginTop: 8,
+  },
   radialSpoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
   radialBar: {
     position: "absolute",
-    width: 28,
+    width: 18,
     borderWidth: 1,
     borderColor: "rgba(71,88,79,0.28)",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
   },
   radialCentre: {
     position: "absolute",
-    top: 91,
-    left: 91,
-    width: 40,
-    height: 40,
+    top: RADIAL_BAR_ANCHOR,
+    left: RADIAL_BAR_ANCHOR,
+    width: RADIAL_CENTRE_SIZE,
+    height: RADIAL_CENTRE_SIZE,
     borderWidth: 1,
     borderColor: "rgba(78,98,87,0.24)",
-    borderRadius: 20,
+    borderRadius: RADIAL_CENTRE_SIZE / 2,
     backgroundColor: "#ffffff",
   },
   peakMonths: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: -2 },
