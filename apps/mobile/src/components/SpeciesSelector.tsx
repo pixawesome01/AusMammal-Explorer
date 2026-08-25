@@ -1,3 +1,4 @@
+import { useAssets } from "expo-asset";
 import { useMemo, useState } from "react";
 import {
   Image,
@@ -15,14 +16,20 @@ import { MVP_SPECIES, type Species } from "../species";
 import { SeasonalSpeciesView } from "./SeasonalSpeciesView";
 
 type SpeciesSelectorProps = {
+  imageRevision?: number;
   initialMonth?: number;
   onSpeciesPress?: (species: Species, month?: number) => void;
 };
 
+const LOGO_ASSET = require("../../assets/branding/ausmammal-logo.png");
+const SELECTOR_ASSETS = [LOGO_ASSET, ...MVP_SPECIES.map((species) => species.image)];
+
 export function SpeciesSelector({
+  imageRevision = 0,
   initialMonth = new Date().getMonth() + 1,
   onSpeciesPress,
 }: SpeciesSelectorProps) {
+  const [cachedAssets] = useAssets(SELECTOR_ASSETS);
   const { selectedSpecies, selectSpecies } = useSpeciesSelection();
   const [query, setQuery] = useState("");
   const [seasonalView, setSeasonalView] = useState(false);
@@ -44,15 +51,27 @@ export function SpeciesSelector({
     selectSpecies(species.id);
     onSpeciesPress?.(species, selectedMonth);
   };
+  const imageSourceForSpecies = (species: Species) => {
+    const assetIndex = MVP_SPECIES.findIndex((item) => item.id === species.id) + 1;
+    const localUri = cachedAssets?.[assetIndex]?.localUri;
+    return localUri ? { uri: localUri } : species.image;
+  };
 
   return (
     <View accessibilityLabel="MVP species selector" style={styles.screen}>
       <View style={styles.header}>
         <Image
+          key={`logo-${imageRevision}`}
           accessibilityLabel="AusMammal"
           accessibilityRole="image"
+          defaultSource={LOGO_ASSET}
+          fadeDuration={0}
           resizeMode="contain"
-          source={require("../../assets/branding/ausmammal-logo.png")}
+          source={
+            cachedAssets?.[0]?.localUri
+              ? { uri: cachedAssets[0].localUri }
+              : LOGO_ASSET
+          }
           style={styles.logo}
         />
       </View>
@@ -90,6 +109,8 @@ export function SpeciesSelector({
 
       {seasonalView ? (
         <SeasonalSpeciesView
+          imageRevision={imageRevision}
+          imageSourceForSpecies={imageSourceForSpecies}
           month={month}
           onMonthChange={setMonth}
           onSpeciesPress={(species) => chooseSpecies(species, month)}
@@ -119,8 +140,11 @@ export function SpeciesSelector({
               ]}
             >
               <Image
+                key={`${species.id}-${imageRevision}`}
                 accessibilityLabel={`${species.commonName} photo`}
-                source={species.image}
+                defaultSource={species.image}
+                fadeDuration={0}
+                source={imageSourceForSpecies(species)}
                 style={styles.photo}
               />
               <View style={styles.optionText}>

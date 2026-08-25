@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import { ExplorerWorkspace } from "./App";
 import type { OccurrenceAssetReader, OccurrenceFeature } from "./src/data/occurrenceLoader";
@@ -67,6 +67,13 @@ function featureFor(scientificName: string, index: number): OccurrenceFeature {
   };
 }
 
+async function returnToSpeciesSelector() {
+  await act(async () => {
+    fireEvent.press(screen.getByRole("button", { name: "Back to species selection" }));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  });
+}
+
 describe("ExplorerWorkspace species flow", () => {
   it("updates the map, summary and data provenance for all seven species", async () => {
     const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -84,9 +91,7 @@ describe("ExplorerWorkspace species flow", () => {
 
     for (const [index, species] of MVP_SPECIES.entries()) {
       if (index > 0) {
-        await fireEvent.press(
-          screen.getByRole("button", { name: "Back to species selection" }),
-        );
+        await returnToSpeciesSelector();
       }
       await fireEvent.press(
         screen.getByRole("button", { name: new RegExp(species.commonName, "i") }),
@@ -275,7 +280,7 @@ describe("ExplorerWorkspace species flow", () => {
       screen.getByLabelText("Koala photo", { includeHiddenElements: true }),
     ).toBeTruthy();
 
-    await fireEvent.press(screen.getByRole("button", { name: "Back to species selection" }));
+    await returnToSpeciesSelector();
     expect(screen.getByLabelText("AusMammal")).toBeTruthy();
     expect(screen.getByLabelText("Koala photo")).toBeTruthy();
     warning.mockRestore();

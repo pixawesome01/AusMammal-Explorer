@@ -91,6 +91,7 @@ export function ExplorerWorkspace({
   const { selectedSpecies } = useSpeciesSelection();
   const mapRef = useRef<OccurrenceMapHandle>(null);
   const [isExplorerOpen, setExplorerOpen] = useState(false);
+  const [selectorImageRevision, setSelectorImageRevision] = useState(0);
   const [activeTab, setActiveTab] = useState<ExplorerTab>("records");
   const [aboutOpen, setAboutOpen] = useState(false);
   const [temporalFilter, setTemporalFilter] = useState<OccurrenceTemporalFilter>({});
@@ -111,6 +112,12 @@ export function ExplorerWorkspace({
           ? "No records shown"
           : `${mappedCount?.toLocaleString()} records shown`;
   const sheetHeight = Math.min(470, Math.max(340, Math.round(windowHeight * 0.45)));
+  const closeExplorer = () => {
+    setExplorerOpen(false);
+    requestAnimationFrame(() => {
+      setSelectorImageRevision((revision) => revision + 1);
+    });
+  };
 
   return (
     <View style={styles.workspace}>
@@ -122,6 +129,7 @@ export function ExplorerWorkspace({
         style={styles.selectorSafeArea}
       >
         <SpeciesSelector
+          imageRevision={selectorImageRevision}
           onSpeciesPress={(_species, month) => {
             setTemporalFilter(month === undefined ? {} : { month });
             setActiveTab("records");
@@ -147,7 +155,7 @@ export function ExplorerWorkspace({
             <Pressable
               accessibilityLabel="Back to species selection"
               accessibilityRole="button"
-              onPress={() => setExplorerOpen(false)}
+              onPress={closeExplorer}
               style={({ pressed }) => [styles.topIconButton, pressed && styles.pressed]}
             >
               <Text style={styles.backIcon}>‹</Text>
@@ -156,7 +164,7 @@ export function ExplorerWorkspace({
             <Pressable
               accessibilityLabel="Change species"
               accessibilityRole="button"
-              onPress={() => setExplorerOpen(false)}
+              onPress={closeExplorer}
               style={({ pressed }) => [styles.speciesControl, pressed && styles.pressed]}
             >
               <Text numberOfLines={1} style={styles.speciesControlText}>

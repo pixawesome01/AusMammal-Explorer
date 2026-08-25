@@ -1,4 +1,13 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  Image,
+  type ImageSourcePropType,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 import { getAustralianSeason } from "../data/occurrenceFilter";
 import { MVP_SPECIES, type Species } from "../species";
@@ -29,6 +38,8 @@ const BUBBLE_LAYOUT = [
 ] as const;
 
 type SeasonalSpeciesViewProps = {
+  imageRevision?: number;
+  imageSourceForSpecies?: (species: Species) => ImageSourcePropType;
   month: number;
   onMonthChange: (month: number) => void;
   onSpeciesPress: (species: Species) => void;
@@ -45,6 +56,8 @@ export function getSeasonLabel(month: number) {
 }
 
 export function SeasonalSpeciesView({
+  imageRevision = 0,
+  imageSourceForSpecies,
   month,
   onMonthChange,
   onSpeciesPress,
@@ -90,7 +103,10 @@ export function SeasonalSpeciesView({
               ]}
             >
               <Image
-                source={species.image}
+                key={`${species.id}-${imageRevision}`}
+                defaultSource={species.image}
+                fadeDuration={0}
+                source={imageSourceForSpecies?.(species) ?? species.image}
                 style={[
                   styles.bubbleImage,
                   {

@@ -21,6 +21,7 @@
   "dependencies": {
     "@maplibre/maplibre-react-native": "^11.3.6",
     "expo": "~57.0.16",
+    "expo-asset": "~57.0.14",
     "expo-dev-client": "~57.0.15",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
