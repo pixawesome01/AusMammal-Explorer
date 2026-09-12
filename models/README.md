@@ -39,3 +39,21 @@ Model outputs must be described as suitability estimates. They must not be prese
 - `notes` — also records which species (if any) fell below the recommended minimum or had zero cleaned records, per the Validation check above.
 - `pipeline_version` — the git commit SHA of the code that produced the snapshot.
 
+## Species distribution model
+
+`models/Species Distribution Model Pipeline for MaxEnt.R` fits one **maxnet** model per species (report Section 4 Phase 3) from the two artefacts above, and writes `models/output/suitability_<species-id>.tif` (Cloud Optimized GeoTIFF) plus `models/output/model_metadata_<species-id>.json` per species.
+
+**Land mask**: predictors are masked to Australian land before background sampling and prediction, using `models/input/australia_land.gpkg`. Generate it once by running `models/Prepare Australia Land Boundary.R`, which dissolves the mobile app's existing `apps/mobile/src/data/absStates2021.json` state/territory polygons (ABS ASGS Edition 3, 2021) into a single land boundary — no new external dataset or licence to track. Without this mask, ocean cells — which are not NA in the CHELSA-derived predictor stack — could be sampled as background for a terrestrial mammal.
+
+**Thinning**: occurrences are spatially thinned 10km via `spThin`, ten replicates, keeping the replicate with the most retained records (report Phase 1's last step — done here in R rather than the Python occurrence pipeline, since `spThin` is an R package).
+
+**Tuning**: `ENMeval::ENMevaluate()` searches feature classes `L`/`LQ`/`LQH` × regularisation multipliers `0.5`/`1`/`2`/`4` under Checkerboard2 hierarchical spatial cross-validation (Phillips et al., 2009 — counters ALA's spatial sampling bias). Verified against the installed ENMeval 2.0.6: there is no separate `"checkerboard1"`/`"checkerboard2"` partition literal in this version — `partitions = "checkerboard"` with a two-value `aggregation.factor` (here `c(10, 10)`) is what produces the hierarchical four-group Checkerboard2 scheme (a single value would give the basic two-group Checkerboard1 instead). The optimal setting is selected by delta-AICc ≤ 2, with ties broken toward the simplest model (fewest feature classes, then highest regularisation).
+
+**Reproducibility**: each species is seeded deterministically (`RANDOM_SEED + sum(utf8ToInt(species_id))`) before thinning/sampling/importance, so one species failing or being skipped can't change another species' results, and results is deterministic in a re-run.
+
+**Evaluation** (report Section 2.3): validation AUC, the continuous Boyce index, and the 10th-percentile training omission rate — all three computed natively by `ENMeval`, not calculated separately.
+
+**Permutation importance**: maxnet has no built-in percent-contribution table (unlike the original Java Maxent), so each predictor is permuted independently and scored by the resulting drop in AUC, then normalised to percentages.
+
+**Output**: predictions use the `cloglog` link (Phillips et al., 2017 — the maxnet paper the report cites), so raster cell values read directly as a 0–1 suitability estimate. Every metadata JSON carries a `displayWording` field so the app never needs to invent its own uncertainty language — model outputs must be presented as suitability estimates, never as guaranteed sightings or a definitive future distribution forecast. The COG output is not itself mobile-renderable — MapLibre Native has no on-device GeoTIFF/COG decoder, so a separate PNG (or tile) conversion step is still needed for the app.
+
