@@ -303,9 +303,11 @@ export function ExplorerWorkspace({
                   showsVerticalScrollIndicator={false}
                 >
                   <EnvironmentalInsights
-                    collection={occurrenceState.records?.collection}
+                    collection={occurrenceState.unfilteredRecords?.collection}
                     speciesName={selectedSpecies.commonName}
-                    status={occurrenceState.status}
+                    status={occurrenceState.unfilteredRecords
+                      ? (occurrenceState.unfilteredRecords.collection.features.length ? "ready" : "empty")
+                      : occurrenceState.status}
                   />
                   <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
                 </ScrollView>

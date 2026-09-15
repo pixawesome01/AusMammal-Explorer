@@ -28,14 +28,14 @@ describe("OccurrenceDataStatus", () => {
   beforeEach(() => retry.mockClear());
 
   it("announces loading", async () => {
-    await renderStatus({ status: "loading", records: null, error: null, retry });
+    await renderStatus({ status: "loading", unfilteredRecords: null, records: null, error: null, retry });
 
     expect(screen.getByTestId("occurrence-loading-state")).toBeTruthy();
     expect(screen.getByText("Loading Koala sightings…")).toBeTruthy();
   });
 
   it("gives a useful zero-sightings message", async () => {
-    await renderStatus({ status: "empty", records: RECORDS, error: null, retry });
+    await renderStatus({ status: "empty", unfilteredRecords: RECORDS, records: RECORDS, error: null, retry });
 
     expect(screen.getByText("No sightings found")).toBeTruthy();
     expect(screen.getByText(/widening the date range/i)).toBeTruthy();
@@ -43,7 +43,7 @@ describe("OccurrenceDataStatus", () => {
 
   it("distinguishes invalid frozen data and supports retry", async () => {
     const error = new OccurrenceDataError("Invalid occurrence record 1.", "invalid-schema");
-    await renderStatus({ status: "error", records: null, error, retry });
+    await renderStatus({ status: "error", unfilteredRecords: null, records: null, error, retry });
 
     expect(screen.getByText("The frozen occurrence data is invalid.")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Retry" }));
@@ -74,7 +74,7 @@ describe("OccurrenceDataStatus", () => {
         ],
       },
     };
-    const view = await renderStatus({ status: "ready", records, error: null, retry });
+    const view = await renderStatus({ status: "ready", unfilteredRecords: records, records, error: null, retry });
 
     expect(view.toJSON()).toBeNull();
     expect(screen.queryByTestId("occurrence-ready-state")).toBeNull();

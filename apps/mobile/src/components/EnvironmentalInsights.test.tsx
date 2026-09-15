@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { EnvironmentalInsights } from "./EnvironmentalInsights";
@@ -34,5 +34,41 @@ describe("EnvironmentalInsights", () => {
     expect(screen.getByLabelText("Typical monthly temperature chart")).toBeTruthy();
     expect(screen.getByLabelText("Typical daily rainfall chart")).toBeTruthy();
     expect(screen.getByText(/NASA POWER climate normals/)).toBeTruthy();
+    expect(screen.getByLabelText("Apr: 20.3°C, top observation month")).toBeTruthy();
+    expect(screen.getByLabelText("Jan: 23.9°C")).toBeTruthy();
+    expect(screen.getByText("Tap a bar to see temperature")).toBeTruthy();
+    const april = screen.getByRole("button", { name: "Apr: 20.3°C, top observation month" });
+    await fireEvent.press(april);
+    expect(screen.getByText("Apr · 20.3°C")).toBeTruthy();
+    expect(april.props.accessibilityState.selected).toBe(true);
+    await fireEvent.press(screen.getByRole("button", { name: "Jan: 23.9°C" }));
+    expect(screen.getByText("Jan · 23.9°C")).toBeTruthy();
+    expect(april.props.accessibilityState.selected).toBe(false);
+    expect(screen.getByText("Tap a bar to see rainfall")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Apr: 2.0 mm/day, top observation month" }));
+    expect(screen.getByText("Apr · 2.0 mm/day")).toHaveStyle({ color: "#5797ca" });
+    await fireEvent.press(screen.getByRole("button", { name: "Jan: 3.9 mm/day" }));
+    expect(screen.getByText("Jan · 3.9 mm/day")).toHaveStyle({ color: "#747b77" });
+    expect(screen.getByText("Jan · 23.9°C")).toBeTruthy();
+  });
+});
+
+
+describe("monthly chart scrubbing", () => {
+  it("shows the touched month, updates while dragging, and preserves the last value", async () => {
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
+    const chart = screen.getByTestId("month-scrubber");
+    await fireEvent(chart, "responderGrant", { nativeEvent: { locationX: 235, locationY: 135 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Apr · 1 total observation");
+    await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 35 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
+    await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 135 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
+    await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 400, locationY: 400 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
+    await fireEvent(chart, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Dec · 0 total observations");
+    await fireEvent(chart, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
   });
 });

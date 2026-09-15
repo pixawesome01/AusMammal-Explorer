@@ -92,8 +92,14 @@ describe("useOccurrenceRecords", () => {
     );
 
     await waitFor(() => expect(result.current.records?.collection.features).toHaveLength(2));
+    const unfiltered = result.current.unfilteredRecords;
+    expect(unfiltered?.collection.features).toHaveLength(3);
     await act(async () => rerender({ year: undefined, month: 6 }));
     expect(result.current.records?.collection.features).toHaveLength(2);
+    expect(result.current.unfilteredRecords).toBe(unfiltered);
+    await act(async () => rerender({ year: undefined, month: 12 }));
+    expect(result.current.status).toBe("empty");
+    expect(result.current.unfilteredRecords).toBe(unfiltered);
     expect(readAsset).toHaveBeenCalledTimes(1);
   });
 

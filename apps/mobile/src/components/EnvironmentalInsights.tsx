@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
 
 import {
   CLIMATE_REFERENCE,
@@ -43,6 +43,8 @@ type ClimateBarChartProps = {
   color: string;
   unit: string;
   values: readonly number[];
+  highlightedMonths?: readonly number[];
+  metricName: string;
 };
 
 function ClimateBarChart({
@@ -50,7 +52,12 @@ function ClimateBarChart({
   color,
   unit,
   values,
+  highlightedMonths,
+  metricName,
 }: ClimateBarChartProps) {
+  const [selectedBar, setSelectedBar] = useState<number | null>(null);
+  const interactive = highlightedMonths !== undefined;
+  const BarContainer = interactive ? Pressable : View;
   const largest = Math.max(...values);
   const smallest = Math.min(...values);
   const peakIndex = values.indexOf(largest);
@@ -58,28 +65,54 @@ function ClimateBarChart({
 
   return (
     <View accessibilityLabel={accessibilityLabel}>
-      <Text style={[styles.climateMetric, { color }]}>
-        {largest.toFixed(1)}{unit} · {MONTHLY_CLIMATE[peakIndex].name}
-      </Text>
+      {highlightedMonths === undefined ? (
+        <Text style={[styles.climateMetric, { color }]}>
+          {largest.toFixed(1)}{unit} · {MONTHLY_CLIMATE[peakIndex].name}
+        </Text>
+      ) : (
+        <Text
+          style={[styles.climateMetric, {
+            color: selectedBar !== null && highlightedMonths.includes(selectedBar + 1)
+              ? color
+              : "#747b77",
+          }]}
+          accessibilityLiveRegion="polite"
+        >
+          {selectedBar === null
+            ? `Tap a bar to see ${metricName}`
+            : `${MONTHLY_CLIMATE[selectedBar].name} · ${values[selectedBar].toFixed(1)}${unit}`}
+        </Text>
+      )}
       <View style={styles.barChart}>
         {values.map((value, index) => {
           const height = 24 + ((value - smallest) / range) * 82;
+          const highlighted = highlightedMonths?.includes(index + 1);
           return (
-            <View key={MONTHLY_CLIMATE[index].month} style={styles.barColumn}>
+            <BarContainer
+              key={MONTHLY_CLIMATE[index].month}
+              onPress={interactive ? () => setSelectedBar(index) : undefined}
+              accessibilityRole={interactive ? "button" : undefined}
+              accessibilityState={interactive ? { selected: selectedBar === index } : undefined}
+              style={styles.barColumn}
+              accessible
+              accessibilityLabel={`${MONTHLY_CLIMATE[index].name}: ${value.toFixed(1)}${unit}${highlighted ? ", top observation month" : ""}`}
+            >
               <View style={styles.barArea}>
                 <View
                   style={[
                     styles.climateBar,
                     {
                       height,
-                      backgroundColor: color,
-                      opacity: index === peakIndex ? 1 : 0.48 + index * 0.025,
+                      borderWidth: interactive && selectedBar === index ? 2 : 0,
+                      borderColor: "#34423a",
+                      backgroundColor: highlightedMonths !== undefined && !highlighted ? "#cbd0cc" : color,
+                      opacity: highlightedMonths !== undefined ? 1 : index === peakIndex ? 1 : 0.48 + index * 0.025,
                     },
                   ]}
                 />
               </View>
               <Text style={styles.barMonth}>{MONTHLY_CLIMATE[index].name.slice(0, 1)}</Text>
-            </View>
+            </BarContainer>
           );
         })}
       </View>
@@ -93,6 +126,17 @@ export function EnvironmentalInsights({
   collection,
 }: EnvironmentalInsightsProps) {
   const monthlySeries = useMemo(() => countOccurrencesByMonth(collection), [collection]);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const selected = selectedMonth === null ? null : monthlySeries[selectedMonth];
+  const scrubMonth = (event: GestureResponderEvent) => {
+    const x = event.nativeEvent.locationX - RADIAL_CHART_CENTRE;
+    const y = event.nativeEvent.locationY - RADIAL_CHART_CENTRE;
+    // Ignore the centre (angle is ambiguous) and touches outside the circle.
+    const radius = Math.hypot(x, y);
+    if (radius < RADIAL_CENTRE_SIZE / 2 || radius > RADIAL_CHART_CENTRE) return;
+    const angle = Math.atan2(x, -y);
+    setSelectedMonth((Math.round(angle / (Math.PI / 6)) + 12) % 12);
+  };
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
   const largestMonthlyCount = Math.max(1, ...monthlySeries.map((item) => item.count));
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
@@ -124,7 +168,7 @@ export function EnvironmentalInsights({
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
         {status === "error" ? <Text style={styles.message}>Monthly insights are unavailable.</Text> : null}
-        {status === "empty" ? <Text style={styles.message}>No records match the active filters.</Text> : null}
+        {status === "empty" ? <Text style={styles.message}>No records are available for this species.</Text> : null}
 
         {status === "ready" ? (
           <>
@@ -146,6 +190,7 @@ export function EnvironmentalInsights({
                           borderRightWidth: halfWidth,
                           borderTopWidth: height,
                           borderTopColor: MONTH_COLORS[index],
+                          opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
                         },
                       ]}
                     />
@@ -183,10 +228,40 @@ export function EnvironmentalInsights({
                   </Text>
                 );
               })}
+              <View
+                style={StyleSheet.absoluteFill}
+                testID="month-scrubber"
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel="Explore monthly total observations"
+                accessibilityHint="Drag around the chart, or swipe up or down to change month."
+                accessibilityValue={{
+                  min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
+                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} total observations`,
+                }}
+                accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+                onAccessibilityAction={({ nativeEvent }) => {
+                  if (nativeEvent.actionName === "increment" || nativeEvent.actionName === "decrement") {
+                    const step = nativeEvent.actionName === "increment" ? 1 : -1;
+                    setSelectedMonth(current => ((current ?? 0) + step + 12) % 12);
+                  }
+                }}
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
+                onResponderGrant={scrubMonth}
+                onResponderMove={scrubMonth}
+                onResponderTerminationRequest={() => false}
+              />
             </View>
+            <Text testID="month-readout" style={styles.monthReadout}>
+              {selected
+                ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "total observation" : "total observations"}`
+                : "Slide around the chart to explore each month"}
+            </Text>
             <Text style={styles.description}>
-              Based on {total.toLocaleString()} mapped observations, {speciesName.toLowerCase()} records
+              Based on all {total.toLocaleString()} loaded observations, {speciesName.toLowerCase()} records
               {peakPhrase ? ` appear most often in ${peakPhrase}` : " do not yet show a monthly peak"}.
+              {" Time filters do not affect this pattern."}
             </Text>
           </>
         ) : null}
@@ -204,10 +279,13 @@ export function EnvironmentalInsights({
           accessibilityLabel="Typical monthly temperature chart"
           color="#42a875"
           unit="°C"
+          metricName="temperature"
           values={temperatures}
+          highlightedMonths={status === "ready" ? peakMonths.map(item => item.month) : []}
         />
         <Text style={styles.description}>
-          This Australia-wide reference is warmest around January and coolest around July.
+          Green marks the top three recorded months for {speciesName.toLowerCase()}; other months are grey.
+          {" Temperatures are a 12-city climate reference, not temperatures measured at sightings or model-based optimal conditions."}
         </Text>
 
         <View style={styles.sectionDivider} />
@@ -222,10 +300,13 @@ export function EnvironmentalInsights({
           accessibilityLabel="Typical daily rainfall chart"
           color="#5797ca"
           unit=" mm/day"
+          metricName="rainfall"
           values={rainfall}
+          highlightedMonths={status === "ready" ? peakMonths.map(item => item.month) : []}
         />
         <Text style={styles.description}>
-          The 12-city reference is wetter early in the year and drier through late winter and spring.
+          Blue marks the top three recorded months for {speciesName.toLowerCase()}; other months are grey.
+          {" Rainfall is a 12-city climate reference in mm/day, not rainfall measured at sightings or model-based optimal conditions."}
         </Text>
 
         <Text style={styles.referenceNote}>
@@ -326,6 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: "center",
   },
+  monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
   description: { marginTop: 13, color: "#747b77", fontSize: 13, lineHeight: 19 },
   climateMetric: { marginTop: 18, fontSize: 25, fontWeight: "500", textAlign: "center" },
   barChart: { height: 138, flexDirection: "row", alignItems: "flex-end", gap: 3, marginTop: 5 },
