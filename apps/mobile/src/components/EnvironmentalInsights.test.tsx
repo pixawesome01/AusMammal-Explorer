@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { EnvironmentalInsights } from "./EnvironmentalInsights";
@@ -34,5 +34,25 @@ describe("EnvironmentalInsights", () => {
     expect(screen.getByLabelText("Typical monthly temperature chart")).toBeTruthy();
     expect(screen.getByLabelText("Typical daily rainfall chart")).toBeTruthy();
     expect(screen.getByText(/NASA POWER climate normals/)).toBeTruthy();
+  });
+});
+
+
+describe("monthly chart scrubbing", () => {
+  it("shows the touched month, updates while dragging, and preserves the last value", async () => {
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
+    const chart = screen.getByTestId("month-scrubber");
+    await fireEvent(chart, "responderGrant", { nativeEvent: { locationX: 235, locationY: 135 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Apr · 1 total observation");
+    await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 35 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
+    await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 135 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
+    await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 400, locationY: 400 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
+    await fireEvent(chart, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Dec · 0 total observations");
+    await fireEvent(chart, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 total observations");
   });
 });

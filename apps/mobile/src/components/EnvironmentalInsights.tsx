@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
 
 import {
   CLIMATE_REFERENCE,
@@ -93,6 +93,17 @@ export function EnvironmentalInsights({
   collection,
 }: EnvironmentalInsightsProps) {
   const monthlySeries = useMemo(() => countOccurrencesByMonth(collection), [collection]);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const selected = selectedMonth === null ? null : monthlySeries[selectedMonth];
+  const scrubMonth = (event: GestureResponderEvent) => {
+    const x = event.nativeEvent.locationX - RADIAL_CHART_CENTRE;
+    const y = event.nativeEvent.locationY - RADIAL_CHART_CENTRE;
+    // Ignore the centre (angle is ambiguous) and touches outside the circle.
+    const radius = Math.hypot(x, y);
+    if (radius < RADIAL_CENTRE_SIZE / 2 || radius > RADIAL_CHART_CENTRE) return;
+    const angle = Math.atan2(x, -y);
+    setSelectedMonth((Math.round(angle / (Math.PI / 6)) + 12) % 12);
+  };
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
   const largestMonthlyCount = Math.max(1, ...monthlySeries.map((item) => item.count));
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
@@ -146,6 +157,7 @@ export function EnvironmentalInsights({
                           borderRightWidth: halfWidth,
                           borderTopWidth: height,
                           borderTopColor: MONTH_COLORS[index],
+                          opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
                         },
                       ]}
                     />
@@ -183,7 +195,36 @@ export function EnvironmentalInsights({
                   </Text>
                 );
               })}
+              <View
+                style={StyleSheet.absoluteFill}
+                testID="month-scrubber"
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel="Explore monthly total observations"
+                accessibilityHint="Drag around the chart, or swipe up or down to change month."
+                accessibilityValue={{
+                  min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
+                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} total observations`,
+                }}
+                accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+                onAccessibilityAction={({ nativeEvent }) => {
+                  if (nativeEvent.actionName === "increment" || nativeEvent.actionName === "decrement") {
+                    const step = nativeEvent.actionName === "increment" ? 1 : -1;
+                    setSelectedMonth(current => ((current ?? 0) + step + 12) % 12);
+                  }
+                }}
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
+                onResponderGrant={scrubMonth}
+                onResponderMove={scrubMonth}
+                onResponderTerminationRequest={() => false}
+              />
             </View>
+            <Text testID="month-readout" style={styles.monthReadout}>
+              {selected
+                ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "total observation" : "total observations"}`
+                : "Slide around the chart to explore each month"}
+            </Text>
             <Text style={styles.description}>
               Based on all {total.toLocaleString()} loaded observations, {speciesName.toLowerCase()} records
               {peakPhrase ? ` appear most often in ${peakPhrase}` : " do not yet show a monthly peak"}.
@@ -327,6 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: "center",
   },
+  monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
   description: { marginTop: 13, color: "#747b77", fontSize: 13, lineHeight: 19 },
   climateMetric: { marginTop: 18, fontSize: 25, fontWeight: "500", textAlign: "center" },
   barChart: { height: 138, flexDirection: "row", alignItems: "flex-end", gap: 3, marginTop: 5 },
