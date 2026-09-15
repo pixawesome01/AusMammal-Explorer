@@ -40,6 +40,17 @@ development computer's LAN IP instead of `localhost`. These large files stay git
 Adding or upgrading a native dependency requires rebuilding the development app with
 `npm run ios` or `npm run android`. Expo Go cannot load the MapLibre native module.
 
+`npm ci` also applies a temporary fix for [Expo issue #49426](https://github.com/expo/expo/issues/49426):
+affected Apple compilers reject returns-retained annotations on RuntimeScheduler
+constructors. The postinstall script removes those annotations, preserves the class ownership behavior and can run repeatedly. Review and remove it once Expo ships a corrected header.
+
+The same script works around Xcode 26.2 Swift concurrency diagnostics in
+`expo-modules-jsi`'s `JavaScriptRuntime.swift`. It repeats the existing
+`nonisolated(unsafe)` pointer declarations inside the synchronous context callback,
+immediately before entering `JavaScriptActor.assumeIsolated`. It keeps the pointers
+within their original callback lifetime and leaves global concurrency checks enabled.
+Review this workaround when upgrading Expo; changed callback shapes fail explicitly.
+
 ## Run on a physical device
 
 The first build needs a USB connection. Expo generates the local `ios/` or `android/`
