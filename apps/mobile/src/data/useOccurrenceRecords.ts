@@ -31,6 +31,7 @@ export type UseOccurrenceRecordsOptions = {
 
 export type UseOccurrenceRecordsResult = OccurrenceRecordsState & {
   retry: () => void;
+  unfilteredRecords: LoadedOccurrenceRecords | null;
 };
 
 const LOADING_STATE: OccurrenceRecordsState = {
@@ -103,7 +104,7 @@ export function useOccurrenceRecords({
   return useMemo(() => {
     const loadedState = state.requestKey === requestKey ? state.result : LOADING_STATE;
     if (!loadedState.records) {
-      return { ...loadedState, retry };
+      return { ...loadedState, retry, unfilteredRecords: null };
     }
 
     try {
@@ -117,10 +118,11 @@ export function useOccurrenceRecords({
         records: { ...loadedState.records, collection },
         error: null,
         retry,
+        unfilteredRecords: loadedState.records,
       } satisfies UseOccurrenceRecordsResult;
     } catch (cause) {
       const error = cause instanceof Error ? cause : new Error("Occurrence data could not filter.");
-      return { status: "error", records: null, error, retry };
+      return { status: "error", records: null, error, retry, unfilteredRecords: loadedState.records };
     }
   }, [fromDate, requestKey, retry, speciesId, state, temporalFilter, toDate]);
 }

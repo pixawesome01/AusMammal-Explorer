@@ -124,7 +124,7 @@ export function EnvironmentalInsights({
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
         {status === "error" ? <Text style={styles.message}>Monthly insights are unavailable.</Text> : null}
-        {status === "empty" ? <Text style={styles.message}>No records match the active filters.</Text> : null}
+        {status === "empty" ? <Text style={styles.message}>No records are available for this species.</Text> : null}
 
         {status === "ready" ? (
           <>
@@ -185,8 +185,9 @@ export function EnvironmentalInsights({
               })}
             </View>
             <Text style={styles.description}>
-              Based on {total.toLocaleString()} mapped observations, {speciesName.toLowerCase()} records
+              Based on all {total.toLocaleString()} loaded observations, {speciesName.toLowerCase()} records
               {peakPhrase ? ` appear most often in ${peakPhrase}` : " do not yet show a monthly peak"}.
+              {" Time filters do not affect this pattern."}
             </Text>
           </>
         ) : null}
