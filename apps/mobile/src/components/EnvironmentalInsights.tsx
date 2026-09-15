@@ -43,6 +43,8 @@ type ClimateBarChartProps = {
   color: string;
   unit: string;
   values: readonly number[];
+  highlightedMonths?: readonly number[];
+  metricName: string;
 };
 
 function ClimateBarChart({
@@ -50,7 +52,12 @@ function ClimateBarChart({
   color,
   unit,
   values,
+  highlightedMonths,
+  metricName,
 }: ClimateBarChartProps) {
+  const [selectedBar, setSelectedBar] = useState<number | null>(null);
+  const interactive = highlightedMonths !== undefined;
+  const BarContainer = interactive ? Pressable : View;
   const largest = Math.max(...values);
   const smallest = Math.min(...values);
   const peakIndex = values.indexOf(largest);
@@ -58,28 +65,54 @@ function ClimateBarChart({
 
   return (
     <View accessibilityLabel={accessibilityLabel}>
-      <Text style={[styles.climateMetric, { color }]}>
-        {largest.toFixed(1)}{unit} · {MONTHLY_CLIMATE[peakIndex].name}
-      </Text>
+      {highlightedMonths === undefined ? (
+        <Text style={[styles.climateMetric, { color }]}>
+          {largest.toFixed(1)}{unit} · {MONTHLY_CLIMATE[peakIndex].name}
+        </Text>
+      ) : (
+        <Text
+          style={[styles.climateMetric, {
+            color: selectedBar !== null && highlightedMonths.includes(selectedBar + 1)
+              ? color
+              : "#747b77",
+          }]}
+          accessibilityLiveRegion="polite"
+        >
+          {selectedBar === null
+            ? `Tap a bar to see ${metricName}`
+            : `${MONTHLY_CLIMATE[selectedBar].name} · ${values[selectedBar].toFixed(1)}${unit}`}
+        </Text>
+      )}
       <View style={styles.barChart}>
         {values.map((value, index) => {
           const height = 24 + ((value - smallest) / range) * 82;
+          const highlighted = highlightedMonths?.includes(index + 1);
           return (
-            <View key={MONTHLY_CLIMATE[index].month} style={styles.barColumn}>
+            <BarContainer
+              key={MONTHLY_CLIMATE[index].month}
+              onPress={interactive ? () => setSelectedBar(index) : undefined}
+              accessibilityRole={interactive ? "button" : undefined}
+              accessibilityState={interactive ? { selected: selectedBar === index } : undefined}
+              style={styles.barColumn}
+              accessible
+              accessibilityLabel={`${MONTHLY_CLIMATE[index].name}: ${value.toFixed(1)}${unit}${highlighted ? ", top observation month" : ""}`}
+            >
               <View style={styles.barArea}>
                 <View
                   style={[
                     styles.climateBar,
                     {
                       height,
-                      backgroundColor: color,
-                      opacity: index === peakIndex ? 1 : 0.48 + index * 0.025,
+                      borderWidth: interactive && selectedBar === index ? 2 : 0,
+                      borderColor: "#34423a",
+                      backgroundColor: highlightedMonths !== undefined && !highlighted ? "#cbd0cc" : color,
+                      opacity: highlightedMonths !== undefined ? 1 : index === peakIndex ? 1 : 0.48 + index * 0.025,
                     },
                   ]}
                 />
               </View>
               <Text style={styles.barMonth}>{MONTHLY_CLIMATE[index].name.slice(0, 1)}</Text>
-            </View>
+            </BarContainer>
           );
         })}
       </View>
@@ -246,10 +279,13 @@ export function EnvironmentalInsights({
           accessibilityLabel="Typical monthly temperature chart"
           color="#42a875"
           unit="°C"
+          metricName="temperature"
           values={temperatures}
+          highlightedMonths={status === "ready" ? peakMonths.map(item => item.month) : []}
         />
         <Text style={styles.description}>
-          This Australia-wide reference is warmest around January and coolest around July.
+          Green marks the top three recorded months for {speciesName.toLowerCase()}; other months are grey.
+          {" Temperatures are a 12-city climate reference, not temperatures measured at sightings or model-based optimal conditions."}
         </Text>
 
         <View style={styles.sectionDivider} />
@@ -264,10 +300,13 @@ export function EnvironmentalInsights({
           accessibilityLabel="Typical daily rainfall chart"
           color="#5797ca"
           unit=" mm/day"
+          metricName="rainfall"
           values={rainfall}
+          highlightedMonths={status === "ready" ? peakMonths.map(item => item.month) : []}
         />
         <Text style={styles.description}>
-          The 12-city reference is wetter early in the year and drier through late winter and spring.
+          Blue marks the top three recorded months for {speciesName.toLowerCase()}; other months are grey.
+          {" Rainfall is a 12-city climate reference in mm/day, not rainfall measured at sightings or model-based optimal conditions."}
         </Text>
 
         <Text style={styles.referenceNote}>

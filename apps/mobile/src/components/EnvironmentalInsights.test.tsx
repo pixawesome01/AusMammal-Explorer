@@ -34,6 +34,22 @@ describe("EnvironmentalInsights", () => {
     expect(screen.getByLabelText("Typical monthly temperature chart")).toBeTruthy();
     expect(screen.getByLabelText("Typical daily rainfall chart")).toBeTruthy();
     expect(screen.getByText(/NASA POWER climate normals/)).toBeTruthy();
+    expect(screen.getByLabelText("Apr: 20.3°C, top observation month")).toBeTruthy();
+    expect(screen.getByLabelText("Jan: 23.9°C")).toBeTruthy();
+    expect(screen.getByText("Tap a bar to see temperature")).toBeTruthy();
+    const april = screen.getByRole("button", { name: "Apr: 20.3°C, top observation month" });
+    await fireEvent.press(april);
+    expect(screen.getByText("Apr · 20.3°C")).toBeTruthy();
+    expect(april.props.accessibilityState.selected).toBe(true);
+    await fireEvent.press(screen.getByRole("button", { name: "Jan: 23.9°C" }));
+    expect(screen.getByText("Jan · 23.9°C")).toBeTruthy();
+    expect(april.props.accessibilityState.selected).toBe(false);
+    expect(screen.getByText("Tap a bar to see rainfall")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Apr: 2.0 mm/day, top observation month" }));
+    expect(screen.getByText("Apr · 2.0 mm/day")).toHaveStyle({ color: "#5797ca" });
+    await fireEvent.press(screen.getByRole("button", { name: "Jan: 3.9 mm/day" }));
+    expect(screen.getByText("Jan · 3.9 mm/day")).toHaveStyle({ color: "#747b77" });
+    expect(screen.getByText("Jan · 23.9°C")).toBeTruthy();
   });
 });
 
