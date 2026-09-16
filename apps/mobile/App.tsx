@@ -171,7 +171,6 @@ export function ExplorerWorkspace({
           imageRevision={selectorImageRevision}
           onSpeciesPress={(_species, month) => {
             setTemporalFilter(month === undefined ? {} : { month });
-            setActiveTab("records");
             setExplorerOpen(true);
           }}
         />

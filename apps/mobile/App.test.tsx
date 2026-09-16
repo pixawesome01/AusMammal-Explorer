@@ -85,6 +85,33 @@ async function incrementSlider(label: "Year" | "Month", count: number) {
 }
 
 describe("ExplorerWorkspace species flow", () => {
+  it.each(["Prediction", "Insights"])("keeps %s selected when changing species", async (tab) => {
+    const readAsset: OccurrenceAssetReader = async (file) => ({
+      type: "FeatureCollection",
+      features: Array.from({ length: file.recordCount }, (_, index) =>
+        featureFor(file.scientificName, index + 1)),
+    });
+    await render(
+      <SpeciesProvider>
+        <ExplorerWorkspace readAsset={readAsset} manifest={TEST_MANIFEST} />
+      </SpeciesProvider>,
+    );
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    expect(screen.getByRole("tab", { name: "Records", selected: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("tab", { name: tab }));
+    await returnToSpeciesSelector();
+    await fireEvent.press(screen.getByRole("button", { name: /eastern grey kangaroo/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: tab, selected: true })).toBeTruthy();
+      expect(screen.getByLabelText(`${tab === "Prediction" ? "Historical density" : "Occurrence"} map for Eastern Grey Kangaroo`)).toBeTruthy();
+    });
+    if (tab === "Insights") {
+      expect(screen.getByLabelText("Monthly occurrence pattern for Eastern Grey Kangaroo")).toBeTruthy();
+    } else {
+      expect(screen.getByLabelText("Historical density legend")).toBeTruthy();
+    }
+  });
+
   it("updates the map, summary and data provenance for all seven species", async () => {
     const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
