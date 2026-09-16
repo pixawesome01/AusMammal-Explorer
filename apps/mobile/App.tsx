@@ -127,6 +127,8 @@ export function ExplorerWorkspace({
   const [isExplorerOpen, setExplorerOpen] = useState(false);
   const [selectorImageRevision, setSelectorImageRevision] = useState(0);
   const [activeTab, setActiveTab] = useState<ExplorerTab>("records");
+  const [recordsHeight, setRecordsHeight] = useState<number | null>(null);
+  const sheetDrag = useRef({ y: 0, height: 0 });
   const [aboutOpen, setAboutOpen] = useState(false);
   const [temporalFilter, setTemporalFilter] = useState<OccurrenceTemporalFilter>({});
   const occurrenceState = useOccurrenceRecords({
@@ -150,7 +152,17 @@ export function ExplorerWorkspace({
     windowHeight - 112,
     Math.max(560, Math.round(windowHeight * 0.84)),
   );
-  const sheetHeight = activeTab === "insights" ? insightsSheetHeight : compactSheetHeight;
+  const collapsedRecordsHeight = 108;
+  const expandedRecordsHeight = Math.max(collapsedRecordsHeight, Math.min(300, windowHeight - 112));
+  const clampRecordsHeight = (height: number) =>
+    Math.min(expandedRecordsHeight, Math.max(collapsedRecordsHeight, height));
+  const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? compactSheetHeight);
+  const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
+  const snapRecordsHeight = (height: number) => {
+    const stops = [collapsedRecordsHeight, clampRecordsHeight(compactSheetHeight), expandedRecordsHeight];
+    setRecordsHeight(stops.reduce((closest, stop) =>
+      Math.abs(stop - height) < Math.abs(closest - height) ? stop : closest));
+  };
   const closeExplorer = () => {
     setExplorerOpen(false);
     requestAnimationFrame(() => {
@@ -266,11 +278,40 @@ export function ExplorerWorkspace({
               <ExplorerTabs activeTab={activeTab} onChange={setActiveTab} />
             </View>
           ) : (
-            <View style={[styles.bottomSheet, { height: sheetHeight }]}>
-              <View style={styles.sheetHandle} />
+            <View testID="explorer-bottom-sheet" style={[styles.bottomSheet, { height: sheetHeight }]}>
+              {activeTab === "records" ? (
+                <View
+                  testID="records-sheet-handle"
+                  style={styles.sheetDragHandle}
+                  accessible
+                  accessibilityRole="adjustable"
+                  accessibilityLabel="Records panel height"
+                  accessibilityHint="Drag down to show more map. Drag up to edit filters."
+                  accessibilityValue={{ min: collapsedRecordsHeight, max: expandedRecordsHeight, now: currentRecordsHeight }}
+                  accessibilityActions={[{ name: "increment", label: "Expand filters" }, { name: "decrement", label: "Show more map" }]}
+                  onAccessibilityAction={({ nativeEvent }) => {
+                    if (nativeEvent.actionName === "increment") setRecordsHeight(expandedRecordsHeight);
+                    if (nativeEvent.actionName === "decrement") setRecordsHeight(collapsedRecordsHeight);
+                  }}
+                  onStartShouldSetResponder={() => true}
+                  onResponderGrant={({ nativeEvent }) => {
+                    sheetDrag.current = { y: nativeEvent.pageY, height: currentRecordsHeight };
+                  }}
+                  onResponderMove={({ nativeEvent }) => {
+                    setRecordsHeight(clampRecordsHeight(sheetDrag.current.height + sheetDrag.current.y - nativeEvent.pageY));
+                  }}
+                  onResponderRelease={({ nativeEvent }) => {
+                    snapRecordsHeight(clampRecordsHeight(sheetDrag.current.height + sheetDrag.current.y - nativeEvent.pageY));
+                  }}
+                  onResponderTerminationRequest={() => false}
+                  onResponderTerminate={() => snapRecordsHeight(currentRecordsHeight)}
+                >
+                  <View pointerEvents="none" style={styles.sheetHandle} />
+                </View>
+              ) : <View style={styles.sheetHandle} />}
               <ExplorerTabs activeTab={activeTab} onChange={setActiveTab} />
 
-              {activeTab === "records" ? (
+              {activeTab === "records" && currentRecordsHeight > collapsedRecordsHeight ? (
                 <ScrollView
                   contentContainerStyle={styles.sheetScrollContent}
                   showsVerticalScrollIndicator={false}
@@ -456,11 +497,12 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     elevation: 15,
   },
+  sheetDragHandle: { height: 20, justifyContent: "center", alignItems: "center" },
   sheetHandle: {
     alignSelf: "center",
     width: 46,
     height: 5,
-    marginBottom: 6,
+    marginBottom: 5,
     borderRadius: 3,
     backgroundColor: "rgba(255,255,255,0.76)",
     shadowColor: "#4c5650",

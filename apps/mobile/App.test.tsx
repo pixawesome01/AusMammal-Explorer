@@ -85,6 +85,34 @@ async function incrementSlider(label: "Year" | "Month", count: number) {
 }
 
 describe("ExplorerWorkspace species flow", () => {
+  it("lets users drag the Records panel down and up without losing filters", async () => {
+    const readAsset: OccurrenceAssetReader = async file => ({
+      type: "FeatureCollection",
+      features: Array.from({ length: file.recordCount }, (_, index) => featureFor(file.scientificName, index + 1)),
+    });
+    await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={TEST_MANIFEST} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    await incrementSlider("Month", 1);
+    const value = screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue;
+    const handle = screen.getByTestId("records-sheet-handle");
+    const initialHeight = handle.props.accessibilityValue.now;
+    await fireEvent(handle, "responderGrant", { nativeEvent: { pageY: 400 } });
+    await fireEvent(handle, "responderMove", { nativeEvent: { pageY: 900 } });
+    await fireEvent(handle, "responderRelease", { nativeEvent: { pageY: 900 } });
+    expect(handle.props.accessibilityValue.now).toBe(108);
+    expect(screen.queryByRole("adjustable", { name: "Month" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Records", selected: true })).toBeTruthy();
+    await fireEvent(handle, "responderGrant", { nativeEvent: { pageY: 900 } });
+    await fireEvent(handle, "responderMove", { nativeEvent: { pageY: 200 } });
+    await fireEvent(handle, "responderRelease", { nativeEvent: { pageY: 200 } });
+    expect(handle.props.accessibilityValue.now).toBe(300);
+    expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue).toEqual(value);
+    await fireEvent(handle, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
+    expect(handle.props.accessibilityValue.now).toBe(108);
+    await fireEvent(handle, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+    expect(screen.getByRole("adjustable", { name: "Month" })).toBeTruthy();
+  });
+
   it.each(["Prediction", "Insights"])("keeps %s selected when changing species", async (tab) => {
     const readAsset: OccurrenceAssetReader = async (file) => ({
       type: "FeatureCollection",
