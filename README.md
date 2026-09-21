@@ -41,6 +41,7 @@ python -m pytest
 python -m ruff check .
 ```
 
+
 Requires Python 3.12 or later. On Windows, activate the environment with `.venv\Scripts\Activate.ps1`.
 
 Running the scripts under `data/processed/` (the ALA cleaning pipeline and the SILO
@@ -56,6 +57,11 @@ Run the mobile application separately:
 cd apps/mobile
 npm ci
 npm run start
+```
+
+For IOS develper mode (xcode)
+```bash
+npm start -- --port 8081 
 ```
 
 The mobile application uses React Native and Expo SDK 57. Use Node.js 24 LTS and run

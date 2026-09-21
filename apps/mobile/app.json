@@ -14,7 +14,8 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-asset"
     ]
   }
 }
