@@ -43,6 +43,22 @@ Model outputs must be described as suitability estimates. They must not be prese
 
 `models/Species Distribution Model Pipeline for MaxEnt.R` fits one **maxnet** model per species (report Section 4 Phase 3) from the two artefacts above, and writes `models/output/suitability_<species-id>.tif` (Cloud Optimized GeoTIFF) plus `models/output/model_metadata_<species-id>.json` per species.
 
+**Running it**:
+
+1. Install R (4.4+) and the required packages:
+   ```r
+   install.packages(c("terra", "spThin", "ENMeval", "maxnet", "dplyr", "readr", "pROC", "jsonlite"))
+   ```
+2. Confirm the two upstream inputs exist: `models/output/environmental_predictors_au.tif` and `models/output/occurrence_records_for_maxent.csv` (built by the two Python pipelines documented above).
+3. Generate the land boundary once, if `models/input/australia_land.gpkg` doesn't exist yet:
+   ```
+   Rscript "models/Prepare Australia Land Boundary.R"
+   ```
+4. Run the pipeline:
+   ```
+   Rscript "models/Species Distribution Model Pipeline for MaxEnt.R"
+   ```
+
 **Land mask**: predictors are masked to Australian land before background sampling and prediction, using `models/input/australia_land.gpkg`. Generate it once by running `models/Prepare Australia Land Boundary.R`, which dissolves the mobile app's existing `apps/mobile/src/data/absStates2021.json` state/territory polygons (ABS ASGS Edition 3, 2021) into a single land boundary — no new external dataset or licence to track. Without this mask, ocean cells — which are not NA in the CHELSA-derived predictor stack — could be sampled as background for a terrestrial mammal.
 
 **Thinning**: occurrences are spatially thinned 10km via `spThin`, ten replicates, keeping the replicate with the most retained records (report Phase 1's last step — done here in R rather than the Python occurrence pipeline, since `spThin` is an R package).
