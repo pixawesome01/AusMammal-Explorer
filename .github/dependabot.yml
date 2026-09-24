@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # apps/mobile's Expo SDK packages (expo, expo-*, react-native, jest-expo)
+  # must all move together to stay mutually compatible - see `expo-doctor`'s
+  # "packages match versions required by installed Expo SDK" check, which
+  # has needed a manual fix roughly every 1-2 weeks (patch releases ship
+  # that often). Grouped into one PR instead of one per package, since a
+  # partial update is exactly the "mismatched patch versions" state that
+  # check exists to catch.
+  - package-ecosystem: "npm"
+    directory: "/apps/mobile"
+    schedule:
+      interval: "weekly"
+    groups:
+      expo-sdk:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+          - "react-native"
+          - "react-native-*"
+          - "@react-native/*"
+          - "jest-expo"
+        update-types:
+          - "patch"
+          - "minor"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Keeps the CI workflow's own actions (actions/checkout, setup-python,
+  # setup-node, ...) current - low-traffic, but costs nothing to include.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"
