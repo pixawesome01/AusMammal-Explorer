@@ -35,7 +35,7 @@
     "@types/react": "~19.2.2",
     "expo-doctor": "^1.20.1",
     "jest-expo": "~57.0.5",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "jest": {
     "preset": "jest-expo"
