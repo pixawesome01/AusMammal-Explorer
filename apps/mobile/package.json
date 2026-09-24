@@ -20,7 +20,7 @@
     "doctor": "expo-doctor"
   },
   "dependencies": {
-    "@maplibre/maplibre-react-native": "^11.3.6",
+    "@maplibre/maplibre-react-native": "^11.4.0",
     "expo": "^57.0.23",
     "expo-asset": "~57.0.18",
     "expo-dev-client": "~57.0.19",
