@@ -1,6 +1,7 @@
 import {
   Camera,
   GeoJSONSource,
+  ImageSource,
   Layer,
   Map,
   TransformRequestManager,
@@ -23,6 +24,7 @@ import {
 } from "react-native";
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
+import type { SuitabilityLayer } from "../data/suitabilityLayers";
 
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
 const AUSTRALIA_VIEW_PADDING = { top: 12, right: 12, bottom: 12, left: 12 };
@@ -66,6 +68,7 @@ type OccurrenceMapProps = {
   fullScreen?: boolean;
   mode?: "records" | "prediction";
   showRecordCount?: boolean;
+  suitabilityLayer?: SuitabilityLayer;
 };
 
 export type OccurrenceMapHandle = {
@@ -127,6 +130,7 @@ function OccurrenceMap(
     fullScreen = false,
     mode = "records",
     showRecordCount = true,
+    suitabilityLayer,
   },
   ref,
 ) {
@@ -181,7 +185,7 @@ function OccurrenceMap(
     <View
       accessibilityLabel={
         mode === "prediction"
-          ? `Historical density map for ${speciesName}`
+          ? `Habitat suitability map for ${speciesName}`
           : `Occurrence map for ${speciesName}`
       }
       style={[
@@ -215,45 +219,18 @@ function OccurrenceMap(
           maxZoom={16}
           maxBounds={AUSTRALIA_BOUNDS}
         />
-        {collection && collection.features.length > 0 && mode === "prediction" ? (
-          <GeoJSONSource id="prediction-density" data={collection}>
+        {suitabilityLayer && mode === "prediction" ? (
+          <ImageSource
+            id="suitability-image"
+            url={suitabilityLayer.image}
+            coordinates={suitabilityLayer.coordinates}
+          >
             <Layer
-              id="prediction-heatmap"
-              type="heatmap"
-              maxzoom={13}
-              paint={{
-                "heatmap-weight": [
-                  "interpolate",
-                  ["linear"],
-                  ["get", "observationCount"],
-                  1,
-                  0.45,
-                  5,
-                  1,
-                ],
-                "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 2, 0.65, 10, 1.5],
-                "heatmap-color": [
-                  "interpolate",
-                  ["linear"],
-                  ["heatmap-density"],
-                  0,
-                  "rgba(68,130,205,0)",
-                  0.12,
-                  "#4f8fd2",
-                  0.34,
-                  "#52cf9a",
-                  0.55,
-                  "#a4eb66",
-                  0.75,
-                  "#f2dc5f",
-                  1,
-                  "#ee7c58",
-                ],
-                "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 2, 15, 10, 38],
-                "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.82, 13, 0.58],
-              }}
+              id="suitability-overlay"
+              type="raster"
+              paint={{ "raster-opacity": 0.9, "raster-fade-duration": 0 }}
             />
-          </GeoJSONSource>
+          </ImageSource>
         ) : null}
         {collection && collection.features.length > 0 && mode === "records" ? (
           <GeoJSONSource

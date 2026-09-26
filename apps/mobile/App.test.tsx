@@ -34,6 +34,14 @@ jest.mock("@maplibre/maplibre-react-native", () => {
       mockReact.useImperativeHandle(ref, () => ({ getClusterExpansionZoom: jest.fn() }));
       return mockReact.createElement(MockView, { ...props, testID: `source-${id}` }, children);
     },
+    ImageSource: ({
+      children,
+      id,
+      ...props
+    }: {
+      children?: import("react").ReactNode;
+      id: string;
+    }) => mockReact.createElement(MockView, { ...props, testID: `source-${id}` }, children),
     Layer: (props: Record<string, unknown>) => mockReact.createElement(MockView, props),
     TransformRequestManager: { addHeader: jest.fn() },
   };
@@ -131,12 +139,12 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent.press(screen.getByRole("button", { name: /eastern grey kangaroo/i }));
     await waitFor(() => {
       expect(screen.getByRole("tab", { name: tab, selected: true })).toBeTruthy();
-      expect(screen.getByLabelText(`${tab === "Prediction" ? "Historical density" : "Occurrence"} map for Eastern Grey Kangaroo`)).toBeTruthy();
+      expect(screen.getByLabelText(`${tab === "Prediction" ? "Habitat suitability" : "Occurrence"} map for Eastern Grey Kangaroo`)).toBeTruthy();
     });
     if (tab === "Insights") {
       expect(screen.getByLabelText("Monthly occurrence pattern for Eastern Grey Kangaroo")).toBeTruthy();
     } else {
-      expect(screen.getByLabelText("Historical density legend")).toBeTruthy();
+      expect(screen.getByLabelText("Habitat suitability legend")).toBeTruthy();
     }
   });
 
@@ -306,8 +314,8 @@ describe("ExplorerWorkspace species flow", () => {
     await waitFor(() => expect(screen.getByTestId("source-occurrence-records")).toBeTruthy());
 
     await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
-    expect(screen.getByLabelText("Historical density legend")).toBeTruthy();
-    expect(screen.getByTestId("source-prediction-density")).toBeTruthy();
+    expect(screen.getByLabelText("Habitat suitability legend")).toBeTruthy();
+    expect(screen.getByTestId("source-suitability-image")).toBeTruthy();
     expect(screen.queryByText("FUTURE FEATURE")).toBeNull();
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));

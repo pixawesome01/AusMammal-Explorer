@@ -72,5 +72,15 @@ Model outputs must be described as suitability estimates. They must not be prese
 
 **Permutation importance**: maxnet has no built-in percent-contribution table (unlike the original Java Maxent), so each predictor is permuted independently and scored by the resulting drop in AUC, then normalised to percentages.
 
-**Output**: predictions use the `cloglog` link (Phillips et al., 2017 — the maxnet paper the report cites), so raster cell values read directly as a 0–1 suitability estimate. Every metadata JSON carries a `displayWording` field so the app never needs to invent its own uncertainty language — model outputs must be presented as suitability estimates, never as guaranteed sightings or a definitive future distribution forecast. The COG output is not itself mobile-renderable — MapLibre Native has no on-device GeoTIFF/COG decoder, so a separate PNG (or tile) conversion step is still needed for the app.
+**Output**: predictions use the `cloglog` link (Phillips et al., 2017 — the maxnet paper the report cites), so raster cell values read directly as a 0–1 suitability estimate. Every metadata JSON carries a `displayWording` field so the app never needs to invent its own uncertainty language — model outputs must be presented as suitability estimates, never as guaranteed sightings or a definitive future distribution forecast. The COG output is not itself mobile-renderable — MapLibre Native has no on-device GeoTIFF/COG decoder, so it is converted for the app by the next step.
+
+## Map overlay for the app
+
+`data/processed/Suitability Layer Pipeline for MapLibre.py` converts each `suitability_<species-id>.tif` into a colour-ramped, transparent-where-empty PNG under `apps/mobile/assets/suitability/<species-id>.png` (reprojected to Web Mercator and averaged down to 1500 px wide — MapLibre draws an `ImageSource` in Web Mercator, so a lat/lon image placed directly would sit up to ~186 km off), plus `manifest.json` holding each layer's geographic bounds (read from the raster, not hard-coded), evaluation metrics, and `displayWording`. The app's Prediction tab places the selected species' PNG with MapLibre's `ImageSource` and shows `displayWording` in its legend. Re-run it whenever the model outputs change:
+
+```
+python "data/processed/Suitability Layer Pipeline for MapLibre.py"
+```
+
+The `.tif` files stay in `models/output/` (Git-ignored) as the master copies; the PNGs and manifest are small enough (~3MB total) to commit and bundle with the app.
 

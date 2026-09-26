@@ -1,0 +1,138 @@
+{
+  "generatedAt": "2026-09-26T09:28:51Z",
+  "layers": {
+    "koala": {
+      "imageFile": "koala.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.9606,
+        "continuous_boyce_index_average": 0.9668,
+        "omission_rate_10th_percentile_average": 0.1019,
+        "aicc": 29753.4883,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T07:57:35Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    },
+    "eastern-grey-kangaroo": {
+      "imageFile": "eastern-grey-kangaroo.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.9336,
+        "continuous_boyce_index_average": 0.949,
+        "omission_rate_10th_percentile_average": 0.0989,
+        "aicc": 46651.0999,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T08:06:27Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    },
+    "common-brushtail-possum": {
+      "imageFile": "common-brushtail-possum.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.9469,
+        "continuous_boyce_index_average": 0.9758,
+        "omission_rate_10th_percentile_average": 0.1064,
+        "aicc": 40227.5881,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T08:14:26Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    },
+    "common-ringtail-possum": {
+      "imageFile": "common-ringtail-possum.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.963,
+        "continuous_boyce_index_average": 0.9588,
+        "omission_rate_10th_percentile_average": 0.1053,
+        "aicc": 24092.8173,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T08:19:59Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    },
+    "swamp-wallaby": {
+      "imageFile": "swamp-wallaby.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.9522,
+        "continuous_boyce_index_average": 0.9768,
+        "omission_rate_10th_percentile_average": 0.1009,
+        "aicc": 36386.809,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T08:27:25Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    },
+    "common-wombat": {
+      "imageFile": "common-wombat.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.9685,
+        "continuous_boyce_index_average": 0.9345,
+        "omission_rate_10th_percentile_average": 0.0956,
+        "aicc": 24627.8348,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T08:33:07Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    },
+    "greater-glider": {
+      "imageFile": "greater-glider.png",
+      "bounds": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
+      "evaluation": {
+        "auc_validation_average": 0.981,
+        "continuous_boyce_index_average": 0.9138,
+        "omission_rate_10th_percentile_average": 0.1178,
+        "aicc": 9376.1832,
+        "delta_aicc": 0
+      },
+      "predictionType": "cloglog",
+      "modelGeneratedAt": "2026-09-26T08:36:21Z",
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+    }
+  }
+}

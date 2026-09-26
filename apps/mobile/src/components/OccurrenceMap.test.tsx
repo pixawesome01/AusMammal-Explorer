@@ -9,6 +9,7 @@ import {
   OccurrenceMap,
   type OccurrenceMapHandle,
 } from "./OccurrenceMap";
+import { getSuitabilityLayer } from "../data/suitabilityLayers";
 
 const mockFlyTo = jest.fn();
 const mockZoomTo = jest.fn();
@@ -58,6 +59,14 @@ jest.mock("@maplibre/maplibre-react-native", () => {
         children,
       );
     },
+    ImageSource: ({
+      children,
+      id,
+      ...props
+    }: {
+      children?: import("react").ReactNode;
+      id: string;
+    }) => mockReact.createElement(MockView, { ...props, testID: `source-${id}` }, children),
     Layer: ({ id, ...props }: Record<string, unknown> & { id: string }) =>
       mockReact.createElement(MockView, { ...props, testID: `layer-${id}` }),
     TransformRequestManager: {
@@ -180,37 +189,17 @@ describe("OccurrenceMap", () => {
     ]);
   });
 
-  it("switches records to a historical density heatmap in prediction mode", async () => {
-    const collection = {
-      type: "FeatureCollection" as const,
-      features: [
-        {
-          type: "Feature" as const,
-          id: "0123456789abcdef",
-          geometry: {
-            type: "Point" as const,
-            coordinates: [153.0281, -27.4705] as [number, number],
-          },
-          properties: {
-            species: "Phascolarctos cinereus",
-            eventDate: "2026-08-04",
-            basisOfRecord: "HUMAN_OBSERVATION",
-            license: "CC-BY 4.0 (Int)",
-            coordinateUncertaintyM: 10,
-            uncertaintyUnknown: false,
-            observationCount: 1,
-            geographicOutlier: false,
-          },
-        },
-      ],
-    };
+  it("shows the species suitability overlay instead of records in prediction mode", async () => {
+    const suitabilityLayer = getSuitabilityLayer("koala");
     const { getByLabelText, getByTestId, queryByTestId } = await render(
-      <OccurrenceMap collection={collection} mode="prediction" speciesName="Koala" />,
+      <OccurrenceMap mode="prediction" speciesName="Koala" suitabilityLayer={suitabilityLayer} />,
     );
 
-    expect(getByLabelText("Historical density map for Koala")).toBeTruthy();
-    expect(getByTestId("source-prediction-density").props.data).toBe(collection);
-    expect(getByTestId("layer-prediction-heatmap").props.type).toBe("heatmap");
+    expect(getByLabelText("Habitat suitability map for Koala")).toBeTruthy();
+    expect(getByTestId("source-suitability-image").props.coordinates).toBe(
+      suitabilityLayer.coordinates,
+    );
+    expect(getByTestId("layer-suitability-overlay").props.type).toBe("raster");
     expect(queryByTestId("source-occurrence-records")).toBeNull();
   });
 

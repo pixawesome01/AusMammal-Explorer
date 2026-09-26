@@ -33,6 +33,10 @@ import type {
 } from "./src/data/occurrenceFilter";
 import type { OccurrenceAssetReader } from "./src/data/occurrenceLoader";
 import type { OccurrenceSnapshotManifest } from "./src/data/occurrenceSnapshot";
+import {
+  getSuitabilityLayer,
+  SUITABILITY_LEGEND_COLORS,
+} from "./src/data/suitabilityLayers";
 import { useOccurrenceRecords } from "./src/data/useOccurrenceRecords";
 import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
@@ -138,6 +142,7 @@ export function ExplorerWorkspace({
     readAsset,
     manifest,
   });
+  const suitabilityLayer = getSuitabilityLayer(selectedSpecies.id);
   const mappedCount = occurrenceState.records?.collection.features.length;
   const mappedCountLabel =
     occurrenceState.status === "loading"
@@ -198,6 +203,7 @@ export function ExplorerWorkspace({
           mode={activeTab === "prediction" ? "prediction" : "records"}
           showRecordCount={false}
           speciesName={selectedSpecies.commonName}
+          suitabilityLayer={suitabilityLayer}
         />
 
         <View pointerEvents="box-none" style={styles.mapUi}>
@@ -246,7 +252,7 @@ export function ExplorerWorkspace({
             </View>
 
           {activeTab === "prediction" ? (
-            <View accessibilityLabel="Historical density legend" style={styles.predictionLegend}>
+            <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
               <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
                 Potential observation areas
               </Text>
@@ -255,14 +261,12 @@ export function ExplorerWorkspace({
                 <Text style={styles.legendLabel}>Higher</Text>
               </View>
               <View style={styles.legendBar}>
-                {["#4f8fd2", "#52cf9a", "#a4eb66", "#f2dc5f", "#ee7c58"].map(
-                  (color) => (
-                    <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
-                  ),
-                )}
+                {SUITABILITY_LEGEND_COLORS.map((color) => (
+                  <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
+                ))}
               </View>
               <Text style={styles.predictionLegendNote}>
-                Historical record density · not a sighting guarantee
+                {suitabilityLayer.displayWording}
               </Text>
             </View>
           ) : (
