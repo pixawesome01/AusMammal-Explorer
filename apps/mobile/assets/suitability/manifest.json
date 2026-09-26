@@ -1,5 +1,44 @@
 {
-  "generatedAt": "2026-09-26T09:28:51Z",
+  "generatedAt": "2026-09-26T11:08:25Z",
+  "legendColours": [
+    "#fde725",
+    "#5ec962",
+    "#26828e",
+    "#3b528b",
+    "#440154"
+  ],
+  "provenance": {
+    "occurrences": {
+      "source": "Atlas of Living Australia",
+      "snapshotId": "2026-09-12-ala-marsupials-maxent",
+      "doi": "https://doi.org/10.26197/ala.68a1fd78-629f-4df8-9efd-21ea8aef5c96",
+      "capturedAt": "2026-09-12T06:06:14Z",
+      "dataProfile": "CSDM",
+      "coverageFrom": "2020-01-01",
+      "coverageTo": "2026-09-07",
+      "maxCoordinateUncertaintyM": 1000,
+      "licence": "CC-BY 4.0 (Int)",
+      "attribution": "Atlas of Living Australia (https://www.ala.org.au)",
+      "totalCleanedRecords": 181697
+    },
+    "predictors": {
+      "source": "CHELSA V2.1 (Karger et al., 2017)",
+      "coveragePeriod": "1981-2010",
+      "resolutionDegrees": 0.01,
+      "bands": {
+        "bio1_mean_annual_temp_c": {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC"
+        },
+        "bio12_annual_precip_mm": {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year"
+        }
+      }
+    }
+  },
   "layers": {
     "koala": {
       "imageFile": "koala.png",
@@ -9,16 +48,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.9606,
-        "continuous_boyce_index_average": 0.9668,
-        "omission_rate_10th_percentile_average": 0.1019,
+        "aucValidation": 0.9606,
+        "continuousBoyceIndex": 0.9668,
+        "omissionRate10thPercentile": 0.1019,
         "aicc": 29753.4883,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T07:57:35Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 51.5
+        },
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 48.5
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T10:28:01Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 43125,
+        "thinnedRecords": 1090,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     },
     "eastern-grey-kangaroo": {
       "imageFile": "eastern-grey-kangaroo.png",
@@ -28,16 +94,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.9336,
-        "continuous_boyce_index_average": 0.949,
-        "omission_rate_10th_percentile_average": 0.0989,
+        "aucValidation": 0.9336,
+        "continuousBoyceIndex": 0.949,
+        "omissionRate10thPercentile": 0.0989,
         "aicc": 46651.0999,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T08:06:27Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 67.9
+        },
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 32.1
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T10:38:03Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 25509,
+        "thinnedRecords": 1650,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     },
     "common-brushtail-possum": {
       "imageFile": "common-brushtail-possum.png",
@@ -47,16 +140,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.9469,
-        "continuous_boyce_index_average": 0.9758,
-        "omission_rate_10th_percentile_average": 0.1064,
+        "aucValidation": 0.9469,
+        "continuousBoyceIndex": 0.9758,
+        "omissionRate10thPercentile": 0.1064,
         "aicc": 40227.5881,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T08:14:26Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 70.2
+        },
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 29.8
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T10:46:09Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 34568,
+        "thinnedRecords": 1446,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     },
     "common-ringtail-possum": {
       "imageFile": "common-ringtail-possum.png",
@@ -66,16 +186,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.963,
-        "continuous_boyce_index_average": 0.9588,
-        "omission_rate_10th_percentile_average": 0.1053,
+        "aucValidation": 0.963,
+        "continuousBoyceIndex": 0.9588,
+        "omissionRate10thPercentile": 0.1053,
         "aicc": 24092.8173,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T08:19:59Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 64.8
+        },
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 35.2
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T10:51:41Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 36202,
+        "thinnedRecords": 885,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     },
     "swamp-wallaby": {
       "imageFile": "swamp-wallaby.png",
@@ -85,16 +232,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.9522,
-        "continuous_boyce_index_average": 0.9768,
-        "omission_rate_10th_percentile_average": 0.1009,
+        "aucValidation": 0.9522,
+        "continuousBoyceIndex": 0.9768,
+        "omissionRate10thPercentile": 0.1009,
         "aicc": 36386.809,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T08:27:25Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 59.2
+        },
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 40.8
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T10:59:12Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 18831,
+        "thinnedRecords": 1319,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     },
     "common-wombat": {
       "imageFile": "common-wombat.png",
@@ -104,16 +278,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.9685,
-        "continuous_boyce_index_average": 0.9345,
-        "omission_rate_10th_percentile_average": 0.0956,
+        "aucValidation": 0.9685,
+        "continuousBoyceIndex": 0.9345,
+        "omissionRate10thPercentile": 0.0956,
         "aicc": 24627.8348,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T08:33:07Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 76.6
+        },
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 23.4
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T11:04:54Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 11308,
+        "thinnedRecords": 918,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     },
     "greater-glider": {
       "imageFile": "greater-glider.png",
@@ -123,16 +324,43 @@
         "east": 155.0,
         "north": -6.0
       },
+      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings.",
       "evaluation": {
-        "auc_validation_average": 0.981,
-        "continuous_boyce_index_average": 0.9138,
-        "omission_rate_10th_percentile_average": 0.1178,
+        "aucValidation": 0.981,
+        "continuousBoyceIndex": 0.9138,
+        "omissionRate10thPercentile": 0.1178,
         "aicc": 9376.1832,
-        "delta_aicc": 0
+        "deltaAicc": 0.0
       },
-      "predictionType": "cloglog",
-      "modelGeneratedAt": "2026-09-26T08:36:21Z",
-      "displayWording": "Model-based suitability estimate - potential observation areas, not guaranteed sightings."
+      "variableContribution": [
+        {
+          "id": "bio12_annual_precip_mm",
+          "label": "Annual precipitation amount",
+          "units": "mm/year",
+          "percent": 55.4
+        },
+        {
+          "id": "bio1_mean_annual_temp_c",
+          "label": "Mean annual air temperature",
+          "units": "degC",
+          "percent": 44.6
+        }
+      ],
+      "model": {
+        "algorithm": "maxnet",
+        "predictionType": "cloglog",
+        "featureClasses": "LQH",
+        "regularisationMultiplier": 0.5,
+        "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "generatedAt": "2026-09-26T11:08:04Z"
+      },
+      "trainingData": {
+        "cleanedRecords": 12154,
+        "thinnedRecords": 363,
+        "spatialThinningKm": 10,
+        "spatialThinningReplicates": 10,
+        "backgroundPoints": 10000
+      }
     }
   }
 }

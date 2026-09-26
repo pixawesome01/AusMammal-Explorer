@@ -20,6 +20,7 @@ import {
   OccurrenceMap,
   type OccurrenceMapHandle,
 } from "./src/components/OccurrenceMap";
+import { ModelInfoPanel } from "./src/components/ModelInfoPanel";
 import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { TemporalFilters } from "./src/components/TemporalFilters";
@@ -252,23 +253,26 @@ export function ExplorerWorkspace({
             </View>
 
           {activeTab === "prediction" ? (
-            <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
-              <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
-                Potential observation areas
-              </Text>
-              <View style={styles.legendLabels}>
-                <Text style={styles.legendLabel}>Lower</Text>
-                <Text style={styles.legendLabel}>Higher</Text>
+            <>
+              <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
+                <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
+                  Potential observation areas
+                </Text>
+                <View style={styles.legendLabels}>
+                  <Text style={styles.legendLabel}>Lower suitability</Text>
+                  <Text style={styles.legendLabel}>Higher suitability</Text>
+                </View>
+                <View style={styles.legendBar}>
+                  {SUITABILITY_LEGEND_COLORS.map((color) => (
+                    <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
+                  ))}
+                </View>
+                <Text style={styles.predictionLegendNote}>
+                  {suitabilityLayer.displayWording}
+                </Text>
               </View>
-              <View style={styles.legendBar}>
-                {SUITABILITY_LEGEND_COLORS.map((color) => (
-                  <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
-                ))}
-              </View>
-              <Text style={styles.predictionLegendNote}>
-                {suitabilityLayer.displayWording}
-              </Text>
-            </View>
+              <ModelInfoPanel layer={suitabilityLayer} speciesName={selectedSpecies.commonName} />
+            </>
           ) : (
             <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
               <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
@@ -610,16 +614,18 @@ const styles = StyleSheet.create({
   },
   predictionLegendTitle: { color: "#26342d", fontSize: 15, fontWeight: "600", textAlign: "center" },
   legendLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 7, marginBottom: 4 },
-  legendLabel: { color: "#53605a", fontSize: 10, fontWeight: "500" },
-  legendBar: { height: 15, flexDirection: "row", overflow: "hidden", borderRadius: 8 },
+  legendLabel: { color: "#4a5750", fontSize: 11, fontWeight: "600" },
+  legendBar: { height: 16, flexDirection: "row", overflow: "hidden", borderRadius: 8, borderWidth: 1, borderColor: "#26342d" },
   legendSegment: { flex: 1 },
-  predictionLegendNote: { marginTop: 6, color: "#6b746f", fontSize: 9, textAlign: "center" },
+  predictionLegendNote: { marginTop: 6, color: "#4a5750", fontSize: 11, textAlign: "center" },
+  // No overflow: hidden here - on Android it stops the tab bar inside this
+  // elevated, translucent dock from painting at all (the tabs stay in the
+  // accessibility tree but the dock shows as an empty pill).
   predictionDock: {
     position: "absolute",
     right: 12,
     bottom: 12,
     left: 12,
-    overflow: "hidden",
     paddingTop: 7,
     paddingHorizontal: 10,
     paddingBottom: 9,

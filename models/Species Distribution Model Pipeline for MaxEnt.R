@@ -445,7 +445,7 @@ predict_suitability_raster <- function(model, predictors) {
 # --------------------------------------------------------------------------
 
 export_species_outputs <- function(species_id, suitability_raster, variable_importance,
-                                    evaluation_metrics, selected_settings) {
+                                    evaluation_metrics, selected_settings, record_counts) {
   raster_path <- file.path(OUTPUT_DIR, paste0("suitability_", species_id, ".tif"))
   # Cloud Optimized GeoTIFF: internally tiled with overviews, useful for any
   # tool reading this file directly (QGIS, gdal2tiles, a future tile
@@ -474,7 +474,11 @@ export_species_outputs <- function(species_id, suitability_raster, variable_impo
       occurrenceCsv = "occurrence_records_for_maxent.csv",
       spatialThinningKm = THIN_DISTANCE_KM,
       spatialThinningReplicates = THIN_REPLICATES,
-      backgroundPoints = N_BACKGROUND_POINTS
+      backgroundPoints = N_BACKGROUND_POINTS,
+      # Record trail for this species: cleaned CSV rows -> rows on valid
+      # (land-masked) predictor cells -> after spatial thinning, i.e. the
+      # presences the model was actually fitted to.
+      recordCounts = record_counts
     ),
     # RTM R13 / models/README.md: outputs must read as suitability
     # estimates, never as guaranteed sightings or a distribution forecast.
@@ -516,7 +520,9 @@ run_maxent_pipeline_for_one_species <- function(scientific_name, predictors) {
   set.seed(species_seed(species_id))
 
   occurrences <- load_occurrences(scientific_name)
+  cleaned_count <- nrow(occurrences)
   occurrences <- filter_occurrences_to_valid_predictors(occurrences, predictors, species_id)
+  valid_count <- nrow(occurrences)
   thinned <- thin_occurrences(occurrences, species_id)
 
   if (nrow(thinned) < MIN_THINNED_RECORDS) {
@@ -535,7 +541,12 @@ run_maxent_pipeline_for_one_species <- function(scientific_name, predictors) {
 
   outputs <- export_species_outputs(
     species_id, suitability_raster, variable_importance,
-    evaluation_metrics, fit$selected_settings
+    evaluation_metrics, fit$selected_settings,
+    record_counts = list(
+      cleaned = cleaned_count,
+      onValidPredictorCells = valid_count,
+      spatiallyThinned = nrow(thinned)
+    )
   )
   message(sprintf("  Saved %s and %s", outputs$raster_path, outputs$metadata_path))
   outputs

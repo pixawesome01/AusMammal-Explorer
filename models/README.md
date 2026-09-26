@@ -24,7 +24,7 @@ Model outputs must be described as suitability estimates. They must not be prese
 
 **Source**: Atlas of Living Australia via `galah`, under the `CSDM` (Species Distribution Modelling) data-quality profile, for the 7 MVP species. `2020-01-01` onward, licensed `CC-BY 4.0 (Int)` only (RTM R11) — same policy as the MapLibre pipeline.
 
-**Cleaning**: report Phase 1 explicitly specifies coordinate uncertainty ≤1000m (stricter than the MapLibre pipeline's 2000m — unknown uncertainty is dropped here, not kept-and-flagged, since an unconfirmed-precision point is a real risk to a statistical model), taxonomic synonym resolution (reduced to binomial, matched against the 7 MVP species, no fuzzy matching), and duplicate removal (one record per species+coordinate). A few extra steps carried over from the MapLibre pipeline as baseline hygiene: Australian bounding box, capital-city-centroid default-pin removal, and fossil/preserved specimen exclusion.
+**Cleaning**: report Phase 1 explicitly specifies coordinate uncertainty ≤1000m (stricter than the MapLibre pipeline's 2000m — unknown uncertainty is dropped here, not kept-and-flagged, since an unconfirmed-precision point is a real risk to a statistical model), taxonomic synonym resolution (reduced to binomial, known former names mapped to the accepted one via `TAXONOMIC_SYNONYMS`, then matched against the 7 MVP species — no fuzzy matching; ALA normally returns its own accepted name already, so this is a safety net and the 2026-09-12 run resolved 0 records with it), and duplicate removal (one record per species+coordinate). A few extra steps carried over from the MapLibre pipeline as baseline hygiene: Australian bounding box, capital-city-centroid default-pin removal, and fossil/preserved specimen exclusion.
 
 **Validation**: cleaned record counts are printed per species (report Phase 3 fits one model per species); any species below 30 records is flagged as a likely training risk, and zero-record species are called out explicitly — surfaced here rather than discovered later in the R pipeline.
 
@@ -74,13 +74,24 @@ Model outputs must be described as suitability estimates. They must not be prese
 
 **Output**: predictions use the `cloglog` link (Phillips et al., 2017 — the maxnet paper the report cites), so raster cell values read directly as a 0–1 suitability estimate. Every metadata JSON carries a `displayWording` field so the app never needs to invent its own uncertainty language — model outputs must be presented as suitability estimates, never as guaranteed sightings or a definitive future distribution forecast. The COG output is not itself mobile-renderable — MapLibre Native has no on-device GeoTIFF/COG decoder, so it is converted for the app by the next step.
 
-## Map overlay for the app
+## Map overlay and model panel data for the app
 
-`data/processed/Suitability Layer Pipeline for MapLibre.py` converts each `suitability_<species-id>.tif` into a colour-ramped, transparent-where-empty PNG under `apps/mobile/assets/suitability/<species-id>.png` (reprojected to Web Mercator and averaged down to 1500 px wide — MapLibre draws an `ImageSource` in Web Mercator, so a lat/lon image placed directly would sit up to ~186 km off), plus `manifest.json` holding each layer's geographic bounds (read from the raster, not hard-coded), evaluation metrics, and `displayWording`. The app's Prediction tab places the selected species' PNG with MapLibre's `ImageSource` and shows `displayWording` in its legend. Re-run it whenever the model outputs change:
+`data/processed/Suitability Layer Pipeline for MapLibre.py` converts each `suitability_<species-id>.tif` into a colour-ramped, transparent-where-empty PNG under `apps/mobile/assets/suitability/<species-id>.png`, and writes `manifest.json` beside them. Re-run it whenever the model outputs change:
 
 ```
 python "data/processed/Suitability Layer Pipeline for MapLibre.py"
 ```
 
-The `.tif` files stay in `models/output/` (Git-ignored) as the master copies; the PNGs and manifest are small enough (~3MB total) to commit and bundle with the app.
+**Projection**: each raster is reprojected to Web Mercator and averaged down to 1500 px wide. MapLibre draws an `ImageSource` in Web Mercator, so a lat/lon image placed directly would sit up to ~186 km off; the manifest still records the raster's lon/lat bounds (read from the file, not hard-coded) for the corner coordinates.
 
+**Manifest** (everything the app's Prediction tab shows, so nothing computed in `models/output/` is lost on the way to the app):
+
+- per species — `evaluation` (validation AUC, continuous Boyce index, 10th-percentile omission rate, AICc, delta-AICc), `variableContribution` (permutation importance %, labelled from the predictor raster's own band tags), `model` (feature classes, regularisation multiplier, partition scheme, build time), `trainingData` (cleaned → spatially thinned record counts, thinning distance, background points) and `displayWording`;
+- shared `provenance` — the occurrence snapshot (ALA DOI, capture date, coverage, licence, attribution, coordinate-uncertainty limit) from `data/metadata/snapshot-*-ala-marsupials-maxent.json`, and the predictor source, period and resolution;
+- `legendColours` — the ramp the PNGs are drawn with, so the legend cannot drift from the map.
+
+The pipeline fails rather than ship a bad manifest: a non-numeric metric (e.g. the `"NA"` Boyce index a missing `ecospat` produces), model metadata without record counts (re-run the R script), or an occurrence CSV whose checksum doesn't match its snapshot manifest. The checksum is accepted in its LF, raw, or CRLF form because git stores the CSV with LF endings while a snapshot generated on Windows hashed the CRLF file.
+
+**Accessibility (WCAG 2.2 AA)**: the ramp is reversed viridis, re-verified on every run by `check_ramp_accessibility()` — luminance strictly decreasing from low to high suitability; adjacent stops at least 15 CIELAB ΔE apart for normal vision and simulated protanopia, deuteranopia and tritanopia (SC 1.4.1, colour is not the only cue; the legend also carries Lower/Higher labels and the panel gives numbers); and stops at suitability ≥ 0.5 reaching 3:1 against the OpenStreetMap land colour once the overlay's baked-in transparency is applied (SC 1.4.11). Low-suitability cells are deliberately translucent, so they are exempt from the 3:1 check. The previous rainbow-style ramp failed all of this (non-monotonic luminance; green and yellow indistinguishable for protanopia). The app's panel text and legend text were also raised to at least 4.5:1 and touch targets to at least 44 px. This is a computed check, not an audit with assistive technology.
+
+The `.tif` files stay in `models/output/` (Git-ignored) as the master copies; the PNGs and manifest are small enough (~3.5MB total) to commit and bundle with the app.

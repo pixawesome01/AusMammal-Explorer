@@ -228,7 +228,7 @@ function OccurrenceMap(
             <Layer
               id="suitability-overlay"
               type="raster"
-              paint={{ "raster-opacity": 0.9, "raster-fade-duration": 0 }}
+              paint={{ "raster-opacity": 1, "raster-fade-duration": 0 }}
             />
           </ImageSource>
         ) : null}

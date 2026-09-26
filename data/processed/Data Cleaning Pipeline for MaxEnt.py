@@ -7,7 +7,8 @@ This is the occurrence-data counterpart to Environmental Predictor Pipeline
 for MaxEnt.py (which builds the CHELSA predictor raster).
 
 Report Phase 1 explicitly specifies: 2020-present, coordinate uncertainty
-filtering (<=1000m), taxonomic synonym resolution, and duplicate removal,
+filtering (<=1000m), taxonomic synonym resolution (TAXONOMIC_SYNONYMS), and
+duplicate removal,
 querying under ALA's CSDM (Species Distribution Modelling) profile. A few
 extra steps are carried over from Data Cleaning Pipeline for MapLibre.py
 as baseline data hygiene (Australian bounding box, capital-city-centroid
@@ -41,6 +42,24 @@ SPECIES_ID_BY_SCIENTIFIC_NAME = {
     "Wallabia bicolor": "swamp-wallaby",
     "Vombatus ursinus": "common-wombat",
     "Petauroides volans": "greater-glider",
+}
+
+# Report Phase 1 "taxonomic synonym resolution": older or alternative names
+# mapped to the accepted binomial of the same MVP species. ALA normally
+# returns its own accepted name in scientificName (it name-matches the query
+# and each record), so this is a safety net for stray historical names, not a
+# fix for a known leak - the 2026-09-12 run resolved 0 records this way.
+# Deliberately short and conservative: only unambiguous former combinations
+# of a species' own name. Splits are NOT synonyms and are left to be dropped
+# as non-MVP taxa - e.g. Petauroides minor and P. armillatus (the 2015 split
+# of the greater glider) are different species from P. volans.
+# Extend this from the Australian Faunal Directory, not from guesswork: a
+# wrong entry silently assigns records to the wrong species.
+TAXONOMIC_SYNONYMS = {
+    "Macropus bicolor": "Wallabia bicolor",
+    "Schoinobates volans": "Petauroides volans",
+    "Lipurus cinereus": "Phascolarctos cinereus",
+    "Phascolomys ursinus": "Vombatus ursinus",
 }
 
 CAPITAL_CITY_CENTROIDS = {
@@ -187,16 +206,21 @@ def clean_occurrences_for_maxent(doi, raw_df, output_path=OUTPUT_PATH):
     log_step("Event date before 2020-01-01 (or missing)", before)
 
     # Step 5: taxonomic synonym resolution (report Phase 1) - reduce to
-    # binomial, keep only the 7 MVP species. No fuzzy/synonym-table
-    # matching, same conservative approach as the MapLibre pipeline - that
-    # risks assigning a record to the wrong species.
+    # binomial, map known former names to the accepted one
+    # (TAXONOMIC_SYNONYMS), keep only the 7 MVP species. No fuzzy matching:
+    # that risks assigning a record to the wrong species.
     before = len(df)
     df["species"] = df["species"].apply(normalize_species)
+    resolved = df["species"].isin(TAXONOMIC_SYNONYMS)
+    if resolved.any():
+        resolved_counts = df.loc[resolved, "species"].value_counts().to_dict()
+        print(f"  Resolved {int(resolved.sum())} synonym record(s) to accepted names: {resolved_counts}")
+        df["species"] = df["species"].replace(TAXONOMIC_SYNONYMS)
     unmatched = sorted({s for s in df["species"] if pd.notna(s)} - set(marsupials))
     df = df[df["species"].isin(marsupials)]
     if unmatched:
-        print(f"  Dropped unmatched/synonym taxa not in the MVP list: {unmatched}")
-    log_step("Normalized to canonical MVP binomials", before)
+        print(f"  Dropped taxa that are neither MVP species nor known synonyms: {unmatched}")
+    log_step("Normalized to canonical MVP binomials (synonyms resolved)", before)
 
     # Step 6: enforce the Australian bounding box (also drops (0,0)).
     before = len(df)
