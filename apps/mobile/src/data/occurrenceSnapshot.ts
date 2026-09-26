@@ -40,10 +40,14 @@ export type OccurrenceSnapshotManifest = {
  * Values below are read straight from the committed manifest
  * (data/metadata/snapshot-2026-08-20-ala-marsupials.json) and the real output
  * files' eventDate coverage - keep this in sync whenever a new frozen
- * snapshot is generated and uploaded.
+ * snapshot is generated and uploaded. `snapshotId` intentionally matches the
+ * manifest's `snapshot_id` exactly (not a separate app-side identifier), so
+ * occurrenceSnapshot.manifestParity.test.ts can locate and cross-check the
+ * two automatically (RTM-51: "app/test/report snapshot references are
+ * checked for the same version").
  */
 export const OCCURRENCE_SNAPSHOT = {
-  snapshotId: "2026-08-20-ala-maplibre",
+  snapshotId: "2026-08-20-ala-marsupials",
   capturedAt: "2026-08-20T08:51:10Z",
   source: "Atlas of Living Australia",
   storageUrl:

@@ -159,12 +159,19 @@ def validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
             for field_name in REQUIRED_FILE_FIELDS:
                 if field_name not in file_entry:
                     errors.append(f"files[{index}] missing required field: {field_name}")
-            sha256 = file_entry.get("sha256")
-            if isinstance(sha256, str) and not _looks_like_sha256(sha256):
-                errors.append(f"files[{index}].sha256 is not a 64-character hex digest")
-            record_count = file_entry.get("record_count")
-            if isinstance(record_count, int) and record_count < 0:
-                errors.append(f"files[{index}].record_count must not be negative")
+            if "sha256" in file_entry:
+                sha256 = file_entry["sha256"]
+                if not isinstance(sha256, str):
+                    errors.append(f"files[{index}].sha256 must be a string")
+                elif not _looks_like_sha256(sha256):
+                    errors.append(f"files[{index}].sha256 is not a 64-character hex digest")
+            if "record_count" in file_entry:
+                record_count = file_entry["record_count"]
+                # bool is a subclass of int; a schema "integer" shouldn't accept True/False.
+                if not isinstance(record_count, int) or isinstance(record_count, bool):
+                    errors.append(f"files[{index}].record_count must be an integer")
+                elif record_count < 0:
+                    errors.append(f"files[{index}].record_count must not be negative")
 
     coverage = manifest.get("coverage")
     if not isinstance(coverage, Mapping):
@@ -242,19 +249,33 @@ def verify_snapshot_files(manifest: Mapping[str, Any], repo_root: Path) -> list[
     """Re-hash every file the manifest lists and report drift from what's on disk.
 
     Used for clean-checkout / reproducibility validation: an empty result
-    means every file still matches its recorded checksum.
+    means every file still matches its recorded checksum. Two calls against
+    an untouched snapshot always return the same (empty) result, since this
+    only reads files and never mutates them - that determinism is what makes
+    "rerun validation" a meaningful reproducibility check (RTM-51).
+
+    Each failure names the affected artefact and a concrete recovery step,
+    not just what mismatched.
     """
     mismatches: list[str] = []
     for file_entry in manifest.get("files", []):
         relative_path = file_entry["path"]
         file_path = repo_root / relative_path
         if not file_path.exists():
-            mismatches.append(f"{relative_path}: file not found")
+            mismatches.append(
+                f"{relative_path}: file not found "
+                "(recovery: regenerate this snapshot's outputs or re-download it from "
+                "shared storage, then rerun validation)"
+            )
             continue
         actual = sha256_of_file(file_path)
         expected = file_entry["sha256"]
         if actual != expected:
-            mismatches.append(f"{relative_path}: expected {expected}, got {actual}")
+            mismatches.append(
+                f"{relative_path}: checksum mismatch (expected {expected}, got {actual}) "
+                "(recovery: this file was modified after the snapshot was frozen - restore "
+                "the original from shared storage; do not hand-edit snapshot outputs)"
+            )
     return mismatches
 
 
@@ -325,6 +346,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Manifest '{args.manifest}' is malformed:", file=sys.stderr)
         for error in schema_errors:
             print(f"  - {error}", file=sys.stderr)
+        print(
+            "(recovery: fix the fields above by hand, or regenerate this manifest with "
+            "build_manifest()/write_manifest() rather than editing a corrupted one)",
+            file=sys.stderr,
+        )
         return 1
 
     repo_root = args.repo_root or discover_repo_root(args.manifest.resolve().parent)

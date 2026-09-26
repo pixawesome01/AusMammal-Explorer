@@ -125,6 +125,26 @@ def test_validate_manifest_reports_bad_checksum():
     assert any("sha256" in error for error in errors)
 
 
+def test_validate_manifest_reports_wrong_type_sha256():
+    manifest = _valid_dict_manifest(
+        files=[{"path": "x.geojson", "sha256": 12345, "record_count": 1}]
+    )
+
+    errors = validate_manifest(manifest)
+
+    assert any("sha256 must be a string" in error for error in errors)
+
+
+def test_validate_manifest_reports_wrong_type_record_count():
+    manifest = _valid_dict_manifest(
+        files=[{"path": "x.geojson", "sha256": "0" * 64, "record_count": "42"}]
+    )
+
+    errors = validate_manifest(manifest)
+
+    assert any("record_count must be an integer" in error for error in errors)
+
+
 def test_validate_manifest_reports_missing_licence_fields():
     manifest = _valid_dict_manifest(licence_and_attribution=[{"licence": "CC-BY 4.0 (Int)"}])
 
@@ -181,7 +201,10 @@ def test_verify_snapshot_files_detects_checksum_drift(repo_root, species_file):
 
     mismatches = verify_snapshot_files(manifest, repo_root)
     assert len(mismatches) == 1
+    # Failure messages must name the affected artefact and a recovery step (RTM-51).
     assert "koala.geojson" in mismatches[0]
+    assert "checksum mismatch" in mismatches[0]
+    assert "recovery:" in mismatches[0]
 
 
 def test_verify_snapshot_files_detects_missing_file(repo_root, species_file):
@@ -190,7 +213,34 @@ def test_verify_snapshot_files_detects_missing_file(repo_root, species_file):
     species_file.unlink()
 
     mismatches = verify_snapshot_files(manifest, repo_root)
-    assert mismatches == ["data/processed/koala.geojson: file not found"]
+    assert len(mismatches) == 1
+    assert mismatches[0].startswith("data/processed/koala.geojson: file not found")
+    assert "recovery:" in mismatches[0]
+
+
+def test_verify_snapshot_files_is_deterministic_across_repeated_runs(repo_root, species_file):
+    """Two clean runs against the same untouched snapshot must agree (RTM-51)."""
+    manifest = _build_test_manifest(repo_root, species_file)
+
+    first_run = verify_snapshot_files(manifest, repo_root)
+    second_run = verify_snapshot_files(manifest, repo_root)
+
+    assert first_run == second_run == []
+
+
+def test_build_manifest_produces_identical_checksums_across_repeated_runs(
+    repo_root, species_file
+):
+    """Rebuilding a manifest from the same frozen inputs reproduces the same
+    checksums and record counts every time - the "key aggregates" a clean
+    rerun must match (RTM-8/RTM-51), as distinct from re-extracting from ALA,
+    which is not expected to be reproducible against a live, changing source.
+    """
+    first = _build_test_manifest(repo_root, species_file)
+    second = _build_test_manifest(repo_root, species_file)
+
+    assert first["files"] == second["files"]
+    assert first["transformation_provenance"] == second["transformation_provenance"]
 
 
 def _write_valid_manifest(repo_root, species_file):
@@ -224,6 +274,20 @@ def test_main_exits_zero_and_reports_success_for_a_valid_snapshot(
     assert "verified" in capsys.readouterr().out
 
 
+def test_main_run_twice_against_the_same_snapshot_agrees(repo_root, species_file, capsys):
+    """The CLI-level equivalent of "two clean runs produce matching results" (RTM-51)."""
+    manifest_path = _write_valid_manifest(repo_root, species_file)
+
+    first_exit_code = main([str(manifest_path), "--repo-root", str(repo_root)])
+    first_output = capsys.readouterr().out
+    second_exit_code = main([str(manifest_path), "--repo-root", str(repo_root)])
+    second_output = capsys.readouterr().out
+
+    assert first_exit_code == second_exit_code == 0
+    assert first_output == second_output
+    assert "verified" in first_output
+
+
 def test_main_exits_nonzero_and_reports_drift_for_a_tampered_file(
     repo_root, species_file, capsys
 ):
@@ -249,8 +313,10 @@ def test_main_exits_nonzero_for_a_malformed_manifest(tmp_path, capsys):
 
     exit_code = main([str(manifest_path)])
 
+    stderr = capsys.readouterr().err
     assert exit_code == 1
-    assert "malformed" in capsys.readouterr().err
+    assert "malformed" in stderr
+    assert "recovery:" in stderr
 
 
 def test_main_auto_detects_repo_root_without_explicit_flag(repo_root, species_file, capsys):
