@@ -57,7 +57,6 @@ data/processed/*
 models/output/*
 !models/output/.gitkeep
 !models/output/*.csv
-!models/output/*.tif
 outputs/
 artifacts/
 
