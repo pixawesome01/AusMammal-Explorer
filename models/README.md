@@ -47,8 +47,9 @@ Model outputs must be described as suitability estimates. They must not be prese
 
 1. Install R (4.4+) and the required packages:
    ```r
-   install.packages(c("terra", "spThin", "ENMeval", "maxnet", "dplyr", "readr", "pROC", "jsonlite"))
+   install.packages(c("terra", "spThin", "ENMeval", "maxnet", "dplyr", "readr", "pROC", "jsonlite", "ecospat"))
    ```
+   `ecospat` is ENMeval's optional dependency for the continuous Boyce index (report Section 2.3) - without it, `ENMevaluate()` doesn't error, it just silently returns `"NA"` for that metric in every species' `model_metadata_<species-id>.json`.
 2. Confirm the two upstream inputs exist: `models/output/environmental_predictors_au.tif` and `models/output/occurrence_records_for_maxent.csv` (built by the two Python pipelines documented above).
 3. Generate the land boundary once, if `models/input/australia_land.gpkg` doesn't exist yet:
    ```

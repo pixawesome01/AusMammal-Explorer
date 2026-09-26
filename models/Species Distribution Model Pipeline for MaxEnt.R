@@ -35,8 +35,12 @@
 # forecast (models/README.md).
 
 # Required packages: terra, spThin, ENMeval, maxnet (installed for ENMeval's
-# algorithm="maxnet" backend), dplyr, readr, pROC, jsonlite. readr and pROC
-# are called via `::` below rather than attached here.
+# algorithm="maxnet" backend), dplyr, readr, pROC, jsonlite, ecospat (ENMeval's
+# optional dependency for the continuous Boyce index - report Section 2.3;
+# without it ENMevaluate() silently returns "NA" for cbi.val.avg instead of
+# erroring, confirmed by an actual run). readr, pROC and ecospat are never
+# attached with library() - ecospat only needs to be installed so ENMeval can
+# find it via requireNamespace(), and readr/pROC are called via `::` below.
 suppressPackageStartupMessages({
   library(terra)      # predictor raster I/O, cropping, masking, prediction
   library(spThin)     # 10km spatial thinning (report Phase 1's last step,
@@ -492,42 +496,59 @@ export_species_outputs <- function(species_id, suitability_raster, variable_impo
 # per species using ENMeval")
 # --------------------------------------------------------------------------
 
+#' Runs the full pipeline (load -> thin -> background -> tune -> evaluate ->
+#' export) for a single species against an already-loaded, already-masked
+#' predictor stack. Factored out of run_maxent_pipeline_for_all_species() so
+#' one species can be trialled end-to-end - e.g. while validating the
+#' pipeline on a new machine - without waiting on the other six.
+#'
+#' Returns the list produced by export_species_outputs() (raster_path,
+#' metadata_path) on success, or NULL if the species was skipped for having
+#' too few thinned records. Errors propagate to the caller rather than being
+#' caught here, so a single-species trial fails loudly; the all-species
+#' driver below wraps this call in its own tryCatch per species instead.
+run_maxent_pipeline_for_one_species <- function(scientific_name, predictors) {
+  species_id <- SPECIES_ID_BY_SCIENTIFIC_NAME[[scientific_name]]
+  if (is.null(species_id)) {
+    stop("Unknown species scientific name: ", scientific_name)
+  }
+  message(sprintf("Fitting maxnet model for %s (%s)...", scientific_name, species_id))
+  set.seed(species_seed(species_id))
+
+  occurrences <- load_occurrences(scientific_name)
+  occurrences <- filter_occurrences_to_valid_predictors(occurrences, predictors, species_id)
+  thinned <- thin_occurrences(occurrences, species_id)
+
+  if (nrow(thinned) < MIN_THINNED_RECORDS) {
+    message(sprintf(
+      "  Skipping %s: only %d thinned records (below the %d-record minimum).",
+      species_id, nrow(thinned), MIN_THINNED_RECORDS
+    ))
+    return(invisible(NULL))
+  }
+
+  bg <- sample_background(predictors)
+  fit <- tune_and_select_model(thinned, bg, predictors)
+  evaluation_metrics <- extract_evaluation_metrics(fit$selected_settings)
+  variable_importance <- compute_variable_importance(fit$model, predictors, thinned, bg)
+  suitability_raster <- predict_suitability_raster(fit$model, predictors)
+
+  outputs <- export_species_outputs(
+    species_id, suitability_raster, variable_importance,
+    evaluation_metrics, fit$selected_settings
+  )
+  message(sprintf("  Saved %s and %s", outputs$raster_path, outputs$metadata_path))
+  outputs
+}
+
 run_maxent_pipeline_for_all_species <- function() {
   dir.create(OUTPUT_DIR, recursive = TRUE, showWarnings = FALSE)
   predictors <- load_predictors()
 
   for (scientific_name in names(SPECIES_ID_BY_SCIENTIFIC_NAME)) {
     species_id <- SPECIES_ID_BY_SCIENTIFIC_NAME[[scientific_name]]
-    message(sprintf("Fitting maxnet model for %s (%s)...", scientific_name, species_id))
-    set.seed(species_seed(species_id))
-
     tryCatch({
-      occurrences <- load_occurrences(scientific_name)
-      occurrences <- filter_occurrences_to_valid_predictors(occurrences, predictors, species_id)
-      thinned <- thin_occurrences(occurrences, species_id)
-
-      if (nrow(thinned) < MIN_THINNED_RECORDS) {
-        # `next`/skip, not `return()` - a `return()` here would exit
-        # run_maxent_pipeline_for_all_species() entirely (return() inside
-        # tryCatch()'s expr unwinds to the enclosing *function*, not just
-        # this iteration), silently skipping every remaining species.
-        message(sprintf(
-          "  Skipping %s: only %d thinned records (below the %d-record minimum).",
-          species_id, nrow(thinned), MIN_THINNED_RECORDS
-        ))
-      } else {
-        bg <- sample_background(predictors)
-        fit <- tune_and_select_model(thinned, bg, predictors)
-        evaluation_metrics <- extract_evaluation_metrics(fit$selected_settings)
-        variable_importance <- compute_variable_importance(fit$model, predictors, thinned, bg)
-        suitability_raster <- predict_suitability_raster(fit$model, predictors)
-
-        outputs <- export_species_outputs(
-          species_id, suitability_raster, variable_importance,
-          evaluation_metrics, fit$selected_settings
-        )
-        message(sprintf("  Saved %s and %s", outputs$raster_path, outputs$metadata_path))
-      }
+      run_maxent_pipeline_for_one_species(scientific_name, predictors)
     }, error = function(e) {
       message(sprintf("  FAILED for %s: %s", species_id, conditionMessage(e)))
     })
