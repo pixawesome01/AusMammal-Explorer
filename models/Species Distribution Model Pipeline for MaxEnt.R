@@ -467,6 +467,14 @@ export_species_outputs <- function(species_id, suitability_raster, variable_impo
     selectedRegularisationMultiplier = selected_settings$rm,
     spatialPartitionMethod = "hierarchical checkerboard (Checkerboard2)",
     checkerboardAggregationFactor = CHECKERBOARD_AGGREGATION,
+    # Full search space, not just the winning combination - so the app's
+    # model information panel can show what was actually searched, not only
+    # what was selected.
+    tuning = list(
+      searchedFeatureClasses = TUNE_FEATURE_CLASSES,
+      searchedRegularisationMultipliers = TUNE_REGULARISATION_MULTIPLIERS,
+      deltaAiccSelectionThreshold = DELTA_AICC_SELECTION_THRESHOLD
+    ),
     evaluation = evaluation_metrics,
     permutationImportancePercent = as.list(variable_importance),
     trainingInputs = list(

@@ -228,7 +228,13 @@ function OccurrenceMap(
             <Layer
               id="suitability-overlay"
               type="raster"
-              paint={{ "raster-opacity": 1, "raster-fade-duration": 0 }}
+              // The base map's road/place labels are baked into its raster
+              // tiles (no separate label layer to draw above), so this is
+              // the only way to keep them legible under the overlay. Kept
+              // in sync by hand with APP_LAYER_OPACITY in "Suitability
+              // Layer Pipeline for MapLibre.py", which verifies this exact
+              // value still clears WCAG 2.2 AA contrast against the map.
+              paint={{ "raster-opacity": 0.88, "raster-fade-duration": 0 }}
             />
           </ImageSource>
         ) : null}

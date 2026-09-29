@@ -104,10 +104,18 @@ RAMP_COLOURS = np.array(
 
 # Low-suitability cells fade to transparent so the basemap stays readable
 # and only plausibly suitable areas stand out: fully transparent at 0,
-# reaching MAX_ALPHA by ALPHA_FULL_AT. The app draws the image at full layer
-# opacity, so this baked-in alpha is the only transparency applied.
+# fully opaque (in the PNG's own alpha channel) by ALPHA_FULL_AT.
 ALPHA_FULL_AT = 0.35
-MAX_ALPHA = 230
+MAX_ALPHA = 255
+
+# The base map's road/place labels are baked into its raster tiles - there
+# is no separate label layer to draw the overlay under - so the app also
+# caps the whole layer's opacity (OccurrenceMap.tsx, the Layer's
+# "raster-opacity" paint property) rather than relying on MAX_ALPHA alone.
+# Kept here, duplicated by hand in that file, purely so
+# check_ramp_accessibility() below verifies the contrast actually rendered
+# on screen (PNG alpha x layer opacity), not just the PNG's own alpha.
+APP_LAYER_OPACITY = 0.88
 
 # --- WCAG 2.2 AA ramp verification (see module docstring) -------------------
 # OpenStreetMap "land" colour the overlay sits on, as used by the app's map.
@@ -188,7 +196,11 @@ def check_ramp_accessibility() -> list[str]:
             )
         results.append(f"adjacent-stop dE >= {min(deltas):.0f} for {name}")
 
-    alpha = MAX_ALPHA / 255.0
+    # Effective alpha as actually rendered: the PNG's own alpha channel,
+    # then dimmed again by the app's layer opacity - checking MAX_ALPHA
+    # alone would pass a ramp that fails once the app's own opacity is
+    # applied on top.
+    alpha = (MAX_ALPHA / 255.0) * APP_LAYER_OPACITY
     contrasts = []
     for stop, colour in zip(RAMP_STOPS, colours):
         if stop >= HIGH_SUITABILITY_FROM:
@@ -197,11 +209,12 @@ def check_ramp_accessibility() -> list[str]:
     if min(contrasts) < MIN_GRAPHICAL_CONTRAST:
         raise ValueError(
             f"Ramp stops at suitability >= {HIGH_SUITABILITY_FROM} fall below "
-            f"{MIN_GRAPHICAL_CONTRAST}:1 against the map: {[round(c, 2) for c in contrasts]}"
+            f"{MIN_GRAPHICAL_CONTRAST}:1 against the map once the app's "
+            f"{APP_LAYER_OPACITY} layer opacity is applied: {[round(c, 2) for c in contrasts]}"
         )
     results.append(
         f"suitability >= {HIGH_SUITABILITY_FROM} contrasts {min(contrasts):.1f}:1 or better "
-        "against the map land (3:1 required)"
+        f"against the map land at the app's actual rendered opacity (3:1 required)"
     )
     return results
 
@@ -306,9 +319,10 @@ def _load_occurrence_provenance() -> dict:
 
 
 def _load_predictor_provenance() -> dict:
-    """Predictor source and per-band descriptions, read from the raster's own tags."""
+    """Predictor source, extent and per-band descriptions, read from the raster itself."""
     with rasterio.open(PREDICTOR_RASTER_PATH) as src:
         dataset_tags = src.tags()
+        west, south, east, north = src.bounds
         bands = {}
         for index, band_id in enumerate(src.descriptions, start=1):
             tags = src.tags(index)
@@ -321,6 +335,8 @@ def _load_predictor_provenance() -> dict:
         "source": dataset_tags["source"],
         "coveragePeriod": dataset_tags["coverage_period"],
         "resolutionDegrees": float(dataset_tags["resolution_degrees"]),
+        "crs": dataset_tags["crs"],
+        "extent": {"west": west, "south": south, "east": east, "north": north},
         "bands": bands,
     }
 
@@ -406,6 +422,8 @@ def _convert_species(species_id: str, predictor_bands: dict) -> dict:
             "featureClasses": metadata["selectedFeatureClasses"],
             "regularisationMultiplier": metadata["selectedRegularisationMultiplier"],
             "spatialPartitionMethod": metadata["spatialPartitionMethod"],
+            "checkerboardAggregationFactor": metadata["checkerboardAggregationFactor"],
+            "tuning": metadata["tuning"],
             "generatedAt": metadata["generatedAt"],
         },
         "trainingData": {

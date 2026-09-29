@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T11:08:25Z",
+  "generatedAt": "2026-09-29T22:29:27Z",
   "legendColours": [
     "#fde725",
     "#5ec962",
@@ -25,6 +25,13 @@
       "source": "CHELSA V2.1 (Karger et al., 2017)",
       "coveragePeriod": "1981-2010",
       "resolutionDegrees": 0.01,
+      "crs": "EPSG:4326",
+      "extent": {
+        "west": 110.0,
+        "south": -45.0,
+        "east": 155.0,
+        "north": -6.0
+      },
       "bands": {
         "bio1_mean_annual_temp_c": {
           "id": "bio1_mean_annual_temp_c",
@@ -76,6 +83,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T10:28:01Z"
       },
       "trainingData": {
@@ -122,6 +147,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T10:38:03Z"
       },
       "trainingData": {
@@ -168,6 +211,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T10:46:09Z"
       },
       "trainingData": {
@@ -214,6 +275,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T10:51:41Z"
       },
       "trainingData": {
@@ -260,6 +339,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T10:59:12Z"
       },
       "trainingData": {
@@ -306,6 +403,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T11:04:54Z"
       },
       "trainingData": {
@@ -352,6 +467,24 @@
         "featureClasses": "LQH",
         "regularisationMultiplier": 0.5,
         "spatialPartitionMethod": "hierarchical checkerboard (Checkerboard2)",
+        "checkerboardAggregationFactor": [
+          10,
+          10
+        ],
+        "tuning": {
+          "searchedFeatureClasses": [
+            "L",
+            "LQ",
+            "LQH"
+          ],
+          "searchedRegularisationMultipliers": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "deltaAiccSelectionThreshold": 2
+        },
         "generatedAt": "2026-09-26T11:08:04Z"
       },
       "trainingData": {

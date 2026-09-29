@@ -29,12 +29,20 @@ export type VariableContribution = {
   percent: number;
 };
 
+export type ModelTuning = {
+  searchedFeatureClasses: string[];
+  searchedRegularisationMultipliers: number[];
+  deltaAiccSelectionThreshold: number;
+};
+
 export type SuitabilityModel = {
   algorithm: string;
   predictionType: string;
   featureClasses: string;
   regularisationMultiplier: number;
   spatialPartitionMethod: string;
+  checkerboardAggregationFactor: number[];
+  tuning: ModelTuning;
   generatedAt: string;
 };
 
@@ -64,6 +72,8 @@ export type PredictorProvenance = {
   source: string;
   coveragePeriod: string;
   resolutionDegrees: number;
+  crs: string;
+  extent: { west: number; south: number; east: number; north: number };
 };
 
 type ManifestLayer = {
