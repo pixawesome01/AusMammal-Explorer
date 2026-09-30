@@ -214,7 +214,10 @@ def clean_occurrences_for_maxent(doi, raw_df, output_path=OUTPUT_PATH):
     resolved = df["species"].isin(TAXONOMIC_SYNONYMS)
     if resolved.any():
         resolved_counts = df.loc[resolved, "species"].value_counts().to_dict()
-        print(f"  Resolved {int(resolved.sum())} synonym record(s) to accepted names: {resolved_counts}")
+        print(
+            f"  Resolved {int(resolved.sum())} synonym record(s) to accepted names: "
+            f"{resolved_counts}"
+        )
         df["species"] = df["species"].replace(TAXONOMIC_SYNONYMS)
     unmatched = sorted({s for s in df["species"] if pd.notna(s)} - set(marsupials))
     df = df[df["species"].isin(marsupials)]

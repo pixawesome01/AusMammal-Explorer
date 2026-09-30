@@ -138,15 +138,21 @@ HIGH_SUITABILITY_FROM = 0.5
 MIN_ADJACENT_DELTA_E = 15.0
 # Machado et al. (2009), severity 1.0, applied in linear RGB.
 CVD_MATRICES = {
-    "protanopia": np.array(
-        [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]]
-    ),
-    "deuteranopia": np.array(
-        [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]]
-    ),
-    "tritanopia": np.array(
-        [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]]
-    ),
+    "protanopia": np.array([
+        [0.152286, 1.052583, -0.204868],
+        [0.114503, 0.786281, 0.099216],
+        [-0.003882, -0.048116, 1.051998],
+    ]),
+    "deuteranopia": np.array([
+        [0.367322, 0.860646, -0.227968],
+        [0.280085, 0.672501, 0.047413],
+        [-0.011820, 0.042940, 0.968881],
+    ]),
+    "tritanopia": np.array([
+        [1.255528, -0.076749, -0.178779],
+        [-0.078411, 0.930809, 0.147602],
+        [0.004733, 0.691367, 0.303900],
+    ]),
 }
 
 
@@ -165,7 +171,9 @@ def _contrast(rgb_a: np.ndarray, rgb_b: np.ndarray) -> float:
 
 
 def _to_lab(rgb01: np.ndarray) -> np.ndarray:
-    xyz_matrix = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]])
+    xyz_matrix = np.array(
+        [[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]]
+    )
     xyz = xyz_matrix @ _to_linear(rgb01) / np.array([0.95047, 1.0, 1.08883])
     f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
     return np.array([116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])])
@@ -196,8 +204,9 @@ def check_ramp_accessibility() -> list[str]:
         seen = [c if matrix is None else _simulate_deficiency(c, matrix) for c in colours]
         deltas = [float(np.linalg.norm(_to_lab(a) - _to_lab(b))) for a, b in zip(seen, seen[1:])]
         if min(deltas) < MIN_ADJACENT_DELTA_E:
+            rounded_deltas = [round(d, 1) for d in deltas]
             raise ValueError(
-                f"Adjacent ramp stops are too similar for {name}: dE {[round(d, 1) for d in deltas]}"
+                f"Adjacent ramp stops are too similar for {name}: dE {rounded_deltas}"
             )
         results.append(f"adjacent-stop dE >= {min(deltas):.0f} for {name}")
 
@@ -410,12 +419,16 @@ def _convert_species(species_id: str, predictor_bands: dict) -> dict:
         "bounds": {"west": west, "south": south, "east": east, "north": north},
         "displayWording": metadata["displayWording"],
         "evaluation": {
-            "aucValidation": _require_number(evaluation["auc_validation_average"], "AUC", species_id),
+            "aucValidation": _require_number(
+                evaluation["auc_validation_average"], "AUC", species_id
+            ),
             "continuousBoyceIndex": _require_number(
                 evaluation["continuous_boyce_index_average"], "continuous Boyce index", species_id
             ),
             "omissionRate10thPercentile": _require_number(
-                evaluation["omission_rate_10th_percentile_average"], "10th-percentile omission", species_id
+                evaluation["omission_rate_10th_percentile_average"],
+                "10th-percentile omission",
+                species_id,
             ),
             "aicc": _require_number(evaluation["aicc"], "AICc", species_id),
             "deltaAicc": _require_number(evaluation["delta_aicc"], "delta-AICc", species_id),
