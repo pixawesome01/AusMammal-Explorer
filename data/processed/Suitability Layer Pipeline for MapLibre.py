@@ -44,7 +44,10 @@ Colour ramp accessibility (WCAG 2.2 AA, SC 1.4.1 / 1.4.11): the ramp is
 reversed viridis, chosen because it is monotonic in luminance and stays
 distinguishable under the common colour-vision deficiencies.
 check_ramp_accessibility() re-verifies that on every run so an edit to
-RAMP_COLOURS can't silently regress it.
+RAMP_COLOURS can't silently regress it. Only checked against the base map's
+own land colour (MAP_LAND_RGB) - the app's base style (OccurrenceMap.tsx,
+MAP_STYLE_URL) draws its labels as their own layer above this overlay
+(SUITABILITY_OVERLAY_BEFORE_ID), so label legibility isn't a factor here.
 """
 import hashlib
 import json
@@ -108,18 +111,20 @@ RAMP_COLOURS = np.array(
 ALPHA_FULL_AT = 0.35
 MAX_ALPHA = 255
 
-# The base map's road/place labels are baked into its raster tiles - there
-# is no separate label layer to draw the overlay under - so the app also
-# caps the whole layer's opacity (OccurrenceMap.tsx, the Layer's
-# "raster-opacity" paint property) rather than relying on MAX_ALPHA alone.
-# Kept here, duplicated by hand in that file, purely so
-# check_ramp_accessibility() below verifies the contrast actually rendered
-# on screen (PNG alpha x layer opacity), not just the PNG's own alpha.
-APP_LAYER_OPACITY = 0.88
+# Kept in sync by hand with the suitability Layer's "raster-opacity" in
+# OccurrenceMap.tsx, purely so check_ramp_accessibility() below verifies the
+# contrast actually rendered on screen. This is no longer load-bearing for
+# label legibility the way it was under the old raster basemap (its labels
+# now draw as their own layer above this overlay -
+# SUITABILITY_OVERLAY_BEFORE_ID in that file) - the app-side value is a
+# visual preference now, not a constraint.
+APP_LAYER_OPACITY = 0.92
 
 # --- WCAG 2.2 AA ramp verification (see module docstring) -------------------
-# OpenStreetMap "land" colour the overlay sits on, as used by the app's map.
-MAP_LAND_RGB = (0xF2, 0xEF, 0xE9)
+# The base map's land colour (OccurrenceMap.tsx, MAP_STYLE_URL - the
+# "background" layer of the OpenFreeMap "bright" style, checked directly
+# against its style.json) that the overlay sits on.
+MAP_LAND_RGB = (0xF8, 0xF4, 0xF0)
 # SC 1.4.11: graphical objects needed to understand the content need 3:1.
 MIN_GRAPHICAL_CONTRAST = 3.0
 # Only the meaningful (moderate-to-high suitability) end of the ramp is held

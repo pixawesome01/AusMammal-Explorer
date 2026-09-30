@@ -100,13 +100,19 @@ describe("OccurrenceMap", () => {
     expect(camera.props.maxBounds).toEqual([110, -45, 155, -6]);
   });
 
-  it("provides an absolute glyph source for cluster-count labels", async () => {
+  it("provides an absolute glyph source for cluster-count labels on the Records tab", async () => {
     const { getByTestId } = await render(<OccurrenceMap speciesName="Koala" />);
 
     expect(getByTestId("occurrence-map").props.mapStyle).toMatchObject({
       glyphs: MAP_GLYPHS_URL,
     });
     expect(MAP_GLYPHS_URL).toMatch(/^https:\/\//);
+  });
+
+  it("loads the Prediction tab's map from a real, absolute vector style URL", async () => {
+    const { getByTestId } = await render(<OccurrenceMap mode="prediction" speciesName="Koala" />);
+
+    expect(getByTestId("occurrence-map").props.mapStyle).toMatch(/^https:\/\//);
   });
 
   it("exposes the mock-up zoom controls through its ref", async () => {

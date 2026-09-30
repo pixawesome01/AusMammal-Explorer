@@ -39,7 +39,12 @@ TransformRequestManager.addHeader({
     "AusMammalExplorer/0.1 (+https://github.com/pixawesome01/AusMammal-Explorer)",
 });
 
-const OPENSTREETMAP_STYLE: StyleSpecification = {
+// Records tab: the original raw-OSM raster tiles, unchanged from before the
+// Prediction-tab work below. Kept here rather than switched over too, since
+// only the Prediction tab actually needs a vector style (see
+// PREDICTION_MAP_STYLE_URL) - the Records tab never draws anything over the
+// base map that a label could get lost under.
+const RECORDS_MAP_STYLE: StyleSpecification = {
   version: 8,
   glyphs: MAP_GLYPHS_URL,
   sources: {
@@ -59,6 +64,35 @@ const OPENSTREETMAP_STYLE: StyleSpecification = {
     },
   ],
 };
+
+// Prediction tab only: OpenFreeMap's hosted "bright" vector style (OSM data
+// via OpenMapTiles) - free, no API key, no rate limit (openfreemap.org/tos).
+// "bright" is the classic OSM-Carto-like look (green parks, blue water)
+// closest to RECORDS_MAP_STYLE above; OpenFreeMap's other styles
+// ("positron", "dark" etc.) trade that colour away for a flatter data-viz
+// backdrop. Passing a style URL directly is supported by
+// @maplibre/maplibre-react-native's Map.mapStyle prop; the fetched style
+// brings its own sources, glyphs and sprite, so nothing else needs
+// configuring here. Used only for Prediction specifically because a vector
+// style has real label layers drawn as their own pass - see
+// SUITABILITY_OVERLAY_BEFORE_ID below for why that matters for this app's
+// suitability overlay, and why the Records tab (no overlay to draw under
+// labels) has no need to pay for that switch.
+const PREDICTION_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
+
+// The id of the first real text label layer in PREDICTION_MAP_STYLE_URL's
+// layer stack (checked directly against the fetched style.json -
+// "waterway_line_label" is layer 96 of 119; two icon-only symbol layers,
+// road_oneway arrows, sit just before it and are covered same as any other
+// line/fill, but everything from here on is text). Passing this as the
+// suitability overlay Layer's beforeId inserts it immediately below that
+// point: every fill/line of the base map renders first, then the overlay
+// paints over them, then every label (water names, roads, cities, country
+// names - all with their own white halo in this style) draws on top of the
+// overlay and stays legible regardless of how opaque the overlay gets. A
+// raster basemap (RECORDS_MAP_STYLE) can't do this at all, since its labels
+// are baked into the same image as everything else.
+const SUITABILITY_OVERLAY_BEFORE_ID = "waterway_line_label";
 
 type MapState = "loading" | "ready" | "error";
 
@@ -197,7 +231,7 @@ function OccurrenceMap(
         key={mapKey}
         testID="occurrence-map"
         style={styles.map}
-        mapStyle={OPENSTREETMAP_STYLE}
+        mapStyle={mode === "prediction" ? PREDICTION_MAP_STYLE_URL : RECORDS_MAP_STYLE}
         attribution
         attributionPosition={{ bottom: mode === "prediction" ? 82 : 34, right: 8 }}
         compass
@@ -226,15 +260,17 @@ function OccurrenceMap(
             coordinates={suitabilityLayer.coordinates}
           >
             <Layer
+              beforeId={SUITABILITY_OVERLAY_BEFORE_ID}
               id="suitability-overlay"
               type="raster"
-              // The base map's road/place labels are baked into its raster
-              // tiles (no separate label layer to draw above), so this is
-              // the only way to keep them legible under the overlay. Kept
-              // in sync by hand with APP_LAYER_OPACITY in "Suitability
-              // Layer Pipeline for MapLibre.py", which verifies this exact
-              // value still clears WCAG 2.2 AA contrast against the map.
-              paint={{ "raster-opacity": 0.88, "raster-fade-duration": 0 }}
+              // Labels no longer need this kept low for legibility (the
+              // base map's own labels draw after this layer, per beforeId
+              // above), so this is purely a visual preference - a slightly
+              // less solid wash over the base map's colour. Kept in sync by
+              // hand with APP_LAYER_OPACITY in "Suitability Layer Pipeline
+              // for MapLibre.py", which verifies this exact value still
+              // clears WCAG 2.2 AA contrast against the map.
+              paint={{ "raster-opacity": 0.92, "raster-fade-duration": 0 }}
             />
           </ImageSource>
         ) : null}
@@ -283,6 +319,10 @@ function OccurrenceMap(
               filter={["has", "point_count"]}
               layout={{
                 "text-field": ["to-string", ["get", "point_count"]],
+                // This layer only ever renders on the Records tab
+                // (occurrence-records source, below), so it only ever needs
+                // a font RECORDS_MAP_STYLE's own glyphs (MAP_GLYPHS_URL)
+                // actually serves - not PREDICTION_MAP_STYLE_URL's fonts.
                 "text-font": ["Open Sans Semibold"],
                 "text-size": 12,
               }}
@@ -332,10 +372,20 @@ function OccurrenceMap(
 
       <Pressable
         accessibilityRole="link"
-        onPress={() => Linking.openURL("https://www.openstreetmap.org/copyright")}
+        onPress={() =>
+          Linking.openURL(
+            mode === "prediction"
+              ? "https://openfreemap.org"
+              : "https://www.openstreetmap.org/copyright",
+          )
+        }
         style={[styles.attribution, mode === "prediction" && styles.predictionAttribution]}
       >
-        <Text style={styles.attributionText}>© OpenStreetMap contributors</Text>
+        <Text style={styles.attributionText}>
+          {mode === "prediction"
+            ? "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+            : "© OpenStreetMap contributors"}
+        </Text>
       </Pressable>
 
       {collection && showRecordCount ? (
