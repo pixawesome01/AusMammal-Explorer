@@ -445,9 +445,19 @@ def build_suitability_layers() -> Path:
     predictors = _load_predictor_provenance()
 
     print("Converting suitability rasters to map overlays...")
-    layers = {
-        species_id: _convert_species(species_id, predictors["bands"]) for species_id in SPECIES_IDS
-    }
+    layers = {}
+    for species_id in SPECIES_IDS:
+        try:
+            layers[species_id] = _convert_species(species_id, predictors["bands"])
+        except FileNotFoundError as error:
+            # The R pipeline skips (not hard-fails) a species with too few
+            # thinned records - MIN_THINNED_RECORDS in "Species Distribution
+            # Model Pipeline for MaxEnt.R" - so its .tif/.json never exist.
+            # That must not take down the other 6 species' layers too.
+            print(f"  Skipping {species_id}: {error}")
+
+    if not layers:
+        raise RuntimeError("No species produced a suitability layer - nothing to write.")
 
     manifest = {
         "generatedAt": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),

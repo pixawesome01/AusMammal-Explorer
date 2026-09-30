@@ -143,7 +143,10 @@ export function ExplorerWorkspace({
     readAsset,
     manifest,
   });
-  const suitabilityLayer = getSuitabilityLayer(selectedSpecies.id);
+  // undefined when this species has no suitability model - e.g. too few
+  // thinned records for the R pipeline to fit one (see suitabilityLayers.ts).
+  const suitabilityLayer =
+    activeTab === "prediction" ? getSuitabilityLayer(selectedSpecies.id) : undefined;
   const mappedCount = occurrenceState.records?.collection.features.length;
   const mappedCountLabel =
     occurrenceState.status === "loading"
@@ -252,7 +255,7 @@ export function ExplorerWorkspace({
             </View>
             </View>
 
-          {activeTab === "prediction" ? (
+          {activeTab === "prediction" && suitabilityLayer ? (
             <>
               <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
                 <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
@@ -273,6 +276,18 @@ export function ExplorerWorkspace({
               </View>
               <ModelInfoPanel layer={suitabilityLayer} speciesName={selectedSpecies.commonName} />
             </>
+          ) : activeTab === "prediction" ? (
+            <View
+              accessibilityLabel="Habitat suitability unavailable"
+              style={styles.predictionLegend}
+            >
+              <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
+                Potential observation areas
+              </Text>
+              <Text style={styles.predictionLegendNote}>
+                No suitability model is available yet for {selectedSpecies.commonName}.
+              </Text>
+            </View>
           ) : (
             <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
               <Text style={styles.mapCountText}>{mappedCountLabel}</Text>

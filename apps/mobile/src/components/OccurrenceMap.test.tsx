@@ -191,6 +191,9 @@ describe("OccurrenceMap", () => {
 
   it("shows the species suitability overlay instead of records in prediction mode", async () => {
     const suitabilityLayer = getSuitabilityLayer("koala");
+    if (!suitabilityLayer) {
+      throw new Error("Expected a suitability layer for koala - is the fixture manifest missing it?");
+    }
     const { getByLabelText, getByTestId, queryByTestId } = await render(
       <OccurrenceMap mode="prediction" speciesName="Koala" suitabilityLayer={suitabilityLayer} />,
     );

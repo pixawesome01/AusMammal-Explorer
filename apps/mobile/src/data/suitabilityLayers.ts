@@ -88,7 +88,12 @@ type ManifestLayer = {
 type SuitabilityManifest = {
   legendColours: string[];
   provenance: { occurrences: OccurrenceProvenance; predictors: PredictorProvenance };
-  layers: Record<SpeciesId, ManifestLayer>;
+  // Partial, not Record<SpeciesId, ...>: the conversion pipeline skips a
+  // species that the R pipeline itself skipped for too few thinned records
+  // (models/Species Distribution Model Pipeline for MaxEnt.R,
+  // MIN_THINNED_RECORDS), so a given species' entry is not guaranteed to
+  // exist even though every current species happens to have one.
+  layers: Partial<Record<SpeciesId, ManifestLayer>>;
 };
 
 const MANIFEST: SuitabilityManifest = require("../../assets/suitability/manifest.json");
@@ -109,8 +114,14 @@ export type SuitabilityLayer = {
   predictors: PredictorProvenance;
 };
 
-export function getSuitabilityLayer(speciesId: SpeciesId): SuitabilityLayer {
-  const { bounds, ...layer } = MANIFEST.layers[speciesId];
+// Returns undefined if this species has no suitability model - see the
+// "layers" comment on SuitabilityManifest above for why that can happen.
+export function getSuitabilityLayer(speciesId: SpeciesId): SuitabilityLayer | undefined {
+  const entry = MANIFEST.layers[speciesId];
+  if (!entry) {
+    return undefined;
+  }
+  const { bounds, ...layer } = entry;
   const { west, south, east, north } = bounds;
   return {
     image: SUITABILITY_IMAGES[speciesId],
