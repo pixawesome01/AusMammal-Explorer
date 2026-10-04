@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 import { SpeciesProvider, useSpeciesSelection } from "../SpeciesContext";
 import { MVP_SPECIES } from "../species";
@@ -88,5 +88,31 @@ describe("SpeciesSelector", () => {
       screen.getByRole("button", { name: "Koala, September records" }),
     );
     expect(onSpeciesPress).toHaveBeenCalledWith(MVP_SPECIES[0], 9);
+  });
+
+  it("lists the record counts of the 20% sample the map loads", async () => {
+    await renderSelector();
+
+    expect(screen.getByText("8,557 records")).toBeTruthy();
+    expect(screen.queryByText("42,786 records")).toBeNull();
+  });
+
+  it("sizes seasonal bubbles by the selected month's record count", async () => {
+    await render(
+      <SpeciesProvider>
+        <SpeciesSelector initialMonth={10} />
+      </SpeciesProvider>,
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Seasonal view" }));
+
+    const diameter = (speciesId: string) =>
+      StyleSheet.flatten(screen.getByTestId(`seasonal-bubble-${speciesId}`).props.style).width;
+    // October in the 20% sample: Koala 1,036, Common Wombat 207, Greater Glider 145 records.
+    expect(screen.getByText("1,036 records")).toBeTruthy();
+    expect(diameter("koala")).toBeGreaterThan(diameter("common-wombat"));
+    expect(diameter("common-wombat")).toBeGreaterThan(diameter("greater-glider"));
+    expect(
+      screen.getByRole("button", { name: "Koala, October records" }).props.accessibilityValue,
+    ).toEqual({ text: "1,036 records" });
   });
 });

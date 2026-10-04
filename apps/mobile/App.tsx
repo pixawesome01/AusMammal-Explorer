@@ -190,6 +190,7 @@ export function ExplorerWorkspace({
       >
         <SpeciesSelector
           imageRevision={selectorImageRevision}
+          manifest={manifest}
           onSpeciesPress={(_species, month) => {
             setTemporalFilter(month === undefined ? {} : { month });
             setExplorerOpen(true);

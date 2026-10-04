@@ -4,6 +4,7 @@ import {
   ImageSource,
   Layer,
   Map,
+  Marker,
   TransformRequestManager,
   type CameraRef,
   type GeoJSONSourceProps,
@@ -12,7 +13,7 @@ import {
   type LngLatBounds,
   type StyleSpecification,
 } from "@maplibre/maplibre-react-native";
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -23,7 +24,10 @@ import {
   View,
 } from "react-native";
 
-import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
+import type {
+  OccurrenceFeatureCollection,
+  OccurrenceProperties,
+} from "../data/occurrenceLoader";
 import type { SuitabilityLayer } from "../data/suitabilityLayers";
 
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
@@ -94,6 +98,8 @@ const PREDICTION_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
 // are baked into the same image as everything else.
 const SUITABILITY_OVERLAY_BEFORE_ID = "waterway_line_label";
 
+const TOOLTIP_BACKGROUND = "rgba(22, 60, 44, 0.95)";
+
 type MapState = "loading" | "ready" | "error";
 
 type OccurrenceMapProps = {
@@ -152,6 +158,41 @@ export function getClusterPressTarget(
   return { clusterId, center: [coordinates[0], coordinates[1]] };
 }
 
+/**
+ * The id of a pressed single record, or null for clusters. The id is used to
+ * look the record up in the loaded data: the pressed feature's own geometry
+ * comes from a rendered map tile and loses precision at low zoom.
+ */
+export function getPressedRecordId(features: GeoJSON.Feature[] | undefined): string | null {
+  const feature = features?.[0];
+  if (!feature || feature.properties?.cluster_id !== undefined) {
+    return null;
+  }
+  return typeof feature.id === "string" ? feature.id : null;
+}
+
+/** "latitude, longitude" to 5 decimals (about 1 m), the order phone map apps accept. */
+export function formatRecordCoordinates([longitude, latitude]: readonly [number, number]) {
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+}
+
+export function formatRecordDetail({
+  eventDate,
+  coordinateUncertaintyM,
+}: Pick<OccurrenceProperties, "eventDate" | "coordinateUncertaintyM">) {
+  const date = new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${eventDate}T00:00:00Z`));
+  const accuracy =
+    coordinateUncertaintyM === null
+      ? "accuracy unknown"
+      : `within ${coordinateUncertaintyM.toLocaleString()} m`;
+  return `Recorded ${date} · ${accuracy}`;
+}
+
 export function getResponsiveMapHeight(windowHeight: number) {
   return Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
 }
@@ -174,6 +215,16 @@ function OccurrenceMap(
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
   const [zoom, setZoom] = useState(3);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  // Looked up in the current data, so the tooltip closes by itself when a
+  // filter or species change removes the record.
+  const selectedRecord = useMemo(
+    () =>
+      selectedRecordId === null
+        ? undefined
+        : collection?.features.find((feature) => feature.id === selectedRecordId),
+    [collection, selectedRecordId],
+  );
   const mapHeight = getResponsiveMapHeight(windowHeight);
 
   useImperativeHandle(ref, () => ({
@@ -198,7 +249,8 @@ function OccurrenceMap(
     setMapKey((currentKey) => currentKey + 1);
   };
 
-  const expandCluster: NonNullable<GeoJSONSourceProps["onPress"]> = async (event) => {
+  const handleOccurrencePress: NonNullable<GeoJSONSourceProps["onPress"]> = async (event) => {
+    setSelectedRecordId(getPressedRecordId(event.nativeEvent.features));
     const target = getClusterPressTarget(event.nativeEvent.features);
     if (!target || !occurrenceSourceRef.current || !cameraRef.current) {
       return;
@@ -239,6 +291,13 @@ function OccurrenceMap(
         logo={false}
         onDidFailLoadingMap={() => setMapState("error")}
         onDidFinishLoadingMap={() => setMapState("ready")}
+        onPress={(event) => {
+          // Presses on a record or cluster also reach the map, with the
+          // pressed features attached; only a press on empty map closes the tooltip.
+          if (!("features" in event.nativeEvent) || event.nativeEvent.features.length === 0) {
+            setSelectedRecordId(null);
+          }
+        }}
         onRegionDidChange={(event) => {
           if (Number.isFinite(event.nativeEvent.zoom)) {
             setZoom(event.nativeEvent.zoom);
@@ -283,7 +342,7 @@ function OccurrenceMap(
             clusterMaxZoom={11}
             clusterMinPoints={2}
             clusterRadius={52}
-            onPress={expandCluster}
+            onPress={handleOccurrencePress}
           >
             <Layer
               id="occurrence-clusters"
@@ -346,6 +405,30 @@ function OccurrenceMap(
               }}
             />
           </GeoJSONSource>
+        ) : null}
+        {selectedRecord && mode === "records" ? (
+          <Marker
+            id="occurrence-record-tooltip"
+            lngLat={selectedRecord.geometry.coordinates}
+            anchor="bottom"
+            offset={[0, -6]}
+          >
+            <View
+              accessibilityLiveRegion="polite"
+              style={styles.tooltip}
+              testID="occurrence-record-tooltip"
+            >
+              <View style={styles.tooltipBody}>
+                <Text style={styles.tooltipCoordinates}>
+                  {formatRecordCoordinates(selectedRecord.geometry.coordinates)}
+                </Text>
+                <Text style={styles.tooltipDetail}>
+                  {formatRecordDetail(selectedRecord.properties)}
+                </Text>
+              </View>
+              <View style={styles.tooltipArrow} />
+            </View>
+          </Marker>
         ) : null}
       </Map>
 
@@ -486,5 +569,38 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 11,
     fontWeight: "700",
+  },
+  tooltip: {
+    alignItems: "center",
+  },
+  tooltipBody: {
+    maxWidth: 260,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: TOOLTIP_BACKGROUND,
+    borderRadius: 10,
+  },
+  tooltipCoordinates: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    textAlign: "center",
+  },
+  tooltipDetail: {
+    marginTop: 2,
+    color: "#d7e5dc",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  tooltipArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 8,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: TOOLTIP_BACKGROUND,
   },
 });

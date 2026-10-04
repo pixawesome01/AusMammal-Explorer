@@ -4,7 +4,6 @@ import {
 } from "./occurrenceAssetReader";
 import {
   BUNDLED_OCCURRENCE_SNAPSHOT,
-  BUNDLED_SAMPLE_SIZE,
   createBundledOccurrenceAssetReader,
 } from "./bundledOccurrenceSnapshot";
 import { loadOccurrenceRecords } from "./occurrenceLoader";
@@ -25,7 +24,8 @@ describe("runtime occurrence asset reader", () => {
         }),
       ]),
     });
-    expect(file.recordCount).toBe(BUNDLED_SAMPLE_SIZE);
+    // 20% of the 42,786 frozen koala records.
+    expect(file.recordCount).toBe(8557);
   });
 
   it("loads the selected frozen file from the configured host", async () => {
@@ -58,7 +58,29 @@ describe("runtime occurrence asset reader", () => {
         reader,
         BUNDLED_OCCURRENCE_SNAPSHOT,
       );
-      expect(result.collection.features).toHaveLength(BUNDLED_SAMPLE_SIZE);
+      expect(result.collection.features).toHaveLength(
+        Math.round(OCCURRENCE_SNAPSHOT.files[species.id].recordCount * 0.2),
+      );
+    }
+  });
+
+  it("lists each bundled sample's records per month", async () => {
+    const reader = createBundledOccurrenceAssetReader();
+
+    for (const species of MVP_SPECIES) {
+      const result = await loadOccurrenceRecords(
+        species.id,
+        reader,
+        BUNDLED_OCCURRENCE_SNAPSHOT,
+      );
+      const recordsPerMonth = Array.from({ length: 12 }, () => 0);
+      for (const feature of result.collection.features) {
+        recordsPerMonth[Number(feature.properties.eventDate.slice(5, 7)) - 1] += 1;
+      }
+
+      expect(BUNDLED_OCCURRENCE_SNAPSHOT.files[species.id].monthlyRecordCounts).toEqual(
+        recordsPerMonth,
+      );
     }
   });
 });

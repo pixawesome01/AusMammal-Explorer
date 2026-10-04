@@ -5,6 +5,8 @@ export type OccurrenceSnapshotFile = {
   scientificName: string;
   fileName: string;
   recordCount: number;
+  /** Records per calendar month, January first, when known for this file. */
+  monthlyRecordCounts?: readonly number[];
   coverage: {
     from: string;
     to: string;

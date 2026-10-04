@@ -3,7 +3,10 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 
 import {
   countClusteredRecords,
+  formatRecordCoordinates,
+  formatRecordDetail,
   getClusterPressTarget,
+  getPressedRecordId,
   getResponsiveMapHeight,
   MAP_GLYPHS_URL,
   OccurrenceMap,
@@ -25,17 +28,29 @@ jest.mock("@maplibre/maplibre-react-native", () => {
       children,
       onDidFailLoadingMap,
       onDidFinishLoadingMap,
+      onPress,
       ...props
     }: {
       children?: import("react").ReactNode;
       onDidFailLoadingMap?: () => void;
       onDidFinishLoadingMap?: () => void;
-    }) =>
-      mockReact.createElement(
-        MockPressable,
-        { ...props, onLongPress: onDidFailLoadingMap, onPress: onDidFinishLoadingMap },
-        children,
-      ),
+      onPress?: (event: unknown) => void;
+    }) => {
+      const mapProps = {
+        ...props,
+        onLongPress: onDidFailLoadingMap,
+        onPress: onDidFinishLoadingMap,
+        // fireEvent(map, "mapPress", event) stands in for a native map press.
+        onMapPress: onPress,
+      };
+      return mockReact.createElement(MockPressable, mapProps, children);
+    },
+    Marker: ({
+      children,
+      id,
+      ...props
+    }: Record<string, unknown> & { children?: import("react").ReactNode; id: string }) =>
+      mockReact.createElement(MockView, { ...props, testID: `marker-${id}` }, children),
     Camera: ({ ref, ...props }: Record<string, unknown> & { ref?: import("react").Ref<unknown> }) => {
       mockReact.useImperativeHandle(ref, () => ({ flyTo: mockFlyTo, zoomTo: mockZoomTo }));
       return mockReact.createElement(MockView, props);
@@ -321,6 +336,123 @@ describe("OccurrenceMap", () => {
         },
       ]),
     ).toBeNull();
+  });
+
+  describe("record coordinate tooltip", () => {
+    const collection = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          id: "0123456789abcdef",
+          geometry: {
+            type: "Point" as const,
+            coordinates: [153.028123, -27.470456] as [number, number],
+          },
+          properties: {
+            species: "Phascolarctos cinereus",
+            eventDate: "2026-08-04",
+            basisOfRecord: "HUMAN_OBSERVATION",
+            license: "CC-BY 4.0 (Int)",
+            coordinateUncertaintyM: 10,
+            uncertaintyUnknown: false,
+            observationCount: 1,
+            geographicOutlier: false,
+          },
+        },
+      ],
+    };
+    // Pressed features come from a rendered map tile, so their geometry is approximate.
+    const recordPress = {
+      nativeEvent: {
+        features: [
+          {
+            type: "Feature",
+            id: "0123456789abcdef",
+            geometry: { type: "Point", coordinates: [153.03, -27.47] },
+            properties: {},
+          },
+        ],
+      },
+    };
+
+    it("shows a pressed record's exact coordinates until the empty map is pressed", async () => {
+      const { getByTestId, getByText, queryByTestId } = await render(
+        <OccurrenceMap collection={collection} speciesName="Koala" />,
+      );
+
+      await fireEvent(getByTestId("source-occurrence-records"), "press", recordPress);
+
+      expect(getByText("-27.47046, 153.02812")).toBeTruthy();
+      expect(getByText("Recorded 4 Aug 2026 · within 10 m")).toBeTruthy();
+      expect(getByTestId("marker-occurrence-record-tooltip").props.lngLat).toEqual([
+        153.028123, -27.470456,
+      ]);
+
+      // The same press also reaches the map, with the pressed features attached.
+      await fireEvent(getByTestId("occurrence-map"), "mapPress", {
+        nativeEvent: { lngLat: [153.03, -27.47], point: [40, 40], features: recordPress.nativeEvent.features },
+      });
+      expect(queryByTestId("occurrence-record-tooltip")).toBeTruthy();
+
+      await fireEvent(getByTestId("occurrence-map"), "mapPress", {
+        nativeEvent: { lngLat: [150, -30], point: [10, 10] },
+      });
+      expect(queryByTestId("occurrence-record-tooltip")).toBeNull();
+    });
+
+    it("closes the tooltip when a cluster is pressed", async () => {
+      const { getByTestId, queryByTestId } = await render(
+        <OccurrenceMap collection={collection} speciesName="Koala" />,
+      );
+
+      await fireEvent(getByTestId("source-occurrence-records"), "press", recordPress);
+      expect(queryByTestId("occurrence-record-tooltip")).toBeTruthy();
+
+      await fireEvent(getByTestId("source-occurrence-records"), "press", {
+        nativeEvent: {
+          features: [
+            {
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [145, -37.8] },
+              properties: { cluster: true, cluster_id: 42, point_count: 18 },
+            },
+          ],
+        },
+      });
+      expect(queryByTestId("occurrence-record-tooltip")).toBeNull();
+      expect(mockGetClusterExpansionZoom).toHaveBeenCalledWith(42);
+    });
+
+    it("formats coordinates in the latitude, longitude order map apps accept", () => {
+      expect(formatRecordCoordinates([144.96316, -37.81421])).toBe("-37.81421, 144.96316");
+      expect(
+        formatRecordDetail({ eventDate: "2024-03-15", coordinateUncertaintyM: 1500 }),
+      ).toBe("Recorded 15 Mar 2024 · within 1,500 m");
+      expect(
+        formatRecordDetail({ eventDate: "2024-03-15", coordinateUncertaintyM: null }),
+      ).toBe("Recorded 15 Mar 2024 · accuracy unknown");
+    });
+
+    it("only treats single records with an id as tooltip targets", () => {
+      expect(getPressedRecordId(recordPress.nativeEvent.features as GeoJSON.Feature[])).toBe(
+        "0123456789abcdef",
+      );
+      expect(
+        getPressedRecordId([
+          {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [145, -37.8] },
+            properties: { cluster_id: 42, point_count: 18 },
+          },
+        ]),
+      ).toBeNull();
+      expect(
+        getPressedRecordId([
+          { type: "Feature", geometry: { type: "Point", coordinates: [145, -37.8] }, properties: {} },
+        ]),
+      ).toBeNull();
+    });
   });
 
   it("preserves record totals through clustering, expansion and recombination", () => {

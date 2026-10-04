@@ -10,7 +10,14 @@ import {
 } from "react-native";
 
 import { getAustralianSeason } from "../data/occurrenceFilter";
+import type { OccurrenceSnapshotManifest } from "../data/occurrenceSnapshot";
 import { MVP_SPECIES, type Species } from "../species";
+import {
+  BUBBLE_LABEL_GAP,
+  BUBBLE_LABEL_WIDTH,
+  SEASONAL_CANVAS_HEIGHT,
+  layoutSeasonalBubbles,
+} from "./seasonalBubbleLayout";
 
 const MONTHS = [
   "January",
@@ -27,19 +34,16 @@ const MONTHS = [
   "December",
 ] as const;
 
-const BUBBLE_LAYOUT = [
-  { size: 130, x: 0.5, top: 112 },
-  { size: 78, x: 0.16, top: 28 },
-  { size: 72, x: 0.78, top: 40 },
-  { size: 68, x: 0.11, top: 214 },
-  { size: 82, x: 0.81, top: 212 },
-  { size: 72, x: 0.27, top: 318 },
-  { size: 68, x: 0.72, top: 326 },
-] as const;
+// Line heights of styles.bubbleLabel, styles.primaryLabel and styles.bubbleCount;
+// the layout reserves two name lines plus the count line under each bubble.
+const LABEL_LINE_HEIGHT = 12;
+const PRIMARY_LABEL_LINE_HEIGHT = 15;
+const COUNT_LINE_HEIGHT = 12;
 
 type SeasonalSpeciesViewProps = {
   imageRevision?: number;
   imageSourceForSpecies?: (species: Species) => ImageSourcePropType;
+  manifest: OccurrenceSnapshotManifest;
   month: number;
   onMonthChange: (month: number) => void;
   onSpeciesPress: (species: Species) => void;
@@ -58,6 +62,7 @@ export function getSeasonLabel(month: number) {
 export function SeasonalSpeciesView({
   imageRevision = 0,
   imageSourceForSpecies,
+  manifest,
   month,
   onMonthChange,
   onSpeciesPress,
@@ -65,10 +70,25 @@ export function SeasonalSpeciesView({
 }: SeasonalSpeciesViewProps) {
   const { width } = useWindowDimensions();
   const canvasWidth = Math.min(410, width - 24);
-  const orderedSpecies = [
-    selectedSpecies,
-    ...MVP_SPECIES.filter((species) => species.id !== selectedSpecies.id),
-  ];
+  // Species keep the same spot as the month changes (largest yearly total in
+  // the centre); only bubble size follows the month's record count.
+  const bubbles = [...MVP_SPECIES]
+    .sort((left, right) => manifest.files[right.id].recordCount - manifest.files[left.id].recordCount)
+    .map((species) => {
+      const file = manifest.files[species.id];
+      const monthRecords = file.monthlyRecordCounts?.[month - 1];
+      const isSelected = species.id === selectedSpecies.id;
+      return {
+        species,
+        monthRecords,
+        isSelected,
+        value: monthRecords ?? file.recordCount,
+        labelHeight:
+          2 * (isSelected ? PRIMARY_LABEL_LINE_HEIGHT : LABEL_LINE_HEIGHT) +
+          (monthRecords === undefined ? 0 : COUNT_LINE_HEIGHT),
+      };
+    });
+  const placements = layoutSeasonalBubbles(bubbles, canvasWidth);
   const visibleMonths = [-2, -1, 0, 1, 2].map((offset) => wrapMonth(month + offset));
 
   return (
@@ -84,10 +104,9 @@ export function SeasonalSpeciesView({
       <Text style={styles.helper}>Choose a mammal to map records from this month.</Text>
 
       <View style={[styles.constellation, { width: canvasWidth }]}>
-        {orderedSpecies.map((species, index) => {
-          const layout = BUBBLE_LAYOUT[index];
-          const left = Math.round(canvasWidth * layout.x - layout.size / 2);
-          const isPrimary = index === 0;
+        {bubbles.map(({ species, monthRecords, isSelected }, index) => {
+          const { centerX, centerY, diameter } = placements[index];
+          const hitWidth = Math.max(diameter, BUBBLE_LABEL_WIDTH);
 
           return (
             <Pressable
@@ -95,10 +114,16 @@ export function SeasonalSpeciesView({
               accessibilityHint="Opens the occurrence explorer with this month selected"
               accessibilityLabel={`${species.commonName}, ${MONTHS[month - 1]} records`}
               accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
+              accessibilityValue={
+                monthRecords === undefined
+                  ? undefined
+                  : { text: `${monthRecords.toLocaleString()} records` }
+              }
               onPress={() => onSpeciesPress(species)}
               style={({ pressed }) => [
                 styles.bubble,
-                { left, top: layout.top, width: layout.size },
+                { left: centerX - hitWidth / 2, top: centerY - diameter / 2, width: hitWidth },
                 pressed && styles.pressed,
               ]}
             >
@@ -107,22 +132,26 @@ export function SeasonalSpeciesView({
                 defaultSource={species.image}
                 fadeDuration={0}
                 source={imageSourceForSpecies?.(species) ?? species.image}
+                testID={`seasonal-bubble-${species.id}`}
                 style={[
                   styles.bubbleImage,
                   {
-                    width: layout.size,
-                    height: layout.size,
-                    borderRadius: layout.size / 2,
+                    width: diameter,
+                    height: diameter,
+                    borderRadius: diameter / 2,
                     borderColor: species.accent,
                   },
                 ]}
               />
               <Text
                 numberOfLines={2}
-                style={[styles.bubbleLabel, isPrimary && styles.primaryLabel]}
+                style={[styles.bubbleLabel, isSelected && styles.primaryLabel]}
               >
                 {species.commonName}
               </Text>
+              {monthRecords === undefined ? null : (
+                <Text style={styles.bubbleCount}>{monthRecords.toLocaleString()} records</Text>
+              )}
             </Pressable>
           );
         })}
@@ -178,7 +207,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: "#9fc7aa", fontSize: 9, fontWeight: "600", letterSpacing: 1.3 },
   heading: { marginTop: 5, color: "#ffffff", fontSize: 23, fontWeight: "600" },
   helper: { marginTop: 6, color: "#c4cbd1", fontSize: 12, fontWeight: "400" },
-  constellation: { position: "relative", height: 420, marginTop: 8 },
+  constellation: { position: "relative", height: SEASONAL_CANVAS_HEIGHT, marginTop: 8 },
   bubble: { position: "absolute", alignItems: "center" },
   bubbleImage: {
     borderWidth: 2,
@@ -189,15 +218,27 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   bubbleLabel: {
-    width: 112,
-    marginTop: 5,
+    width: BUBBLE_LABEL_WIDTH,
+    marginTop: BUBBLE_LABEL_GAP,
     color: "#dce1e5",
     fontSize: 9,
     fontWeight: "500",
-    lineHeight: 12,
+    lineHeight: LABEL_LINE_HEIGHT,
     textAlign: "center",
   },
-  primaryLabel: { color: "#ffffff", fontSize: 12, fontWeight: "600", lineHeight: 15 },
+  primaryLabel: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: PRIMARY_LABEL_LINE_HEIGHT,
+  },
+  bubbleCount: {
+    width: BUBBLE_LABEL_WIDTH,
+    color: "#aab3ba",
+    fontSize: 9,
+    lineHeight: COUNT_LINE_HEIGHT,
+    textAlign: "center",
+  },
   timeline: {
     width: "100%",
     minHeight: 78,

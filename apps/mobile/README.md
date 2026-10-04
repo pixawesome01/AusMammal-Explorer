@@ -10,8 +10,8 @@
 - **Data loading:** compact, versioned assets generated from the frozen project snapshot
 
 The mobile application does not depend on live ALA requests during the demo. It includes
-a deterministic 600-record sample for each MVP species, generated from the frozen project
-snapshot, so maps work immediately without a local data server.
+a deterministic 20% sample of each MVP species' records (37,069 in total), generated from
+the frozen project snapshot, so maps work immediately without a local data server.
 
 MapLibre React Native contains native Android and iOS code, so the map requires an Expo
 development build and does not run inside Expo Go. The app config includes MapLibre's

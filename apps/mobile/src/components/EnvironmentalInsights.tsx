@@ -5,9 +5,12 @@ import {
   CLIMATE_REFERENCE,
   MONTHLY_CLIMATE,
   NASA_POWER_CLIMATE_URL,
+  YEARLY_CLIMATE,
+  compareClimateWithYear,
   countOccurrencesByMonth,
   getPeakOccurrenceMonths,
 } from "../data/climateContext";
+import { getAustralianSeason } from "../data/occurrenceFilter";
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 
 type EnvironmentalInsightsProps = {
@@ -37,6 +40,21 @@ const RADIAL_CHART_CENTRE = RADIAL_CHART_SIZE / 2;
 const RADIAL_CENTRE_OFFSET = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
 const RADIAL_LABEL_RADIUS = 122;
 const RADIAL_MAX_PETAL_HEIGHT = 104;
+
+const TEMPERATURE_COMPARISON = {
+  higher: "warmer than",
+  similar: "close to",
+  lower: "cooler than",
+} as const;
+const RAINFALL_COMPARISON = {
+  higher: "wetter than",
+  similar: "close to",
+  lower: "drier than",
+} as const;
+
+function listPhrase(items: readonly string[]) {
+  return items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items.at(-1)}` : items[0];
+}
 
 type ClimateBarChartProps = {
   accessibilityLabel: string;
@@ -95,7 +113,7 @@ function ClimateBarChart({
               accessibilityState={interactive ? { selected: selectedBar === index } : undefined}
               style={styles.barColumn}
               accessible
-              accessibilityLabel={`${MONTHLY_CLIMATE[index].name}: ${value.toFixed(1)}${unit}${highlighted ? ", top observation month" : ""}`}
+              accessibilityLabel={`${MONTHLY_CLIMATE[index].name}: ${value.toFixed(1)}${unit}${highlighted ? ", top record month" : ""}`}
             >
               <View style={styles.barArea}>
                 <View
@@ -140,11 +158,15 @@ export function EnvironmentalInsights({
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
   const largestMonthlyCount = Math.max(1, ...monthlySeries.map((item) => item.count));
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
-  const peakNames = peakMonths.map((item) => item.name);
-  const peakPhrase =
-    peakNames.length > 1
-      ? `${peakNames.slice(0, -1).join(", ")} and ${peakNames.at(-1)}`
-      : peakNames[0];
+  const peakPhrase = listPhrase(peakMonths.map((item) => item.name));
+  const peakSeasons = listPhrase([
+    ...new Set(peakMonths.map((item) => getAustralianSeason(item.month))),
+  ]);
+  const peakClimate =
+    status === "ready" ? compareClimateWithYear(peakMonths.map((item) => item.month)) : null;
+  const speciesLabel = speciesName.toLowerCase();
+  const peakMonthWord = peakMonths.length === 1 ? "month" : "months";
+  const peakAverageWord = peakMonths.length === 1 ? "averages" : "average";
   const temperatures = MONTHLY_CLIMATE.map((item) => item.temperatureC);
   const rainfall = MONTHLY_CLIMATE.map((item) => item.precipitationMmPerDay);
 
@@ -233,11 +255,11 @@ export function EnvironmentalInsights({
                 testID="month-scrubber"
                 accessible
                 accessibilityRole="adjustable"
-                accessibilityLabel="Explore monthly total observations"
+                accessibilityLabel="Explore monthly records"
                 accessibilityHint="Drag around the chart, or swipe up or down to change month."
                 accessibilityValue={{
                   min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
-                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} total observations`,
+                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} records`,
                 }}
                 accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
                 onAccessibilityAction={({ nativeEvent }) => {
@@ -255,12 +277,12 @@ export function EnvironmentalInsights({
             </View>
             <Text testID="month-readout" style={styles.monthReadout}>
               {selected
-                ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "total observation" : "total observations"}`
+                ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "record" : "records"}`
                 : "Slide around the chart to explore each month"}
             </Text>
             <Text style={styles.description}>
-              Based on all {total.toLocaleString()} loaded observations, {speciesName.toLowerCase()} records
-              {peakPhrase ? ` appear most often in ${peakPhrase}` : " do not yet show a monthly peak"}.
+              Based on all {total.toLocaleString()} loaded records, {speciesLabel} records
+              {peakPhrase ? ` appear most often in ${peakPhrase} (${peakSeasons})` : " do not yet show a monthly peak"}.
               {" Time filters do not affect this pattern."}
             </Text>
           </>
@@ -284,7 +306,9 @@ export function EnvironmentalInsights({
           highlightedMonths={status === "ready" ? peakMonths.map(item => item.month) : []}
         />
         <Text style={styles.description}>
-          Green marks the top three recorded months for {speciesName.toLowerCase()}; other months are grey.
+          {peakClimate
+            ? `Green bars mark ${speciesLabel}'s top recorded ${peakMonthWord} (${peakPhrase}), which ${peakAverageWord} ${peakClimate.temperatureC.toFixed(1)}°C, ${TEMPERATURE_COMPARISON[peakClimate.temperature]} the yearly average of ${YEARLY_CLIMATE.temperatureC.toFixed(1)}°C.`
+            : `Green marks the top three recorded months for ${speciesLabel}; other months are grey.`}
           {" Temperatures are a 12-city climate reference, not temperatures measured at sightings or model-based optimal conditions."}
         </Text>
 
@@ -305,9 +329,17 @@ export function EnvironmentalInsights({
           highlightedMonths={status === "ready" ? peakMonths.map(item => item.month) : []}
         />
         <Text style={styles.description}>
-          Blue marks the top three recorded months for {speciesName.toLowerCase()}; other months are grey.
+          {peakClimate
+            ? `Blue bars mark the same ${peakMonthWord}, which ${peakAverageWord} ${peakClimate.precipitationMmPerDay.toFixed(1)} mm/day, ${RAINFALL_COMPARISON[peakClimate.rainfall]} the yearly average of ${YEARLY_CLIMATE.precipitationMmPerDay.toFixed(1)} mm/day.`
+            : `Blue marks the top three recorded months for ${speciesLabel}; other months are grey.`}
           {" Rainfall is a 12-city climate reference in mm/day, not rainfall measured at sightings or model-based optimal conditions."}
         </Text>
+        {peakClimate ? (
+          <Text style={styles.description}>
+            This shows when {speciesLabel} records peak, not that the weather causes it: records
+            also depend on when people go looking.
+          </Text>
+        ) : null}
 
         <Text style={styles.referenceNote}>
           {CLIMATE_REFERENCE.source} climate normals · {CLIMATE_REFERENCE.period} · {CLIMATE_REFERENCE.method}

@@ -44,6 +44,11 @@ export type MonthlyOccurrence = {
   count: number;
 };
 
+/**
+ * Records per calendar month, the same count the map and seasonal view show.
+ * A record's observationCount (animals seen) is deliberately not summed: one
+ * survey record can report hundreds of animals and swamp the monthly pattern.
+ */
 export function countOccurrencesByMonth(
   collection?: OccurrenceFeatureCollection,
 ): MonthlyOccurrence[] {
@@ -52,7 +57,7 @@ export function countOccurrencesByMonth(
   for (const feature of collection?.features ?? []) {
     const month = Number(feature.properties.eventDate.slice(5, 7));
     if (Number.isInteger(month) && month >= 1 && month <= 12) {
-      counts[month - 1] += feature.properties.observationCount;
+      counts[month - 1] += 1;
     }
   }
 
@@ -68,4 +73,47 @@ export function getPeakOccurrenceMonths(series: MonthlyOccurrence[], limit = 3) 
     .filter((item) => item.count > 0)
     .sort((a, b) => b.count - a.count || a.month - b.month)
     .slice(0, limit);
+}
+
+function average(values: readonly number[]) {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+export const YEARLY_CLIMATE = {
+  temperatureC: average(MONTHLY_CLIMATE.map((item) => item.temperatureC)),
+  precipitationMmPerDay: average(MONTHLY_CLIMATE.map((item) => item.precipitationMmPerDay)),
+};
+
+export type ClimateDifference = "higher" | "similar" | "lower";
+
+function classifyDifference(difference: number, tolerance: number): ClimateDifference {
+  if (difference > tolerance) {
+    return "higher";
+  }
+  return difference < -tolerance ? "lower" : "similar";
+}
+
+/**
+ * The climate reference averaged over `months` (1-12), compared with the
+ * yearly average. Within 1°C, or within 15% of the yearly mean rainfall,
+ * counts as similar. Returns null when no months are given.
+ */
+export function compareClimateWithYear(months: readonly number[]) {
+  const selected = MONTHLY_CLIMATE.filter((item) => months.includes(item.month));
+  if (selected.length === 0) {
+    return null;
+  }
+
+  const temperatureC = average(selected.map((item) => item.temperatureC));
+  const precipitationMmPerDay = average(selected.map((item) => item.precipitationMmPerDay));
+  return {
+    temperatureC,
+    temperature: classifyDifference(temperatureC - YEARLY_CLIMATE.temperatureC, 1),
+    precipitationMmPerDay,
+    rainfall: classifyDifference(
+      (precipitationMmPerDay - YEARLY_CLIMATE.precipitationMmPerDay) /
+        YEARLY_CLIMATE.precipitationMmPerDay,
+      0.15,
+    ),
+  };
 }

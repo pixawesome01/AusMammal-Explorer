@@ -11,22 +11,27 @@ import {
 } from "react-native";
 
 import { useSpeciesSelection } from "../SpeciesContext";
-import { OCCURRENCE_SNAPSHOT } from "../data/occurrenceSnapshot";
+import { getRuntimeOccurrenceSnapshot } from "../data/occurrenceAssetReader";
+import type { OccurrenceSnapshotManifest } from "../data/occurrenceSnapshot";
 import { MVP_SPECIES, type Species } from "../species";
 import { SeasonalSpeciesView } from "./SeasonalSpeciesView";
 
 type SpeciesSelectorProps = {
   imageRevision?: number;
   initialMonth?: number;
+  /** The dataset the map loads; its record counts are the ones shown here. */
+  manifest?: OccurrenceSnapshotManifest;
   onSpeciesPress?: (species: Species, month?: number) => void;
 };
 
 const LOGO_ASSET = require("../../assets/branding/ausmammal-logo.png");
 const SELECTOR_ASSETS = [LOGO_ASSET, ...MVP_SPECIES.map((species) => species.image)];
+const runtimeOccurrenceSnapshot = getRuntimeOccurrenceSnapshot();
 
 export function SpeciesSelector({
   imageRevision = 0,
   initialMonth = new Date().getMonth() + 1,
+  manifest = runtimeOccurrenceSnapshot,
   onSpeciesPress,
 }: SpeciesSelectorProps) {
   const [cachedAssets] = useAssets(SELECTOR_ASSETS);
@@ -111,6 +116,7 @@ export function SpeciesSelector({
         <SeasonalSpeciesView
           imageRevision={imageRevision}
           imageSourceForSpecies={imageSourceForSpecies}
+          manifest={manifest}
           month={month}
           onMonthChange={setMonth}
           onSpeciesPress={(species) => chooseSpecies(species, month)}
@@ -123,7 +129,7 @@ export function SpeciesSelector({
         >
         {visibleSpecies.map((species) => {
           const isSelected = species.id === selectedSpecies.id;
-          const recordCount = OCCURRENCE_SNAPSHOT.files[species.id].recordCount;
+          const recordCount = manifest.files[species.id].recordCount;
 
           return (
             <Pressable

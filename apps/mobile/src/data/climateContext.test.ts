@@ -1,5 +1,9 @@
 import type { OccurrenceFeatureCollection } from "./occurrenceLoader";
-import { countOccurrencesByMonth, getPeakOccurrenceMonths } from "./climateContext";
+import {
+  compareClimateWithYear,
+  countOccurrencesByMonth,
+  getPeakOccurrenceMonths,
+} from "./climateContext";
 
 const collection: OccurrenceFeatureCollection = {
   type: "FeatureCollection",
@@ -38,18 +42,36 @@ const collection: OccurrenceFeatureCollection = {
 };
 
 describe("climate context summaries", () => {
-  it("counts observation totals by calendar month", () => {
+  it("counts records by calendar month, not animals per record", () => {
     const series = countOccurrencesByMonth(collection);
 
     expect(series).toHaveLength(12);
-    expect(series[3]).toMatchObject({ name: "Apr", count: 2 });
+    // The April record reports two animals but is one record.
+    expect(series[3]).toMatchObject({ name: "Apr", count: 1 });
     expect(series[8]).toMatchObject({ name: "Sep", count: 1 });
   });
 
   it("returns the busiest months in descending order", () => {
     expect(getPeakOccurrenceMonths(countOccurrencesByMonth(collection))).toEqual([
-      { month: 4, name: "Apr", count: 2 },
+      { month: 4, name: "Apr", count: 1 },
       { month: 9, name: "Sep", count: 1 },
     ]);
+  });
+
+  it("compares months' climate reference with the yearly average", () => {
+    expect(compareClimateWithYear([9, 10, 11])).toMatchObject({
+      temperature: "similar",
+      rainfall: "lower",
+    });
+    expect(compareClimateWithYear([12, 1, 2])).toMatchObject({
+      temperature: "higher",
+      rainfall: "higher",
+    });
+    expect(compareClimateWithYear([6, 7, 8])).toMatchObject({
+      temperature: "lower",
+      rainfall: "lower",
+    });
+    expect(compareClimateWithYear([9, 10, 11])?.precipitationMmPerDay).toBeCloseTo(1.583, 3);
+    expect(compareClimateWithYear([])).toBeNull();
   });
 });
