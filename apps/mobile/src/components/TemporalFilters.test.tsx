@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import { useState } from "react";
 
 import type { OccurrenceTemporalFilter } from "../data/occurrenceFilter";
@@ -28,6 +28,27 @@ describe("TemporalFilters", () => {
       );
     }
   }
+
+  it("places a compact toggle beside the month or season value at the end of its heading row", async () => {
+    await render(<Harness />);
+    const monthHeading = screen.getByTestId("month-slider-heading");
+    expect(monthHeading).toHaveStyle({ flexDirection: "row", alignItems: "center" });
+    expect(within(monthHeading).getByText("All months")).toBeTruthy();
+    expect(within(monthHeading).getByLabelText("Time filter type"))
+      .toHaveStyle({ width: 116, height: 44, flexShrink: 0 });
+    for (const name of ["Month", "Season"]) {
+      const tab = within(monthHeading).getByRole("tab", { name });
+      expect(tab).toHaveStyle({ minHeight: 44 });
+      expect(within(tab).getByText(name)).toHaveStyle({ fontSize: 10 });
+    }
+    expect(within(screen.getByTestId("year-slider-heading")).queryByLabelText("Time filter type")).toBeNull();
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    const seasonHeading = screen.getByTestId("season-slider-heading");
+    expect(within(seasonHeading).getByText("All seasons")).toBeTruthy();
+    expect(within(seasonHeading).getByRole("tab", { name: "Season", selected: true })).toBeTruthy();
+    await incrementSlider("Season", 4);
+    expect(within(seasonHeading).getByText("Spring (Sep–Nov)")).toBeTruthy();
+  });
 
   it("switches between month and season, clears the hidden restriction, and preserves the year", async () => {
     const onChange = jest.fn();

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { OCCURRENCE_SEASONS, type OccurrenceTemporalFilter } from "../data/occurrenceFilter";
@@ -39,6 +39,7 @@ type DiscreteSliderProps = {
   options: SliderOption[];
   selectedIndex: number;
   onSelect: (value: number | undefined) => void;
+  headerAccessory?: ReactNode;
 };
 
 function DiscreteSlider({
@@ -46,6 +47,7 @@ function DiscreteSlider({
   options,
   selectedIndex,
   onSelect,
+  headerAccessory,
 }: DiscreteSliderProps) {
   const trackWidth = useRef(1);
   const optionsRef = useRef(options);
@@ -80,9 +82,14 @@ function DiscreteSlider({
 
   return (
     <View style={styles.sliderBlock}>
-      <Text accessibilityLiveRegion="polite" style={styles.sliderValue}>
-        {options[selectedIndex].label}
-      </Text>
+      <View testID={`${accessibilityLabel.toLowerCase()}-slider-heading`} style={styles.sliderHeading}>
+        <View style={styles.sliderValueContainer}>
+          <Text accessibilityLiveRegion="polite" style={styles.sliderValue}>
+            {options[selectedIndex].label}
+          </Text>
+        </View>
+        {headerAccessory}
+      </View>
       <View
         accessible
         accessibilityActions={[
@@ -165,6 +172,26 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
     // Never leave an invisible month/season restriction active after a switch.
     onChange({ year: value.year });
   };
+  const modeToggle = (
+    <View accessibilityRole="tablist" accessibilityLabel="Time filter type" style={styles.modeToggle}>
+      <View pointerEvents="none" style={styles.modeToggleTrack} />
+      {(["month", "season"] as const).map((option) => (
+        <Pressable
+          key={option}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: mode === option }}
+          onPress={() => selectMode(option)}
+          style={({ pressed }) => [styles.modeOption, pressed && styles.pressed]}
+        >
+          <View style={[styles.modeOptionPill, mode === option && styles.modeOptionSelected]}>
+            <Text style={[styles.modeText, mode === option && styles.modeTextSelected]}>
+              {option === "month" ? "Month" : "Season"}
+            </Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
 
   return (
     <View accessibilityLabel="Occurrence time filters" style={styles.card}>
@@ -184,21 +211,6 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
         options={yearOptions}
         selectedIndex={selectedYearIndex}
       />
-      <View accessibilityRole="tablist" accessibilityLabel="Time filter type" style={styles.modeToggle}>
-        {(["month", "season"] as const).map((option) => (
-          <Pressable
-            key={option}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: mode === option }}
-            onPress={() => selectMode(option)}
-            style={({ pressed }) => [styles.modeOption, mode === option && styles.modeOptionSelected, pressed && styles.pressed]}
-          >
-            <Text style={[styles.modeText, mode === option && styles.modeTextSelected]}>
-              {option === "month" ? "Month" : "Season"}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
       {mode === "month" ? (
         <DiscreteSlider
           key="month"
@@ -206,6 +218,7 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
           onSelect={(month) => onChange({ year: value.year, month })}
           options={monthOptions}
           selectedIndex={selectedMonthIndex}
+          headerAccessory={modeToggle}
         />
       ) : (
         <DiscreteSlider
@@ -214,6 +227,7 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
           onSelect={(index) => onChange({ year: value.year, season: index === undefined ? undefined : OCCURRENCE_SEASONS[index] })}
           options={seasonOptions}
           selectedIndex={selectedSeasonIndex}
+          headerAccessory={modeToggle}
         />
       )}
     </View>
@@ -235,20 +249,26 @@ const styles = StyleSheet.create({
   },
   clearText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "700" },
   modeToggle: {
-    alignSelf: "center",
     flexDirection: "row",
-    width: 196,
-    padding: 3,
-    marginVertical: 8,
-    borderRadius: 18,
+    flexShrink: 0,
+    width: 116,
+    height: 44,
+  },
+  // A 28-point visual control retains 44-point touch targets.
+  modeToggleTrack: {
+    position: "absolute", left: 0, right: 0, top: 8, bottom: 8,
+    borderRadius: 14,
     backgroundColor: "#e4ece6",
   },
-  modeOption: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 15 },
+  modeOption: { flex: 1, minHeight: 44, justifyContent: "center", paddingHorizontal: 2 },
+  modeOptionPill: { minHeight: 24, alignItems: "center", justifyContent: "center", borderRadius: 12 },
   modeOptionSelected: { backgroundColor: "#ffffff" },
-  modeText: { color: READABLE_COLOURS.muted, fontSize: 12, fontWeight: "500" },
+  modeText: { color: READABLE_COLOURS.muted, fontSize: 10, fontWeight: "500" },
   modeTextSelected: { color: "#163c2c", fontWeight: "700" },
   pressed: { opacity: 0.7 },
   sliderBlock: { marginTop: 1, marginBottom: 3 },
+  sliderHeading: { flexDirection: "row", alignItems: "center", columnGap: 8 },
+  sliderValueContainer: { flex: 1, alignItems: "center" },
   sliderValue: {
     alignSelf: "center",
     minWidth: 80,
