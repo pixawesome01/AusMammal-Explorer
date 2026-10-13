@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { EnvironmentalInsights } from "./EnvironmentalInsights";
@@ -88,6 +89,27 @@ describe("EnvironmentalInsights", () => {
 
 
 describe("monthly chart scrubbing", () => {
+  it("trims blank space above the chart while keeping top-month labels visible", async () => {
+    const { rerender } = await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
+    expect(screen.getByText("Apr")).toHaveStyle({ color: "#6f7772", fontWeight: "400" });
+    const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
+    expect(viewport.height).toBeLessThan(230);
+    expect(viewport.height).toBeGreaterThan(190);
+    expect(viewport.overflow).toBe("visible");
+    expect(screen.getByTestId("monthly-chart-canvas")).toHaveStyle({ top: viewport.height - 270, height: 270 });
+
+    const januaryCollection = {
+      ...collection,
+      features: collection.features.map(record => ({
+        ...record, properties: { ...record.properties, eventDate: "2026-01-10" },
+      })),
+    };
+    await rerender(<EnvironmentalInsights collection={januaryCollection} speciesName="Koala" status="ready" />);
+    expect(screen.getByText("Jan")).toHaveStyle({ color: "#6f7772", fontWeight: "400" });
+    expect(screen.getByTestId("monthly-chart-viewport")).toHaveStyle({ height: 270 });
+    expect(screen.getByTestId("monthly-chart-canvas")).toHaveStyle({ top: 0 });
+  });
+
   it("softens every radial bar's outer corners without changing its height or selection", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
     for (let month = 1; month <= 12; month += 1) {

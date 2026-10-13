@@ -170,6 +170,23 @@ export function EnvironmentalInsights({
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
   const largestMonthlyCount = Math.max(1, ...monthlySeries.map((item) => item.count));
   const largestAverage = Math.max(0.001, ...(averages?.map(item => item.average ?? 0) ?? []));
+  const radialBarHeights = monthlySeries.map((item, index) => {
+    const fraction = averages
+      ? (averages[index].average ?? 0) / largestAverage
+      : item.count / largestMonthlyCount;
+    return 52 + fraction * 52;
+  });
+  // Trim only empty canvas above the rotated bars and peak labels. Keep the
+  // original chart coordinates inside so touch-to-month selection is unchanged.
+  const radialTopInset = Math.max(0, Math.floor(Math.min(
+    ...radialBarHeights.map((height, index) => {
+      const angle = index * Math.PI / 6;
+      return RADIAL_CHART_CENTRE - height * Math.cos(angle)
+        - height * Math.tan(Math.PI / 12) * Math.abs(Math.sin(angle));
+    }),
+    ...peakMonths.map(item => RADIAL_CHART_CENTRE
+      - Math.cos((item.month - 1) * Math.PI / 6) * RADIAL_LABEL_RADIUS - 11),
+  )) - 10);
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
   const peakPhrase = listPhrase(peakMonths.map((item) => item.name));
   const peakSeasons = listPhrase([
@@ -211,98 +228,96 @@ export function EnvironmentalInsights({
 
         {status === "ready" ? (
           <>
-            <View style={styles.radialChart}>
-              {monthlySeries.map((item, index) => {
-                const fraction = averages
-                  ? (averages[index].average ?? 0) / largestAverage
-                  : item.count / largestMonthlyCount;
-                const height = 52 + fraction * 52;
-                const halfWidth = height * Math.tan(Math.PI / 12);
-                return (
-                  <View
-                    key={item.month}
-                    style={[styles.radialSpoke, { transform: [{ rotate: `${index * 30}deg` }] }]}
-                  >
+            <View testID="monthly-chart-viewport" style={[styles.radialViewport, { height: RADIAL_CHART_SIZE - radialTopInset }]}>
+              <View testID="monthly-chart-canvas" style={[styles.radialChart, { top: 0 - radialTopInset }]}>
+                {monthlySeries.map((item, index) => {
+                  const height = radialBarHeights[index];
+                  const halfWidth = height * Math.tan(Math.PI / 12);
+                  return (
                     <View
-                      testID={`month-bar-${item.month}`}
+                      key={item.month}
+                      style={[styles.radialSpoke, { transform: [{ rotate: `${index * 30}deg` }] }]}
+                    >
+                      <View
+                        testID={`month-bar-${item.month}`}
+                        style={[
+                          styles.radialPetalClip,
+                          {
+                            top: RADIAL_CHART_CENTRE - height,
+                            width: halfWidth * 2,
+                            height,
+                            opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
+                          },
+                        ]}
+                      >
+                        <View style={[
+                          styles.radialPetal,
+                          {
+                            borderLeftWidth: halfWidth,
+                            borderRightWidth: halfWidth,
+                            borderTopWidth: height,
+                            borderTopColor: MONTH_COLORS[index],
+                          },
+                        ]} />
+                      </View>
+                    </View>
+                  );
+                })}
+                {monthlySeries.map((item, index) => (
+                  <View
+                    key={`separator-${item.month}`}
+                    pointerEvents="none"
+                    style={[
+                      styles.radialSpoke,
+                      { transform: [{ rotate: `${index * 30 + 15}deg` }] },
+                    ]}
+                  >
+                    <View style={styles.radialSeparator} />
+                  </View>
+                ))}
+                <View style={styles.radialCentre} />
+                {peakMonths.map((item) => {
+                  const angle = ((item.month - 1) * 30 * Math.PI) / 180;
+                  return (
+                    <Text
+                      key={item.month}
                       style={[
-                        styles.radialPetalClip,
+                        styles.peakLabel,
                         {
-                          top: RADIAL_CHART_CENTRE - height,
-                          width: halfWidth * 2,
-                          height,
-                          opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
+                          left: RADIAL_CHART_CENTRE + Math.sin(angle) * RADIAL_LABEL_RADIUS - 28,
+                          top: RADIAL_CHART_CENTRE - Math.cos(angle) * RADIAL_LABEL_RADIUS - 11,
                         },
                       ]}
                     >
-                      <View style={[
-                        styles.radialPetal,
-                        {
-                          borderLeftWidth: halfWidth,
-                          borderRightWidth: halfWidth,
-                          borderTopWidth: height,
-                          borderTopColor: MONTH_COLORS[index],
-                        },
-                      ]} />
-                    </View>
-                  </View>
-                );
-              })}
-              {monthlySeries.map((item, index) => (
+                      {item.name}
+                    </Text>
+                  );
+                })}
                 <View
-                  key={`separator-${item.month}`}
-                  pointerEvents="none"
-                  style={[
-                    styles.radialSpoke,
-                    { transform: [{ rotate: `${index * 30 + 15}deg` }] },
-                  ]}
-                >
-                  <View style={styles.radialSeparator} />
-                </View>
-              ))}
-              <View style={styles.radialCentre} />
-              {peakMonths.map((item) => {
-                const angle = ((item.month - 1) * 30 * Math.PI) / 180;
-                return (
-                  <Text
-                    key={item.month}
-                    style={[
-                      styles.peakLabel,
-                      {
-                        left: RADIAL_CHART_CENTRE + Math.sin(angle) * RADIAL_LABEL_RADIUS - 28,
-                        top: RADIAL_CHART_CENTRE - Math.cos(angle) * RADIAL_LABEL_RADIUS - 11,
-                        color: READABLE_COLOURS.text,
-                      },
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-                );
-              })}
-              <View
-                style={StyleSheet.absoluteFill}
-                testID="month-scrubber"
-                accessible
-                accessibilityRole="adjustable"
-                accessibilityLabel="Explore monthly records"
-                accessibilityHint="Drag around the chart, or swipe up or down to change month."
-                accessibilityValue={{
-                  min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
-                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} records${averages ? `, ${averages[selectedMonth ?? 0].average?.toFixed(1) ?? "unavailable"} average records per month` : ""}`,
-                }}
-                accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-                onAccessibilityAction={({ nativeEvent }) => {
-                  if (nativeEvent.actionName === "increment" || nativeEvent.actionName === "decrement") {
-                    const step = nativeEvent.actionName === "increment" ? 1 : -1;
-                    setSelectedMonth(current => ((current ?? 0) + step + 12) % 12);
-                  }
-                }}
-                onStartShouldSetResponder={() => true}
-                onMoveShouldSetResponder={() => true}
-                onResponderGrant={scrubMonth}
-                onResponderMove={scrubMonth}
-                onResponderTerminationRequest={() => false}
-              />
+                  style={StyleSheet.absoluteFill}
+                  testID="month-scrubber"
+                  accessible
+                  accessibilityRole="adjustable"
+                  accessibilityLabel="Explore monthly records"
+                  accessibilityHint="Drag around the chart, or swipe up or down to change month."
+                  accessibilityValue={{
+                    min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
+                    text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} records${averages ? `, ${averages[selectedMonth ?? 0].average?.toFixed(1) ?? "unavailable"} average records per month` : ""}`,
+                  }}
+                  accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+                  onAccessibilityAction={({ nativeEvent }) => {
+                    if (nativeEvent.actionName === "increment" || nativeEvent.actionName === "decrement") {
+                      const step = nativeEvent.actionName === "increment" ? 1 : -1;
+                      setSelectedMonth(current => ((current ?? 0) + step + 12) % 12);
+                    }
+                  }}
+                  onStartShouldSetResponder={() => true}
+                  onMoveShouldSetResponder={() => true}
+                  onResponderGrant={scrubMonth}
+                  onResponderMove={scrubMonth}
+                  onResponderTerminationRequest={() => false}
+                />
+              </View>
             </View>
             <Text testID="month-readout" style={[styles.monthReadout, selectedMonth === null && styles.chartHint]}>
               {selected
@@ -432,12 +447,14 @@ const styles = StyleSheet.create({
   headingText: { flex: 1, minWidth: 0 },
   title: { color: "#34423a", fontSize: 18, fontWeight: "600", textAlign: "center" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
-  radialChart: {
+  radialViewport: {
     alignSelf: "center",
     width: RADIAL_CHART_SIZE,
-    height: RADIAL_CHART_SIZE,
     marginTop: 8,
+    // Edge month labels may extend slightly beyond the chart's square canvas.
+    overflow: "visible",
   },
+  radialChart: { position: "absolute", width: RADIAL_CHART_SIZE, height: RADIAL_CHART_SIZE },
   radialSpoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
   radialPetalClip: {
     position: "absolute",
@@ -474,7 +491,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 56,
     fontSize: 17,
-    fontWeight: "500",
+    fontWeight: "400",
+    color: "#6f7772",
     textAlign: "center",
   },
   monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
