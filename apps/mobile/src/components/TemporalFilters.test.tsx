@@ -29,13 +29,18 @@ describe("TemporalFilters", () => {
     }
   }
 
-  it("places a compact toggle beside the month or season value at the end of its heading row", async () => {
+  it("places the compact toggle on the left while keeping the month or season value centred", async () => {
     await render(<Harness />);
     const monthHeading = screen.getByTestId("month-slider-heading");
     expect(monthHeading).toHaveStyle({ flexDirection: "row", alignItems: "center" });
     expect(within(monthHeading).getByText("All months")).toBeTruthy();
     expect(within(monthHeading).getByLabelText("Time filter type"))
-      .toHaveStyle({ width: 116, height: 44, flexShrink: 0 });
+      .toHaveStyle({ width: "100%", height: 44, flexShrink: 0 });
+    expect(within(screen.getByTestId("month-slider-leading")).getByLabelText("Time filter type")).toBeTruthy();
+    for (const side of ["leading", "trailing"]) {
+      expect(screen.getByTestId(`month-slider-${side}`)).toHaveStyle({ width: 116, flexShrink: 1 });
+    }
+    expect(screen.getByText("All months")).toHaveStyle({ textAlign: "center", maxWidth: "100%" });
     for (const name of ["Month", "Season"]) {
       const tab = within(monthHeading).getByRole("tab", { name });
       expect(tab).toHaveStyle({ minHeight: 44 });
@@ -45,6 +50,10 @@ describe("TemporalFilters", () => {
     await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
     const seasonHeading = screen.getByTestId("season-slider-heading");
     expect(within(seasonHeading).getByText("All seasons")).toBeTruthy();
+    expect(within(screen.getByTestId("season-slider-leading")).getByLabelText("Time filter type")).toBeTruthy();
+    for (const side of ["leading", "trailing"]) {
+      expect(screen.getByTestId(`season-slider-${side}`)).toHaveStyle({ width: 116, flexShrink: 1 });
+    }
     expect(within(seasonHeading).getByRole("tab", { name: "Season", selected: true })).toBeTruthy();
     await incrementSlider("Season", 4);
     expect(within(seasonHeading).getByText("Spring (Sep–Nov)")).toBeTruthy();

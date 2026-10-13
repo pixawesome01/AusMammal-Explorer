@@ -83,12 +83,23 @@ function DiscreteSlider({
   return (
     <View style={styles.sliderBlock}>
       <View testID={`${accessibilityLabel.toLowerCase()}-slider-heading`} style={styles.sliderHeading}>
+        {headerAccessory ? (
+          <View testID={`${accessibilityLabel.toLowerCase()}-slider-leading`} style={styles.sliderHeadingSide}>
+            {headerAccessory}
+          </View>
+        ) : null}
         <View style={styles.sliderValueContainer}>
           <Text accessibilityLiveRegion="polite" style={styles.sliderValue}>
             {options[selectedIndex].label}
           </Text>
         </View>
-        {headerAccessory}
+        {headerAccessory ? (
+          <View
+            testID={`${accessibilityLabel.toLowerCase()}-slider-trailing`}
+            pointerEvents="none"
+            style={styles.sliderHeadingSide}
+          />
+        ) : null}
       </View>
       <View
         accessible
@@ -251,7 +262,7 @@ const styles = StyleSheet.create({
   modeToggle: {
     flexDirection: "row",
     flexShrink: 0,
-    width: 116,
+    width: "100%",
     height: 44,
   },
   // A 28-point visual control retains 44-point touch targets.
@@ -268,10 +279,14 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   sliderBlock: { marginTop: 1, marginBottom: 3 },
   sliderHeading: { flexDirection: "row", alignItems: "center", columnGap: 8 },
-  sliderValueContainer: { flex: 1, alignItems: "center" },
+  // Equal side slots keep the value at the screen centre, not the remaining space.
+  // They can shrink together on narrow phones while the label wraps within its slot.
+  sliderHeadingSide: { width: 116, flexShrink: 1 },
+  sliderValueContainer: { flex: 1, minWidth: 80, alignItems: "center" },
   sliderValue: {
     alignSelf: "center",
     minWidth: 80,
+    maxWidth: "100%",
     overflow: "hidden",
     paddingHorizontal: 11,
     paddingVertical: 3,
