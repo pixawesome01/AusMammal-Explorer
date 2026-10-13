@@ -103,7 +103,7 @@ type SuitabilityManifest = {
 const MANIFEST: SuitabilityManifest = require("../../assets/suitability/manifest.json");
 
 export const SUITABILITY_DISCLAIMER =
-  "Model-based suitability estimate — not a guaranteed sighting or a future distribution forecast.";
+  "Not a guaranteed sighting or a future distribution forecast.";
 
 // The colours the overlay PNGs are drawn with, low to high suitability.
 export const SUITABILITY_LEGEND_COLORS = MANIFEST.legendColours;

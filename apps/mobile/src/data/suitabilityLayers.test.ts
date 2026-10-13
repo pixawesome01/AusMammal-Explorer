@@ -10,7 +10,7 @@ it.each(MVP_SPECIES)("binds $id to its model version and exact PNG", species => 
   expect(layer?.speciesId).toBe(species.id);
   expect(layer?.modelVersion).toBe(`${species.id}:${layer?.model.generatedAt}`);
   expect(layer?.displayWording).toBe(SUITABILITY_DISCLAIMER);
-  expect(layer?.displayWording).toContain("not a guaranteed sighting or a future distribution forecast");
+  expect(layer?.displayWording).toBe("Not a guaranteed sighting or a future distribution forecast.");
   const entry = manifest.layers[species.id];
   const png = readFileSync(resolve(__dirname, "../../assets/suitability", entry.imageFile));
   expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
