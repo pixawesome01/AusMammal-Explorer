@@ -23,7 +23,6 @@ export function StateRanking({ speciesName, status, collection }: StateRankingPr
   return (
     <View accessibilityLabel={`State ranking for ${speciesName}`} style={styles.card}>
       <Text accessibilityRole="header" style={styles.title}>Where records are concentrated</Text>
-      <Text style={styles.source}>Counts follow the active time filters.</Text>
 
       {status === "loading" ? <Text style={styles.message}>Calculating state ranking…</Text> : null}
       {status === "error" ? (

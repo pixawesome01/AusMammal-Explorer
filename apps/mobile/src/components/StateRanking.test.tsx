@@ -39,7 +39,8 @@ describe("StateRanking", () => {
     expect(screen.getByTestId("state-count-1").props.children).toBe("2");
     expect(screen.getByTestId("state-count-2").props.children).toBe("1");
     expect(screen.getByText(/1 record could not be assigned/)).toBeTruthy();
-    expect(screen.getByText(/active time filters/)).toBeTruthy();
+    expect(screen.queryByText("Counts follow the active time filters.")).toBeNull();
+    expect(screen.getByRole("link", { name: "Boundaries: ABS ASGS Edition 3 (2021)" })).toBeTruthy();
   });
 
   it("explains an empty active time window", async () => {
