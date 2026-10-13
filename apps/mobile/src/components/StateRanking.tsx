@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#ffffff",
   },
-  title: { color: "#163c2c", fontSize: 21, fontWeight: "700" },
+  title: { color: "#163c2c", fontSize: 18, fontWeight: "700" },
   message: {
     marginTop: 16,
     padding: 13,
