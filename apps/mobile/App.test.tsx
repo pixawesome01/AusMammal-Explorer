@@ -187,6 +187,7 @@ describe("ExplorerWorkspace species flow", () => {
         ),
       );
       expect(screen.getByLabelText(`Occurrence summary for ${species.commonName}`)).toBeTruthy();
+      expect(screen.getByLabelText(`State ranking for ${species.commonName}`)).toBeTruthy();
 
       await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
       await fireEvent.press(screen.getByRole("button", { name: "About this data" }));
@@ -281,12 +282,18 @@ describe("ExplorerWorkspace species flow", () => {
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByTestId("mapped-record-count").props.children).toBe("1");
+    expect(screen.getAllByTestId(/^state-count-/).reduce(
+      (sum, row) => sum + Number(row.props.children), 0,
+    )).toBe(1);
     await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
     await waitFor(() => expect(screen.getByText("4 records shown")).toBeTruthy());
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByTestId("mapped-record-count").props.children).toBe("4");
+    expect(screen.getAllByTestId(/^state-count-/).reduce(
+      (sum, row) => sum + Number(row.props.children), 0,
+    )).toBe(4);
     expect(readAsset).toHaveBeenCalledTimes(1);
     warning.mockRestore();
   });

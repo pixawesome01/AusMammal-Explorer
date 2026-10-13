@@ -23,6 +23,7 @@ import {
 import { ModelInfoPanel } from "./src/components/ModelInfoPanel";
 import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
+import { StateRanking } from "./src/components/StateRanking";
 import { TemporalFilters } from "./src/components/TemporalFilters";
 import {
   createRuntimeOccurrenceAssetReader,
@@ -374,6 +375,11 @@ export function ExplorerWorkspace({
                       : occurrenceState.status}
                   />
                   <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
+                  <StateRanking
+                    collection={occurrenceState.records?.collection}
+                    speciesName={selectedSpecies.commonName}
+                    status={occurrenceState.status}
+                  />
                 </ScrollView>
               ) : null}
             </View>

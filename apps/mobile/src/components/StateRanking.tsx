@@ -24,6 +24,7 @@ export function StateRanking({ speciesName, status, collection }: StateRankingPr
     <View accessibilityLabel={`State ranking for ${speciesName}`} style={styles.card}>
       <Text style={styles.eyebrow}>State summary</Text>
       <Text accessibilityRole="header" style={styles.title}>Where records are concentrated</Text>
+      <Text style={styles.source}>Counts follow the active time filters.</Text>
 
       {status === "loading" ? <Text style={styles.message}>Calculating state ranking…</Text> : null}
       {status === "error" ? (
@@ -63,6 +64,14 @@ export function StateRanking({ speciesName, status, collection }: StateRankingPr
             </View>
           ))
         : null}
+
+      {status === "ready" && result && result.unassignedCount > 0 ? (
+        <Text style={styles.message}>
+          {result.unassignedCount.toLocaleString()} {result.unassignedCount === 1 ? "record" : "records"} could not be assigned to a state.
+          They remain included in the map total; coastal and boundary coordinates may fall
+          outside these simplified boundaries.
+        </Text>
+      ) : null}
 
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL(STATE_BOUNDARY_SOURCE.url)}>
         <Text style={styles.source}>Boundaries: ABS ASGS Edition 3 (2021)</Text>
