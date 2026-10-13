@@ -42,6 +42,8 @@ const LOADING_STATE: OccurrenceRecordsState = {
 
 type RequestBoundState = {
   requestKey: string;
+  manifest: OccurrenceSnapshotManifest;
+  readAsset: OccurrenceAssetReader;
   result: OccurrenceRecordsState;
 };
 
@@ -59,12 +61,14 @@ export function useOccurrenceRecords({
   const requestKey = `${speciesId}:${requestVersion}`;
   const [state, setState] = useState<RequestBoundState>({
     requestKey,
+    manifest,
+    readAsset,
     result: LOADING_STATE,
   });
 
   useEffect(() => {
     let isCurrentRequest = true;
-    setState({ requestKey, result: LOADING_STATE });
+    setState({ requestKey, manifest, readAsset, result: LOADING_STATE });
 
     const load = async () => {
       try {
@@ -75,6 +79,8 @@ export function useOccurrenceRecords({
 
         setState({
           requestKey,
+          manifest,
+          readAsset,
           result: {
             status: "ready",
             records: loaded,
@@ -89,6 +95,8 @@ export function useOccurrenceRecords({
         const error = cause instanceof Error ? cause : new Error("Occurrence data could not load.");
         setState({
           requestKey,
+          manifest,
+          readAsset,
           result: { status: "error", records: null, error },
         });
       }
@@ -102,7 +110,8 @@ export function useOccurrenceRecords({
   }, [manifest, readAsset, requestKey, speciesId]);
 
   return useMemo(() => {
-    const loadedState = state.requestKey === requestKey ? state.result : LOADING_STATE;
+    const loadedState = state.requestKey === requestKey && state.manifest === manifest &&
+      state.readAsset === readAsset ? state.result : LOADING_STATE;
     if (!loadedState.records) {
       return { ...loadedState, retry, unfilteredRecords: null };
     }
@@ -124,5 +133,5 @@ export function useOccurrenceRecords({
       const error = cause instanceof Error ? cause : new Error("Occurrence data could not filter.");
       return { status: "error", records: null, error, retry, unfilteredRecords: loadedState.records };
     }
-  }, [fromDate, requestKey, retry, speciesId, state, temporalFilter, toDate]);
+  }, [fromDate, requestKey, retry, speciesId, state, temporalFilter, toDate, manifest, readAsset]);
 }

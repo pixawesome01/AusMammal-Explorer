@@ -11,6 +11,18 @@ import { OCCURRENCE_SNAPSHOT } from "./occurrenceSnapshot";
 import { MVP_SPECIES } from "../species";
 
 describe("runtime occurrence asset reader", () => {
+  it("selects the full snapshot from the configured public environment variable", () => {
+    const previous = process.env.EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL;
+    try {
+      process.env.EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL = "https://assets.example/frozen";
+      expect(getRuntimeOccurrenceSnapshot()).toBe(OCCURRENCE_SNAPSHOT);
+      process.env.EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL = " ";
+      expect(getRuntimeOccurrenceSnapshot()).toBe(BUNDLED_OCCURRENCE_SNAPSHOT);
+    } finally {
+      if (previous === undefined) delete process.env.EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL;
+      else process.env.EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL = previous;
+    }
+  });
   it("loads a bundled real-data sample when no host is configured", async () => {
     const reader = createRuntimeOccurrenceAssetReader("");
     const manifest = getRuntimeOccurrenceSnapshot("");

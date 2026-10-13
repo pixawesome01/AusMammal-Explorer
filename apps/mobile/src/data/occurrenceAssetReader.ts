@@ -11,14 +11,9 @@ import {
   type OccurrenceSnapshotManifest,
 } from "./occurrenceSnapshot";
 
-const ASSET_BASE_URL_VARIABLE = "EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL";
-
 function publicAssetBaseUrl() {
-  const runtime = globalThis as typeof globalThis & {
-    process?: { env?: Record<string, string | undefined> };
-  };
-
-  return runtime.process?.env?.[ASSET_BASE_URL_VARIABLE]?.trim();
+  // Expo replaces only literal process.env.EXPO_PUBLIC_* references in bundles.
+  return process.env.EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL?.trim();
 }
 
 export function createRuntimeOccurrenceAssetReader(

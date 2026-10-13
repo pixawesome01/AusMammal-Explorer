@@ -99,8 +99,8 @@ OpenStreetMap attribution.
 
 KAN-40 provides the occurrence data layer used by the next map task:
 
-- `occurrenceSnapshot.ts` catalogues the 15 August 2026 frozen snapshot for all seven
-  species (185,338 records total).
+- `occurrenceSnapshot.ts` catalogues the 20 August 2026 frozen snapshot for all seven
+  species (185,350 records total).
 - `occurrenceLoader.ts` loads one species asset and validates every required GeoJSON,
   coordinate, date and provenance field.
 - `occurrenceFilter.ts` applies the selected species and an inclusive date range.
@@ -121,14 +121,42 @@ RTM-4 ranks the filtered records by state or territory. Point-to-state assignmen
 the compact, bundled ABS ASGS Edition 3 (2021) state boundaries in
 `src/data/absStates2021.json`; records outside those boundaries are reported separately.
 
-The Insights tab calculates the selected species' monthly pattern from the loaded ALA
-records. Its temperature and rainfall charts use NASA POWER 2001–2020 climate normals,
+The Insights tab follows the active filters for monthly averages, seasonal averages and
+state rankings. A calendar month's count is divided by the number of covered occurrences
+of that month, including zero-record months. Partial boundary months count once; months
+outside the selected window have no average. Seasonal averages are records per covered
+month in that Australian season (summer is December–February).
+
+The temperature and rainfall charts use NASA POWER 2001–2020 climate normals,
 averaged across 12 public Australian city locations; they are an Australia-wide reference,
 not weather measured at occurrence coordinates.
 
-Until the planned habitat-suitability model is shipped, Prediction visualises historical
-occurrence density as a heatmap. The interface labels it as record density and does not
-present it as a guaranteed sighting or a model probability.
+Prediction shows precomputed maxnet suitability layers. Their separate model input snapshot
+is `2026-09-12-ala-marsupials-maxent`; it is not the map's August occurrence snapshot.
+
+About this data reports filtered counts, observation dates, capture date, coverage,
+licences and limitations. The historical August export omitted provider names, rights
+holders and provider update dates. These cannot be inferred from ALA's aggregator label;
+the app reports them as unavailable. Future pipeline captures retain supplied metadata.
+
+### Full-data verification
+
+Sample mode explicitly labels its scope: its counts and averages describe only the 20%
+sample. Full-snapshot acceptance must use the complete files, not compare sample counts
+to full totals. After downloading the seven unchanged August files into `data/processed/`:
+
+```bash
+# Repository root (project installed as documented in the root README)
+python -m ausmammal_explorer.snapshot data/metadata/snapshot-2026-08-20-ala-marsupials.json
+python -m ausmammal_explorer.verify_mobile_snapshot
+# apps/mobile
+VERIFY_FULL_SNAPSHOT=1 npm test -- frozenSnapshot.integration
+```
+
+The audit is read-only and deterministic. It verifies exact checksums, all 37,069 sampled
+records against their full-file derivation, licence values and provider omissions. The
+saved audit is `data/metadata/mobile-snapshot-audit-2026-10-14.json`. Full-data tests are
+opt-in and fail when requested files are missing; ordinary CI does not claim to run them.
 
 The current standard OpenStreetMap raster endpoint is for modest, interactive MVP use
 only. It is identified with the app's user agent and must not be used for bulk or

@@ -293,6 +293,9 @@ export function ExplorerWorkspace({
           ) : (
             <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
               <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
+              {manifest.files[selectedSpecies.id].sourceRecordCount !== undefined ? (
+                <Text style={styles.mapCountText}>20% sample · counts describe sampled records</Text>
+              ) : null}
             </View>
           )}
           </SafeAreaView>
