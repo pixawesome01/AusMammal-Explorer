@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-14",
+  "commit": "b97f1c4",
+  "environment": {
+    "host": "macOS 26.6.2 arm64",
+    "device": "iPhone 17 Simulator, iOS 26.5",
+    "runtime": "Expo SDK 57 development client with --no-dev --minify",
+    "data": "bundled deterministic 20% snapshot; Koala 8,557 records",
+    "network": "local Metro, online basemap"
+  },
+  "method": "Elapsed wall time from automated native action through accessibility-tree and screenshot capture. Expected UI and visible map checked in returned observations. Includes automation overhead, not isolated JS timings. One run per scenario.",
+  "scope": "iOS simulator smoke evidence only, not acceptance on the agreed physical demo device/browser or full-data mode. No claim of guaranteed five-second performance.",
+  "interactions": [
+    {
+      "scenario": "Open Koala explorer",
+      "expected": "8,557 records; clustered map",
+      "observedMs": 2143
+    },
+    {
+      "scenario": "Year 2020",
+      "expected": "1,068 records; updated clusters",
+      "observedMs": 2087
+    },
+    {
+      "scenario": "Year 2020 and January",
+      "expected": "113 records; updated clusters",
+      "observedMs": 1433
+    },
+    {
+      "scenario": "Year 2020, January and summer",
+      "expected": "113 records; Summer (Dec–Feb)",
+      "observedMs": 1505
+    },
+    {
+      "scenario": "Open About this data",
+      "expected": "113 records; matching dates and explicit missing provider metadata",
+      "observedMs": 1406
+    },
+    {
+      "scenario": "January and autumn conflict",
+      "expected": "No records; old clusters removed",
+      "observedMs": 2254
+    },
+    {
+      "scenario": "Clear all filters",
+      "expected": "8,557 records; clusters restored",
+      "observedMs": 1461
+    },
+    {
+      "scenario": "Open Insights",
+      "expected": "8,557 records, averages and state rankings",
+      "observedMs": 3660,
+      "note": "One preceding automated tap did not activate the tab. This measures the successful retry; initial tap failure needs confirmation on the demo device."
+    },
+    {
+      "scenario": "Open Prediction",
+      "expected": "Koala model layer and non-guarantee/future-forecast disclaimer",
+      "observedMs": 1341
+    },
+    {
+      "scenario": "Open About this model",
+      "expected": "Koala metrics, version and disclaimer",
+      "observedMs": 1306
+    }
+  ],
+  "observedMaximumMs": 3660,
+  "remaining": [
+    "Agree demo target: Jira still specifies laptop/browser; application uses native MapLibre.",
+    "Repeat with full-data configuration if that is the accepted demo scope.",
+    "Repeat on physical iOS/Android device, including cold starts, network failures and rapid species switches.",
+    "Investigate any missed first tap in device testing; do not declare RTM-10 Done from this smoke run alone."
+  ]
+}
