@@ -93,6 +93,33 @@ async function incrementSlider(label: "Year" | "Month" | "Season", count: number
 }
 
 describe("ExplorerWorkspace species flow", () => {
+  it("formats the map badge as an ungrouped count and dotted latest date", async () => {
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: {
+        ...TEST_MANIFEST.files,
+        koala: { ...TEST_MANIFEST.files.koala, recordCount: 8557 },
+      },
+    };
+    const readAsset: OccurrenceAssetReader = async file => {
+      const template = featureFor(file.scientificName, 1);
+      return {
+        type: "FeatureCollection",
+        features: Array.from({ length: file.recordCount }, (_, index) => ({
+          ...template,
+          id: (index + 1).toString(16).padStart(16, "0"),
+          properties: { ...template.properties, eventDate: "2026-08-15" },
+        })),
+      };
+    };
+    await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={manifest} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    await waitFor(() => expect(screen.getByText("8557 records")).toBeTruthy());
+    expect(screen.getByText("/")).toBeTruthy();
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.8.2026 latest");
+    expect(screen.queryByText("8,557 records")).toBeNull();
+  });
+
   it.each(["loading", "error"])("shows no latest date while records are %s", async (status) => {
     const readAsset: OccurrenceAssetReader = status === "loading"
       ? () => new Promise(() => {})
@@ -102,7 +129,7 @@ describe("ExplorerWorkspace species flow", () => {
     await waitFor(() => expect(screen.getByText(
       status === "loading" ? "Loading records…" : "Records unavailable",
     )).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: —");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("— latest");
   });
 
   it("shows only count and latest date on the map and keeps sample details in About", async () => {
@@ -118,8 +145,8 @@ describe("ExplorerWorkspace species flow", () => {
     });
     await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={manifest} /></SpeciesProvider>);
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
-    await waitFor(() => expect(screen.getByText("1 record shown")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2026");
+    await waitFor(() => expect(screen.getByText("1 record")).toBeTruthy());
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2026 latest");
     expect(screen.queryByText("20% sample · counts describe sampled records")).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "About this data" }));
     expect(screen.getByText(/This is a 20% sample: 1 records from 5 frozen source records/)).toBeTruthy();
@@ -206,17 +233,17 @@ describe("ExplorerWorkspace species flow", () => {
         expect(screen.getByLabelText(`Occurrence map for ${species.commonName}`)).toBeTruthy(),
       );
       expect(
-        screen.getByText(`${index + 1} ${index === 0 ? "record" : "records"} shown`),
+        screen.getByText(`${index + 1} ${index === 0 ? "record" : "records"}`),
       ).toBeTruthy();
       expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(
         index + 1,
       );
-      expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2026");
+      expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2026 latest");
       expect(screen.getByTestId("map-record-summary")).toHaveStyle({ flexDirection: "row" });
 
       await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-      expect(screen.getByText(`${index + 1} ${index === 0 ? "record" : "records"} shown`)).toBeTruthy();
-      expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2026");
+      expect(screen.getByText(`${index + 1} ${index === 0 ? "record" : "records"}`)).toBeTruthy();
+      expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2026 latest");
       expect(screen.queryByLabelText(`Occurrence summary for ${species.commonName}`)).toBeNull();
       expect(screen.queryByText("Map summary")).toBeNull();
       expect(screen.queryByText("total records")).toBeNull();
@@ -270,17 +297,17 @@ describe("ExplorerWorkspace species flow", () => {
 
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
 
-    await waitFor(() => expect(screen.getByText("2 records shown")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("2 records")).toBeTruthy());
 
     const mappedFeatures = screen.getByTestId("source-occurrence-records").props.data.features;
     expect(mappedFeatures.map((item: OccurrenceFeature) => item.properties.eventDate)).toEqual([
       "2024-01-15",
       "2024-06-15",
     ]);
-    expect(screen.getByText("2 records shown")).toBeTruthy();
+    expect(screen.getByText("2 records")).toBeTruthy();
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-    expect(screen.getByText("2 records shown")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2024");
+    expect(screen.getByText("2 records")).toBeTruthy();
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2024 latest");
 
     warning.mockRestore();
   });
@@ -309,36 +336,36 @@ describe("ExplorerWorkspace species flow", () => {
       </SpeciesProvider>,
     );
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
-    await waitFor(() => expect(screen.getByText("4 records shown")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2025");
+    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2025 latest");
 
     await incrementSlider("Year", 5);
-    await waitFor(() => expect(screen.getByText("3 records shown")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 July 2024");
+    await waitFor(() => expect(screen.getByText("3 records")).toBeTruthy());
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.7.2024 latest");
     await incrementSlider("Season", 3);
-    await waitFor(() => expect(screen.getByText("2 records shown")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("2 records")).toBeTruthy());
     await incrementSlider("Month", 6);
-    await waitFor(() => expect(screen.getByText("1 record shown")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("1 record")).toBeTruthy());
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-    expect(screen.getByText("1 record shown")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2024");
+    expect(screen.getByText("1 record")).toBeTruthy();
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2024 latest");
     expect(screen.getAllByTestId(/^state-count-/).reduce(
       (sum, row) => sum + Number(row.props.children), 0,
     )).toBe(1);
     await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
 
     await incrementSlider("Season", 1);
-    await waitFor(() => expect(screen.getByText("No records shown")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: —");
+    await waitFor(() => expect(screen.getByText("0 records")).toBeTruthy());
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("— latest");
     expect(screen.queryByTestId("source-occurrence-records")).toBeNull();
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
-    await waitFor(() => expect(screen.getByText("4 records shown")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-    expect(screen.getByText("4 records shown")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2025");
+    expect(screen.getByText("4 records")).toBeTruthy();
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2025 latest");
     expect(screen.getAllByTestId(/^state-count-/).reduce(
       (sum, row) => sum + Number(row.props.children), 0,
     )).toBe(4);

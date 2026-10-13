@@ -46,12 +46,8 @@ const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
 const runtimeOccurrenceSnapshot = getRuntimeOccurrenceSnapshot();
 
 function formatRecordDate(date: string) {
-  return new Intl.DateTimeFormat("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T00:00:00Z`));
+  const [year, month, day] = date.split("-");
+  return `${Number(day)}.${Number(month)}.${year}`;
 }
 
 type ExplorerWorkspaceProps = {
@@ -176,9 +172,7 @@ export function ExplorerWorkspace({
       ? "Loading records…"
       : occurrenceState.status === "error"
         ? "Records unavailable"
-        : mappedCount === 0
-          ? "No records shown"
-          : `${mappedCount?.toLocaleString()} ${mappedCount === 1 ? "record" : "records"} shown`;
+        : `${mappedCount ?? 0} ${mappedCount === 1 ? "record" : "records"}`;
   const compactSheetHeight = Math.min(310, Math.max(250, Math.round(windowHeight * 0.34)));
   const insightsSheetHeight = Math.min(
     windowHeight - 112,
@@ -319,8 +313,9 @@ export function ExplorerWorkspace({
             <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
               <View testID="map-record-summary" style={styles.mapCountRow}>
                 <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
+                <Text style={styles.mapCountText}>/</Text>
                 <Text testID="latest-record" style={styles.mapCountText}>
-                  Latest record: {latestRecordDate}
+                  {latestRecordDate} latest
                 </Text>
               </View>
             </View>
@@ -547,8 +542,8 @@ const styles = StyleSheet.create({
   mapCountRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    columnGap: 12,
+    justifyContent: "center",
+    columnGap: 4,
     rowGap: 2,
   },
   mapCountText: { color: "#47524c", fontSize: 11, fontWeight: "600" },
