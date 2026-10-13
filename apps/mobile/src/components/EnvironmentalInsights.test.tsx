@@ -88,9 +88,13 @@ describe("EnvironmentalInsights", () => {
 describe("monthly chart scrubbing", () => {
   it("shows the touched month, updates while dragging, and preserves the last value", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
+    const hintStyle = { fontSize: 14, fontWeight: "400", color: "#566159" } as const;
+    expect(screen.getByText("Slide around the chart to explore each month")).toHaveStyle(hintStyle);
+    expect(screen.getByText("Tap a bar to see temperature")).toHaveStyle(hintStyle);
     const chart = screen.getByTestId("month-scrubber");
     await fireEvent(chart, "responderGrant", { nativeEvent: { locationX: 235, locationY: 135 } });
     expect(screen.getByTestId("month-readout")).toHaveTextContent("Apr · 1 record");
+    expect(screen.getByTestId("month-readout")).toHaveStyle({ fontSize: 16, fontWeight: "600", color: "#34423a" });
     await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 35 } });
     expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 records");
     await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 135 } });

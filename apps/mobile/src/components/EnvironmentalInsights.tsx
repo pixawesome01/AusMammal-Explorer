@@ -94,7 +94,7 @@ function ClimateBarChart({
         </Text>
       ) : (
         <Text
-          style={[styles.climateMetric, selectedBar === null && styles.climateHint, {
+          style={[styles.climateMetric, selectedBar === null && styles.chartHint, {
             color: selectedBar !== null && highlightedMonths.includes(selectedBar + 1)
               ? color
               : READABLE_COLOURS.muted,
@@ -295,7 +295,7 @@ export function EnvironmentalInsights({
                 onResponderTerminationRequest={() => false}
               />
             </View>
-            <Text testID="month-readout" style={styles.monthReadout}>
+            <Text testID="month-readout" style={[styles.monthReadout, selectedMonth === null && styles.chartHint]}>
               {selected
                 ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "record" : "records"}`
                 : "Slide around the chart to explore each month"}
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
   description: { marginTop: 13, color: READABLE_COLOURS.muted, fontSize: 13, lineHeight: 19 },
   climateMetric: { marginTop: 18, fontSize: 25, fontWeight: "500", textAlign: "center" },
-  climateHint: { fontSize: 14, fontWeight: "400" },
+  chartHint: { fontSize: 14, fontWeight: "400", color: READABLE_COLOURS.muted },
   barChart: { height: 138, flexDirection: "row", alignItems: "flex-end", gap: 3, marginTop: 5 },
   barColumn: { flex: 1, minWidth: 24, height: "100%", alignItems: "center" },
   barArea: { flex: 1, width: "100%", alignItems: "center", justifyContent: "flex-end" },
