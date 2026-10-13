@@ -105,7 +105,7 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: —");
   });
 
-  it("keeps the sample disclosure alongside the map count and latest date", async () => {
+  it("shows only count and latest date on the map and keeps sample details in About", async () => {
     const manifest: OccurrenceSnapshotManifest = {
       ...TEST_MANIFEST,
       files: {
@@ -120,7 +120,9 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
     await waitFor(() => expect(screen.getByText("1 record shown")).toBeTruthy());
     expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest record: 15 June 2026");
-    expect(screen.getByText("20% sample · counts describe sampled records")).toBeTruthy();
+    expect(screen.queryByText("20% sample · counts describe sampled records")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "About this data" }));
+    expect(screen.getByText(/This is a 20% sample: 1 records from 5 frozen source records/)).toBeTruthy();
   });
 
   it("lets users drag the Records panel down and up without losing filters", async () => {

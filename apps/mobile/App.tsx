@@ -323,9 +323,6 @@ export function ExplorerWorkspace({
                   Latest record: {latestRecordDate}
                 </Text>
               </View>
-              {manifest.files[selectedSpecies.id].sourceRecordCount !== undefined ? (
-                <Text style={styles.mapCountText}>20% sample · counts describe sampled records</Text>
-              ) : null}
             </View>
           )}
           </SafeAreaView>
