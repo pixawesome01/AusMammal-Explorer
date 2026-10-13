@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Modal,
   Platform,
@@ -22,7 +22,6 @@ import {
   type OccurrenceMapHandle,
 } from "./src/components/OccurrenceMap";
 import { ModelInfoPanel } from "./src/components/ModelInfoPanel";
-import { OccurrenceSummary } from "./src/components/OccurrenceSummary";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { StateRanking } from "./src/components/StateRanking";
 import { TemporalFilters } from "./src/components/TemporalFilters";
@@ -45,6 +44,15 @@ import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
 const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
 const runtimeOccurrenceSnapshot = getRuntimeOccurrenceSnapshot();
+
+function formatRecordDate(date: string) {
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
+}
 
 type ExplorerWorkspaceProps = {
   dateRange?: OccurrenceDateRange;
@@ -156,6 +164,13 @@ export function ExplorerWorkspace({
   const suitabilityLayer =
     activeTab === "prediction" ? getSuitabilityLayer(selectedSpecies.id) : undefined;
   const mappedCount = occurrenceState.records?.collection.features.length;
+  const latestRecordDate = useMemo(() => {
+    const latest = occurrenceState.records?.collection.features.reduce(
+      (date, feature) => feature.properties.eventDate > date ? feature.properties.eventDate : date,
+      "",
+    );
+    return latest ? formatRecordDate(latest) : "—";
+  }, [occurrenceState.records]);
   const mappedCountLabel =
     occurrenceState.status === "loading"
       ? "Loading records…"
@@ -302,7 +317,12 @@ export function ExplorerWorkspace({
             </View>
           ) : (
             <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
-              <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
+              <View testID="map-record-summary" style={styles.mapCountRow}>
+                <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
+                <Text testID="latest-record" style={styles.mapCountText}>
+                  Latest record: {latestRecordDate}
+                </Text>
+              </View>
               {manifest.files[selectedSpecies.id].sourceRecordCount !== undefined ? (
                 <Text style={styles.mapCountText}>20% sample · counts describe sampled records</Text>
               ) : null}
@@ -390,7 +410,6 @@ export function ExplorerWorkspace({
                     temporalFilter={temporalFilter}
                     dateRange={dateRange}
                   />
-                  <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
                   <StateRanking
                     collection={occurrenceState.records?.collection}
                     speciesName={selectedSpecies.commonName}
@@ -514,6 +533,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.68 },
   mapCountPill: {
     alignSelf: "center",
+    maxWidth: "94%",
     marginTop: 10,
     paddingHorizontal: 15,
     paddingVertical: 8,
@@ -526,6 +546,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14,
     shadowRadius: 10,
     elevation: 4,
+  },
+  mapCountRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    columnGap: 12,
+    rowGap: 2,
   },
   mapCountText: { color: "#47524c", fontSize: 11, fontWeight: "600" },
   bottomSheet: {
