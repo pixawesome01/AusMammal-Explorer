@@ -187,6 +187,10 @@ describe("ExplorerWorkspace species flow", () => {
         ),
       );
       expect(screen.getByLabelText(`Occurrence summary for ${species.commonName}`)).toBeTruthy();
+      expect(screen.getByText("total records")).toBeTruthy();
+      expect(screen.getByText("latest record")).toBeTruthy();
+      expect(screen.queryByText("mapped records")).toBeNull();
+      expect(screen.queryByText("latest matching record")).toBeNull();
       expect(screen.getByLabelText(`State ranking for ${species.commonName}`)).toBeTruthy();
 
       await fireEvent.press(screen.getByRole("tab", { name: "Records" }));

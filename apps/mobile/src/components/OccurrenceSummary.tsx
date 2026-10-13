@@ -37,11 +37,11 @@ export function OccurrenceSummary({ species, state }: OccurrenceSummaryProps) {
           <Text style={styles.metricValue} testID="mapped-record-count">
             {mappedCount === undefined ? "—" : mappedCount.toLocaleString()}
           </Text>
-          <Text style={styles.metricLabel}>mapped records</Text>
+          <Text style={styles.metricLabel}>total records</Text>
         </View>
         <View style={styles.metric}>
           <Text style={styles.metricValue}>{latestDate ? formatDate(latestDate) : "—"}</Text>
-          <Text style={styles.metricLabel}>latest matching record</Text>
+          <Text style={styles.metricLabel}>latest record</Text>
         </View>
       </View>
     </View>
