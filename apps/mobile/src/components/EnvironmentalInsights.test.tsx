@@ -25,7 +25,7 @@ const collection: OccurrenceFeatureCollection = {
 };
 
 describe("EnvironmentalInsights", () => {
-  it("shows monthly and seasonal averages for the selected window", async () => {
+  it("keeps monthly averages without the seasonal averages panel", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready"
       coverage={{ from: "2020-01-01", to: "2026-08-15" }} temporalFilter={{ year: 2026 }} />);
     expect(screen.getByText("Average records by month")).toBeTruthy();
@@ -42,9 +42,18 @@ describe("EnvironmentalInsights", () => {
     await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
       { nativeEvent: { locationX: 235, locationY: 135 } });
     expect(screen.getByTestId("month-readout")).toHaveTextContent(/1\.0 average per month/);
-    expect(screen.getByLabelText("Seasonal occurrence averages")).toBeTruthy();
-    expect(screen.getByText(/autumn: 0.3 records per month/)).toBeTruthy();
-    expect(screen.getByText(/spring: — records per month/)).toBeTruthy();
+    expect(screen.queryByLabelText("Seasonal occurrence averages")).toBeNull();
+    expect(screen.queryByText("Seasonal averages")).toBeNull();
+    expect(screen.queryByText(/Averages include months with zero records/)).toBeNull();
+  });
+
+  it("omits the seasonal averages panel when no records match", async () => {
+    await render(<EnvironmentalInsights collection={{ type: "FeatureCollection", features: [] }}
+      speciesName="Koala" status="empty" coverage={{ from: "2020-01-01", to: "2026-08-15" }} />);
+    expect(screen.getByText("No records match the active filters.")).toBeTruthy();
+    expect(screen.getByText("Average records by month")).toBeTruthy();
+    expect(screen.queryByLabelText("Seasonal occurrence averages")).toBeNull();
+    expect(screen.queryByText("Seasonal averages")).toBeNull();
   });
 
   it("shows record seasonality and sourced climate charts", async () => {

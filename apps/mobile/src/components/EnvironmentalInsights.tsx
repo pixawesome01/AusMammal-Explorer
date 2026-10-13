@@ -12,7 +12,7 @@ import {
 } from "../data/climateContext";
 import { getAustralianSeason, type OccurrenceDateRange, type OccurrenceTemporalFilter } from "../data/occurrenceFilter";
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
-import { monthlyOccurrenceAverages, seasonalOccurrenceAverages } from "../data/occurrenceStatistics";
+import { monthlyOccurrenceAverages } from "../data/occurrenceStatistics";
 import { READABLE_COLOURS } from "./accessibility";
 
 type EnvironmentalInsightsProps = {
@@ -311,22 +311,6 @@ export function EnvironmentalInsights({
           </>
         ) : null}
       </View>
-
-      {averages && (status === "ready" || status === "empty") ? (
-        <View style={styles.card} accessibilityLabel="Seasonal occurrence averages">
-          <Text accessibilityRole="header" style={styles.title}>Seasonal averages</Text>
-          {seasonalOccurrenceAverages(averages).map(item => (
-            <Text key={item.season} style={styles.description}>
-              {item.season}: {item.average?.toFixed(1) ?? "—"} records per month
-              {item.periods ? ` (${item.count.toLocaleString()} records / ${item.periods} covered months)` : " (outside the selected period)"}
-            </Text>
-          ))}
-          <Text style={styles.description}>
-            Averages include months with zero records. Partial first and last months count
-            as one month each. No estimate is made for months outside the selected period.
-          </Text>
-        </View>
-      ) : null}
 
       <View accessibilityLabel="Australia climate context" style={[styles.card, styles.climateCard]}>
         <View style={styles.cardHeading}>
