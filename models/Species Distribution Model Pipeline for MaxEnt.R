@@ -492,7 +492,7 @@ export_species_outputs <- function(species_id, suitability_raster, variable_impo
     # estimates, never as guaranteed sightings or a distribution forecast.
     displayWording = paste(
       "Model-based suitability estimate - potential observation areas,",
-      "not guaranteed sightings."
+      "not a guaranteed sighting or a future distribution forecast."
     )
   )
 

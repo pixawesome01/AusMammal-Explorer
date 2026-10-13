@@ -176,6 +176,7 @@ export function ModelInfoPanel({ layer, speciesName }: ModelInfoPanelProps) {
                 value={`maxnet (Maxent), ${describeFeatureClasses(model.featureClasses)} features, regularisation ${model.regularisationMultiplier} — chosen from ${model.tuning.searchedFeatureClasses.length}×${model.tuning.searchedRegularisationMultipliers.length} combinations within ${model.tuning.deltaAiccSelectionThreshold} AICc, ${model.spatialPartitionMethod} cross-validation`}
               />
               <FactRow label="Model built" value={formatDate(model.generatedAt)} />
+              <FactRow label="Model version" value={layer.modelVersion} />
               <Pressable
                 accessibilityHint="Opens the data citation in your browser"
                 accessibilityLabel="View the occurrence data citation (DOI)"

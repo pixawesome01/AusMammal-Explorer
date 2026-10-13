@@ -49,6 +49,9 @@
   "layers": {
     "koala": {
       "imageFile": "koala.png",
+      "speciesId": "koala",
+      "modelVersion": "koala:2026-09-26T10:28:01Z",
+      "imageSha256": "65a4eab3dd7daeacfd6250298bbbdbddd50ad80aeaa565b66408a0c65ba5ee53",
       "bounds": {
         "west": 110.0,
         "south": -45.0,
@@ -113,6 +116,9 @@
     },
     "eastern-grey-kangaroo": {
       "imageFile": "eastern-grey-kangaroo.png",
+      "speciesId": "eastern-grey-kangaroo",
+      "modelVersion": "eastern-grey-kangaroo:2026-09-26T10:38:03Z",
+      "imageSha256": "33fcb23440ff2dfe553b0de5eecfea57a2b36128657385695290412a81e2b074",
       "bounds": {
         "west": 110.0,
         "south": -45.0,
@@ -177,6 +183,9 @@
     },
     "common-brushtail-possum": {
       "imageFile": "common-brushtail-possum.png",
+      "speciesId": "common-brushtail-possum",
+      "modelVersion": "common-brushtail-possum:2026-09-26T10:46:09Z",
+      "imageSha256": "de0b2768691956e7f472dacb20ca755e865ab4620e7a8d155934c7ef07493ae8",
       "bounds": {
         "west": 110.0,
         "south": -45.0,
@@ -241,6 +250,9 @@
     },
     "common-ringtail-possum": {
       "imageFile": "common-ringtail-possum.png",
+      "speciesId": "common-ringtail-possum",
+      "modelVersion": "common-ringtail-possum:2026-09-26T10:51:41Z",
+      "imageSha256": "b17aa5f78caf91ce283591dd90f56430f6fd549687ede82f4ab7f3ee9ec3eb61",
       "bounds": {
         "west": 110.0,
         "south": -45.0,
@@ -305,6 +317,9 @@
     },
     "swamp-wallaby": {
       "imageFile": "swamp-wallaby.png",
+      "speciesId": "swamp-wallaby",
+      "modelVersion": "swamp-wallaby:2026-09-26T10:59:12Z",
+      "imageSha256": "408c58526ef0db08623f43e12188056b077ff2bd2b12c4a87840644885af7298",
       "bounds": {
         "west": 110.0,
         "south": -45.0,
@@ -369,6 +384,9 @@
     },
     "common-wombat": {
       "imageFile": "common-wombat.png",
+      "speciesId": "common-wombat",
+      "modelVersion": "common-wombat:2026-09-26T11:04:54Z",
+      "imageSha256": "415b201e9df284bfed8c8d77b385922d8ae36c70742aa2944e35bdcc9c74ac01",
       "bounds": {
         "west": 110.0,
         "south": -45.0,
@@ -433,6 +451,9 @@
     },
     "greater-glider": {
       "imageFile": "greater-glider.png",
+      "speciesId": "greater-glider",
+      "modelVersion": "greater-glider:2026-09-26T11:08:04Z",
+      "imageSha256": "0a00b74902076e4bb506c950bd8db822fd5a05b53efcd19896808248a295ad58",
       "bounds": {
         "west": 110.0,
         "south": -45.0,

@@ -51,6 +51,7 @@ MAP_STYLE_URL) draws its labels as their own layer above this overlay
 """
 import hashlib
 import json
+import math
 import warnings
 from datetime import UTC, datetime
 from pathlib import Path
@@ -358,9 +359,36 @@ def _load_predictor_provenance() -> dict:
 def _require_number(value, label: str, species_id: str) -> float:
     # ENMeval returns "NA" (not an error) for the continuous Boyce index when
     # the optional ecospat package is missing - never let that reach the app.
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value)):
         raise ValueError(f"{species_id}: {label} is {value!r}, expected a number.")
     return float(value)
+
+
+def validate_model_metadata(metadata: dict, species_id: str) -> None:
+    """Reject corrupt/mismatched evaluation output before writing a mobile image.
+
+    Range/selection checks are technical validity, not scientific acceptance.
+    Scientific quality thresholds still need an explicit project review decision.
+    """
+    if metadata.get("speciesId") != species_id:
+        raise ValueError(f"{species_id}: model metadata belongs to another species")
+    evaluation = metadata["evaluation"]
+    for field, lower, upper in [
+        ("auc_validation_average", 0, 1),
+        ("continuous_boyce_index_average", -1, 1),
+        ("omission_rate_10th_percentile_average", 0, 1),
+    ]:
+        value = _require_number(evaluation[field], field, species_id)
+        if not lower <= value <= upper:
+            raise ValueError(f"{species_id}: {field} must be between {lower} and {upper}")
+    _require_number(evaluation["aicc"], "AICc", species_id)
+    delta = _require_number(evaluation["delta_aicc"], "delta AICc", species_id)
+    threshold = _require_number(
+        metadata["tuning"]["deltaAiccSelectionThreshold"], "delta AICc threshold", species_id
+    )
+    if not 0 <= delta <= threshold:
+        raise ValueError(f"{species_id}: selected model fails its delta AICc selection threshold")
 
 
 def _convert_species(species_id: str, predictor_bands: dict) -> dict:
@@ -373,17 +401,17 @@ def _convert_species(species_id: str, predictor_bands: dict) -> dict:
                 "for MaxEnt.R' first."
             )
 
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    validate_model_metadata(metadata, species_id)
+
     with rasterio.open(raster_path) as src:
         suitability = _to_web_mercator(src)
         west, south, east, north = src.bounds
 
     rgba = _colourise(suitability)
 
-    ASSET_DIR.mkdir(parents=True, exist_ok=True)
     png_path = ASSET_DIR / f"{species_id}.png"
-    _write_png(png_path, rgba)
 
-    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     evaluation = metadata["evaluation"]
     training = metadata["trainingInputs"]
     if "recordCounts" not in training:
@@ -407,17 +435,19 @@ def _convert_species(species_id: str, predictor_bands: dict) -> dict:
         reverse=True,
     )
 
-    valid_share = float(np.mean(~np.isnan(suitability)))
-    print(
-        f"  {species_id}: {suitability.shape[1]}x{suitability.shape[0]} px, "
-        f"{png_path.stat().st_size / 1024:.0f} KB, "
-        f"{valid_share:.0%} land, max suitability {np.nanmax(suitability):.2f}"
-    )
+    if (any(not 0 <= item["percent"] <= 100 for item in variable_contribution)
+            or abs(sum(item["percent"] for item in variable_contribution) - 100) > 0.2):
+        raise ValueError(f"{species_id}: variable contributions must sum to 100%")
 
-    return {
+    layer = {
         "imageFile": png_path.name,
+        "speciesId": species_id,
+        "modelVersion": f"{species_id}:{metadata['generatedAt']}",
         "bounds": {"west": west, "south": south, "east": east, "north": north},
-        "displayWording": metadata["displayWording"],
+        "displayWording": (
+            "Model-based suitability estimate - not a guaranteed sighting "
+            "or a future distribution forecast."
+        ),
         "evaluation": {
             "aucValidation": _require_number(
                 evaluation["auc_validation_average"], "AUC", species_id
@@ -452,6 +482,17 @@ def _convert_species(species_id: str, predictor_bands: dict) -> dict:
             "backgroundPoints": training["backgroundPoints"],
         },
     }
+    # Complete metadata checks before replacing this species' existing output.
+    ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    _write_png(png_path, rgba)
+    layer["imageSha256"] = hashlib.sha256(png_path.read_bytes()).hexdigest()
+    valid_share = float(np.mean(~np.isnan(suitability)))
+    print(
+        f"  {species_id}: {suitability.shape[1]}x{suitability.shape[0]} px, "
+        f"{png_path.stat().st_size / 1024:.0f} KB, "
+        f"{valid_share:.0%} land, max suitability {np.nanmax(suitability):.2f}"
+    )
+    return layer
 
 
 def build_suitability_layers() -> Path:
