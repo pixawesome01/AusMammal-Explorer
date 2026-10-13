@@ -270,12 +270,9 @@ export function ExplorerWorkspace({
           {activeTab === "prediction" && suitabilityLayer ? (
             <>
               <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
-                <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
-                  Potential observation areas
-                </Text>
                 <View style={styles.legendLabels}>
-                  <Text style={styles.legendLabel}>Lower suitability</Text>
-                  <Text style={styles.legendLabel}>Higher suitability</Text>
+                  <Text style={styles.legendLabel}>Less suitable area</Text>
+                  <Text style={[styles.legendLabel, styles.legendLabelRight]}>More potential observation</Text>
                 </View>
                 <View style={styles.legendBar}>
                   {SUITABILITY_LEGEND_COLORS.map((color) => (
@@ -293,9 +290,6 @@ export function ExplorerWorkspace({
               accessibilityLabel="Habitat suitability unavailable"
               style={styles.predictionLegend}
             >
-              <Text accessibilityRole="header" style={styles.predictionLegendTitle}>
-                Potential observation areas
-              </Text>
               <Text style={styles.predictionLegendNote}>
                 No suitability model is available yet for {selectedSpecies.commonName}.
               </Text>
@@ -662,9 +656,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
-  predictionLegendTitle: { color: "#26342d", fontSize: 15, fontWeight: "600", textAlign: "center" },
-  legendLabels: { flexDirection: "row", justifyContent: "space-between", marginTop: 7, marginBottom: 4 },
-  legendLabel: { color: "#4a5750", fontSize: 11, fontWeight: "600" },
+  legendLabels: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", gap: 8, marginBottom: 4 },
+  legendLabel: { flexShrink: 1, color: "#4a5750", fontSize: 11, fontWeight: "600" },
+  legendLabelRight: { textAlign: "right" },
   legendBar: { height: 16, flexDirection: "row", overflow: "hidden", borderRadius: 8, borderWidth: 1, borderColor: "#26342d" },
   legendSegment: { flex: 1 },
   predictionLegendNote: { marginTop: 6, color: "#4a5750", fontSize: 11, textAlign: "center" },

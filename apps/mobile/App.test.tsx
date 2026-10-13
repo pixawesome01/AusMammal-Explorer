@@ -480,6 +480,11 @@ describe("ExplorerWorkspace species flow", () => {
 
     await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
     expect(screen.getByLabelText("Habitat suitability legend")).toBeTruthy();
+    expect(screen.queryByText("Potential observation areas")).toBeNull();
+    expect(screen.queryByText("Lower suitability")).toBeNull();
+    expect(screen.queryByText("Higher suitability")).toBeNull();
+    expect(screen.getByText("Less suitable area")).toBeTruthy();
+    expect(screen.getByText("More potential observation")).toHaveStyle({ textAlign: "right", flexShrink: 1 });
     expect(screen.getByTestId("source-suitability-image")).toBeTruthy();
     expect(screen.queryByText("FUTURE FEATURE")).toBeNull();
 
