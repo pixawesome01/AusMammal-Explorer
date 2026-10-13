@@ -79,10 +79,14 @@ describe("SpeciesSelector", () => {
 
     await fireEvent.press(screen.getByRole("button", { name: "Seasonal view" }));
     expect(screen.getByLabelText("Seasonal species view")).toBeTruthy();
-    expect(screen.getByText("Winter · August")).toBeTruthy();
+    expect(screen.queryByText("AUSTRALIAN SEASON")).toBeNull();
+    expect(screen.queryByText("Winter · August")).toBeNull();
+    expect(screen.queryByText("Choose a mammal to map records from this month.")).toBeNull();
+    expect(screen.getByRole("button", { name: "August", selected: true })).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("button", { name: "Next month" }));
-    expect(screen.getByText("Spring · September")).toBeTruthy();
+    expect(screen.queryByText("Spring · September")).toBeNull();
+    expect(screen.getByRole("button", { name: "September", selected: true })).toBeTruthy();
 
     await fireEvent.press(
       screen.getByRole("button", { name: "Koala, September records" }),
@@ -122,7 +126,10 @@ describe("SpeciesSelector", () => {
     const diameter = (speciesId: string) =>
       StyleSheet.flatten(screen.getByTestId(`seasonal-bubble-${speciesId}`).props.style).width;
     // October in the 20% sample: Koala 1,036, Common Wombat 207, Greater Glider 145 records.
-    expect(screen.getByText("1,036 records")).toBeTruthy();
+    expect(screen.getByText("1,036")).toBeTruthy();
+    expect(screen.getByText("207")).toBeTruthy();
+    expect(screen.getByText("145")).toBeTruthy();
+    expect(screen.queryByText(/^\d[\d,]* records$/)).toBeNull();
     expect(diameter("koala")).toBeGreaterThan(diameter("common-wombat"));
     expect(diameter("common-wombat")).toBeGreaterThan(diameter("greater-glider"));
     expect(

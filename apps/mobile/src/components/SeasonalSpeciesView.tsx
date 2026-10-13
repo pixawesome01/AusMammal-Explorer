@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native";
 
-import { getAustralianSeason } from "../data/occurrenceFilter";
 import type { OccurrenceSnapshotManifest } from "../data/occurrenceSnapshot";
 import { MVP_SPECIES, type Species } from "../species";
 import {
@@ -54,11 +53,6 @@ function wrapMonth(month: number) {
   return ((month - 1 + 12) % 12) + 1;
 }
 
-export function getSeasonLabel(month: number) {
-  const season = getAustralianSeason(month);
-  return `${season[0].toUpperCase()}${season.slice(1)} · ${MONTHS[month - 1]}`;
-}
-
 export function SeasonalSpeciesView({
   imageRevision = 0,
   imageSourceForSpecies,
@@ -97,12 +91,6 @@ export function SeasonalSpeciesView({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.eyebrow}>AUSTRALIAN SEASON</Text>
-      <Text accessibilityLiveRegion="polite" accessibilityRole="header" style={styles.heading}>
-        {getSeasonLabel(month)}
-      </Text>
-      <Text style={styles.helper}>Choose a mammal to map records from this month.</Text>
-
       <View style={[styles.constellation, { width: canvasWidth }]}>
         {bubbles.map(({ species, monthRecords, isSelected }, index) => {
           const { centerX, centerY, diameter } = placements[index];
@@ -150,7 +138,7 @@ export function SeasonalSpeciesView({
                 {species.commonName}
               </Text>
               {monthRecords === undefined ? null : (
-                <Text style={styles.bubbleCount}>{monthRecords.toLocaleString()} records</Text>
+                <Text style={styles.bubbleCount}>{monthRecords.toLocaleString()}</Text>
               )}
             </Pressable>
           );
@@ -209,9 +197,6 @@ export function SeasonalSpeciesView({
 
 const styles = StyleSheet.create({
   content: { alignItems: "center", paddingHorizontal: 12, paddingBottom: 34 },
-  eyebrow: { color: "#9fc7aa", fontSize: 9, fontWeight: "600", letterSpacing: 1.3 },
-  heading: { marginTop: 5, color: "#ffffff", fontSize: 23, fontWeight: "600" },
-  helper: { marginTop: 6, color: "#c4cbd1", fontSize: 12, fontWeight: "400" },
   constellation: { position: "relative", height: SEASONAL_CANVAS_HEIGHT, marginTop: 8 },
   bubble: { position: "absolute", alignItems: "center" },
   bubbleImage: {
