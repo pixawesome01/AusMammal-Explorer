@@ -137,7 +137,7 @@ export function ExplorerWorkspace({
   const [mapZoom, setMapZoom] = useState(MAP_ZOOM_RANGE.initial);
   const [mapViewportHeight, setMapViewportHeight] = useState<number | null>(null);
   const [topControlsHeight, setTopControlsHeight] = useState(0);
-  const [predictionDockHeight, setPredictionDockHeight] = useState(100);
+  const [predictionDockHeight, setPredictionDockHeight] = useState(200);
   const [isExplorerOpen, setExplorerOpen] = useState(false);
   const [selectorImageRevision, setSelectorImageRevision] = useState(0);
   const [activeTab, setActiveTab] = useState<ExplorerTab>("records");
@@ -183,7 +183,7 @@ export function ExplorerWorkspace({
   const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
   const viewportHeight = mapViewportHeight ?? windowHeight;
   const zoomCenterY = viewportHeight / 2 - Math.min(32, Math.round(viewportHeight * 0.04));
-  const zoomTopLimit = (topControlsHeight || (activeTab === "prediction" ? 300 : 160)) + 12;
+  const zoomTopLimit = (topControlsHeight || 160) + 12;
   const zoomBottomLimit = viewportHeight -
     (activeTab === "prediction" ? predictionDockHeight : sheetHeight) - 12;
   // Keep the rail slightly above centre, independent of the differently sized tab overlays.
@@ -269,38 +269,11 @@ export function ExplorerWorkspace({
             <View style={styles.topControlSpacer} />
             </View>
 
-          {activeTab === "prediction" && suitabilityLayer ? (
-            <>
-              <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
-                <View style={styles.legendLabels}>
-                  <Text style={styles.legendLabel}>Less suitable area</Text>
-                  <Text style={[styles.legendLabel, styles.legendLabelRight]}>More potential observation</Text>
-                </View>
-                <View style={styles.legendBar}>
-                  {SUITABILITY_LEGEND_COLORS.map((color) => (
-                    <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
-                  ))}
-                </View>
-                <Text style={styles.predictionLegendNote}>
-                  {suitabilityLayer.displayWording}
-                </Text>
-              </View>
-              <ModelInfoPanel layer={suitabilityLayer} speciesName={selectedSpecies.commonName} />
-            </>
-          ) : activeTab === "prediction" ? (
-            <View
-              accessibilityLabel="Habitat suitability unavailable"
-              style={styles.predictionLegend}
-            >
-              <Text style={styles.predictionLegendNote}>
-                No suitability model is available yet for {selectedSpecies.commonName}.
-              </Text>
-            </View>
-          ) : (
+          {activeTab !== "prediction" ? (
             <View testID="map-record-summary" accessibilityLiveRegion="polite" style={styles.mapCountPill}>
               <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
             </View>
-          )}
+          ) : null}
           </SafeAreaView>
 
           {activeTab !== "insights" && zoomSliderHeight >= 96 ? (
@@ -318,10 +291,35 @@ export function ExplorerWorkspace({
           ) : null}
 
           {activeTab === "prediction" ? (
-            <View style={styles.predictionDock}
+            <View testID="prediction-bottom-dock" style={styles.predictionDock}
               onLayout={({ nativeEvent }) => setPredictionDockHeight(nativeEvent.layout.height)}>
               <View style={styles.sheetHandle} />
               <ExplorerTabs activeTab={activeTab} onChange={setActiveTab} />
+              {suitabilityLayer ? (
+                <>
+                  <View accessibilityLabel="Habitat suitability legend" style={styles.predictionLegend}>
+                    <View style={styles.legendLabels}>
+                      <Text style={styles.legendLabel}>Less suitable area</Text>
+                      <Text style={[styles.legendLabel, styles.legendLabelRight]}>More potential observation</Text>
+                    </View>
+                    <View style={styles.legendBar}>
+                      {SUITABILITY_LEGEND_COLORS.map((color) => (
+                        <View key={color} style={[styles.legendSegment, { backgroundColor: color }]} />
+                      ))}
+                    </View>
+                    <Text style={styles.predictionLegendNote}>
+                      {suitabilityLayer.displayWording}
+                    </Text>
+                  </View>
+                  <ModelInfoPanel layer={suitabilityLayer} speciesName={selectedSpecies.commonName} />
+                </>
+              ) : (
+                <View accessibilityLabel="Habitat suitability unavailable" style={styles.predictionLegend}>
+                  <Text style={styles.predictionLegendNote}>
+                    No suitability model is available yet for {selectedSpecies.commonName}.
+                  </Text>
+                </View>
+              )}
             </View>
           ) : (
             <View testID="explorer-bottom-sheet" style={[styles.bottomSheet, { height: sheetHeight }]}>
@@ -644,19 +642,7 @@ const styles = StyleSheet.create({
   aboutButtonText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "700" },
   predictionLegend: {
     marginTop: 10,
-    marginHorizontal: 22,
-    paddingHorizontal: 15,
-    paddingTop: 10,
-    paddingBottom: 9,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.78)",
-    borderRadius: 24,
-    backgroundColor: "rgba(250,252,250,0.89)",
-    shadowColor: "#54645b",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 5,
+    paddingHorizontal: 8,
   },
   legendLabels: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", gap: 8, marginBottom: 4 },
   legendLabel: { flexShrink: 1, color: "#4a5750", fontSize: 11, fontWeight: "600" },

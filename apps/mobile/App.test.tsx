@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 
 import { ExplorerWorkspace } from "./App";
 import type { OccurrenceAssetReader, OccurrenceFeature } from "./src/data/occurrenceLoader";
@@ -461,7 +461,7 @@ describe("ExplorerWorkspace species flow", () => {
     warning.mockRestore();
   });
 
-  it("collapses prediction into a map overlay and exposes the insights charts", async () => {
+  it("keeps the prediction legend and compact model link in the bottom dock and exposes the insights charts", async () => {
     const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
       type: "FeatureCollection",
@@ -484,7 +484,13 @@ describe("ExplorerWorkspace species flow", () => {
     await waitFor(() => expect(screen.getByTestId("source-occurrence-records")).toBeTruthy());
 
     await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
-    expect(screen.getByLabelText("Habitat suitability legend")).toBeTruthy();
+    const dock = within(screen.getByTestId("prediction-bottom-dock"));
+    const top = within(screen.getByTestId("map-top-controls"));
+    expect(dock.getByLabelText("Habitat suitability legend")).toBeTruthy();
+    expect(dock.getByRole("button", { name: "About this model" })).toHaveStyle({ minHeight: 44 });
+    expect(dock.getByText("About this model")).toHaveStyle({ fontSize: 11, fontWeight: "500" });
+    expect(top.queryByLabelText("Habitat suitability legend")).toBeNull();
+    expect(top.queryByRole("button", { name: "About this model" })).toBeNull();
     expect(screen.queryByText("Potential observation areas")).toBeNull();
     expect(screen.queryByText("Lower suitability")).toBeNull();
     expect(screen.queryByText("Higher suitability")).toBeNull();
@@ -492,8 +498,13 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.getByText("More potential observation")).toHaveStyle({ textAlign: "right", flexShrink: 1 });
     await waitFor(() => expect(screen.getByTestId("source-suitability-image").props.url).toBe("file:///cache/suitability.png"));
     expect(screen.queryByText("FUTURE FEATURE")).toBeNull();
+    await fireEvent.press(dock.getByRole("button", { name: "About this model" }));
+    expect(screen.getByRole("header", { name: "About this model" })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Close about this model" }));
+    expect(screen.queryByRole("header", { name: "About this model" })).toBeNull();
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.queryByTestId("prediction-bottom-dock")).toBeNull();
     expect(screen.getByLabelText("Monthly occurrence pattern for Koala")).toBeTruthy();
     expect(screen.getByLabelText("Typical monthly temperature chart")).toBeTruthy();
     expect(screen.getByLabelText("Typical daily rainfall chart")).toBeTruthy();
