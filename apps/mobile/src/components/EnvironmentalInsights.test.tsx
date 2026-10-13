@@ -41,7 +41,9 @@ describe("EnvironmentalInsights", () => {
     }
     await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
       { nativeEvent: { locationX: 235, locationY: 135 } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent(/1\.0 average per month/);
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^1 record · 1\.0 average$/);
+    expect(screen.getByTestId("month-scrubber").props.accessibilityValue.text)
+      .toBe("Apr: 1 records, 1.0 average records per month");
     expect(screen.queryByLabelText("Seasonal occurrence averages")).toBeNull();
     expect(screen.queryByText("Seasonal averages")).toBeNull();
     expect(screen.queryByText(/Averages include months with zero records/)).toBeNull();
@@ -86,25 +88,31 @@ describe("EnvironmentalInsights", () => {
 
 
 describe("monthly chart scrubbing", () => {
-  it("shows the touched month, updates while dragging, and preserves the last value", async () => {
+  it("shows a compact count while preserving the selected month for accessibility and dragging", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
     const hintStyle = { fontSize: 14, fontWeight: "400", color: "#566159" } as const;
     expect(screen.getByText("Slide around the chart to explore each month")).toHaveStyle(hintStyle);
     expect(screen.getByText("Tap a bar to see temperature")).toHaveStyle(hintStyle);
     const chart = screen.getByTestId("month-scrubber");
     await fireEvent(chart, "responderGrant", { nativeEvent: { locationX: 235, locationY: 135 } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent("Apr · 1 record");
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^1 record$/);
+    expect(chart.props.accessibilityValue.text).toBe("Apr: 1 records");
     expect(screen.getByTestId("month-readout")).toHaveStyle({ fontSize: 16, fontWeight: "600", color: "#34423a" });
     await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 35 } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 records");
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^0 records$/);
+    expect(chart.props.accessibilityValue.text).toBe("Jan: 0 records");
     await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 135, locationY: 135 } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 records");
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^0 records$/);
+    expect(chart.props.accessibilityValue.text).toBe("Jan: 0 records");
     await fireEvent(chart, "responderMove", { nativeEvent: { locationX: 400, locationY: 400 } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 records");
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^0 records$/);
+    expect(chart.props.accessibilityValue.text).toBe("Jan: 0 records");
     await fireEvent(chart, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent("Dec · 0 records");
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^0 records$/);
+    expect(chart.props.accessibilityValue.text).toBe("Dec: 0 records");
     await fireEvent(chart, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
-    expect(screen.getByTestId("month-readout")).toHaveTextContent("Jan · 0 records");
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^0 records$/);
+    expect(chart.props.accessibilityValue.text).toBe("Jan: 0 records");
   });
 });
 

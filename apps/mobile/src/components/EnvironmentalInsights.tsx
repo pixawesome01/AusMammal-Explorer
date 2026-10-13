@@ -297,10 +297,10 @@ export function EnvironmentalInsights({
             </View>
             <Text testID="month-readout" style={[styles.monthReadout, selectedMonth === null && styles.chartHint]}>
               {selected
-                ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "record" : "records"}`
+                ? `${selected.count.toLocaleString()} ${selected.count === 1 ? "record" : "records"}`
                 : "Slide around the chart to explore each month"}
               {selected && averages
-                ? ` · ${averages[selected.month - 1].average?.toFixed(1) ?? "—"} average per month`
+                ? ` · ${averages[selected.month - 1].average?.toFixed(1) ?? "—"} average`
                 : ""}
             </Text>
             <Text style={styles.description}>
