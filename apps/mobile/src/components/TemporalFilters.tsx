@@ -1,7 +1,8 @@
 import { useMemo, useRef } from "react";
 import { PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { OccurrenceTemporalFilter } from "../data/occurrenceFilter";
+import { OCCURRENCE_SEASONS, type OccurrenceTemporalFilter } from "../data/occurrenceFilter";
+import { READABLE_COLOURS } from "./accessibility";
 
 const MONTHS = [
   "January",
@@ -148,7 +149,12 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
   ];
   const selectedYearIndex = value.year === undefined ? 0 : years.indexOf(value.year) + 1;
   const selectedMonthIndex = value.month ?? 0;
-  const hasActiveFilter = value.year !== undefined || value.month !== undefined;
+  const seasonOptions: SliderOption[] = [
+    { label: "All seasons", value: undefined },
+    ...["Summer (Dec–Feb)", "Autumn (Mar–May)", "Winter (Jun–Aug)", "Spring (Sep–Nov)"].map((label, index) => ({ label, value: index })),
+  ];
+  const selectedSeasonIndex = value.season === undefined ? 0 : OCCURRENCE_SEASONS.indexOf(value.season) + 1;
+  const hasActiveFilter = value.year !== undefined || value.month !== undefined || value.season !== undefined;
 
   return (
     <View accessibilityLabel="Occurrence time filters" style={styles.card}>
@@ -164,15 +170,21 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
 
       <DiscreteSlider
         accessibilityLabel="Year"
-        onSelect={(year) => onChange({ year, month: value.month })}
+        onSelect={(year) => onChange({ ...value, year })}
         options={yearOptions}
         selectedIndex={selectedYearIndex}
       />
       <DiscreteSlider
         accessibilityLabel="Month"
-        onSelect={(month) => onChange({ year: value.year, month })}
+        onSelect={(month) => onChange({ ...value, month })}
         options={monthOptions}
         selectedIndex={selectedMonthIndex}
+      />
+      <DiscreteSlider
+        accessibilityLabel="Season"
+        onSelect={(index) => onChange({ ...value, season: index === undefined ? undefined : OCCURRENCE_SEASONS[index] })}
+        options={seasonOptions}
+        selectedIndex={selectedSeasonIndex}
       />
     </View>
   );
@@ -185,14 +197,13 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   clearButton: {
-    position: "absolute",
-    top: 1,
-    right: 4,
-    zIndex: 2,
+    alignSelf: "flex-end",
+    minHeight: 44,
+    justifyContent: "center",
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-  clearText: { color: "#3783ee", fontSize: 10, fontWeight: "700" },
+  clearText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "700" },
   sliderBlock: { marginTop: 1, marginBottom: 3 },
   sliderValue: {
     alignSelf: "center",
@@ -210,7 +221,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   sliderTouchArea: {
-    height: 26,
+    height: 44,
     marginTop: 1,
     marginHorizontal: 9,
     justifyContent: "center",
@@ -267,5 +278,5 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 9,
   },
-  sliderRangeText: { color: "#7b8580", fontSize: 8, fontWeight: "600" },
+  sliderRangeText: { color: READABLE_COLOURS.muted, fontSize: 10, fontWeight: "600" },
 });

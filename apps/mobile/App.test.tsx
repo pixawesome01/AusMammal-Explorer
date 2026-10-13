@@ -82,7 +82,7 @@ async function returnToSpeciesSelector() {
   });
 }
 
-async function incrementSlider(label: "Year" | "Month", count: number) {
+async function incrementSlider(label: "Year" | "Month" | "Season", count: number) {
   for (let index = 0; index < count; index += 1) {
     await fireEvent(
       screen.getByRole("adjustable", { name: label }),
@@ -279,6 +279,8 @@ describe("ExplorerWorkspace species flow", () => {
 
     await incrementSlider("Year", 5);
     await waitFor(() => expect(screen.getByText("3 records shown")).toBeTruthy());
+    await incrementSlider("Season", 3);
+    await waitFor(() => expect(screen.getByText("2 records shown")).toBeTruthy());
     await incrementSlider("Month", 6);
     await waitFor(() => expect(screen.getByText("1 record shown")).toBeTruthy());
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
@@ -289,6 +291,10 @@ describe("ExplorerWorkspace species flow", () => {
       (sum, row) => sum + Number(row.props.children), 0,
     )).toBe(1);
     await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
+
+    await incrementSlider("Season", 1);
+    await waitFor(() => expect(screen.getByText("No records shown")).toBeTruthy());
+    expect(screen.queryByTestId("source-occurrence-records")).toBeNull();
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
     await waitFor(() => expect(screen.getByText("4 records shown")).toBeTruthy());
