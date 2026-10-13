@@ -33,6 +33,12 @@ describe("EnvironmentalInsights", () => {
     expect(screen.queryByText(/^Climate reference$/i)).toBeNull();
     expect(screen.getByRole("header", { name: "Typical monthly temperature" })).toBeTruthy();
     expect(screen.getByRole("header", { name: "Typical daily rainfall" })).toBeTruthy();
+    for (const name of ["Average records by month", "Typical monthly temperature", "Typical daily rainfall"]) {
+      const title = screen.getByRole("header", { name });
+      expect(title).toHaveStyle({ textAlign: "center" });
+      expect(title.props.numberOfLines).toBe(1);
+      expect(title.props.adjustsFontSizeToFit).toBe(true);
+    }
     await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
       { nativeEvent: { locationX: 235, locationY: 135 } });
     expect(screen.getByTestId("month-readout")).toHaveTextContent(/1\.0 average per month/);

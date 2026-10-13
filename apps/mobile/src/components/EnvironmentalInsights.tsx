@@ -190,16 +190,19 @@ export function EnvironmentalInsights({
         style={[styles.card, styles.monthCard]}
       >
         <View style={styles.cardHeading}>
-          <View style={styles.calendarIcon}>
-            <View style={[styles.calendarRing, styles.calendarRingLeft]} />
-            <View style={[styles.calendarRing, styles.calendarRingRight]} />
-            <View style={styles.calendarHeader} />
+          <View style={styles.headingIcon}>
+            <View style={styles.calendarIcon}>
+              <View style={[styles.calendarRing, styles.calendarRingLeft]} />
+              <View style={[styles.calendarRing, styles.calendarRingRight]} />
+              <View style={styles.calendarHeader} />
+            </View>
           </View>
           <View style={styles.headingText}>
-            <Text accessibilityRole="header" style={styles.title}>
+            <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.title}>
               {averages ? "Average records by month" : "Records by month"}
             </Text>
           </View>
+          <View style={styles.headingIcon} />
         </View>
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
@@ -327,10 +330,11 @@ export function EnvironmentalInsights({
 
       <View accessibilityLabel="Australia climate context" style={[styles.card, styles.climateCard]}>
         <View style={styles.cardHeading}>
-          <Text style={styles.icon}>℃</Text>
+          <View style={styles.headingIcon}><Text style={styles.icon}>℃</Text></View>
           <View style={styles.headingText}>
-            <Text accessibilityRole="header" style={styles.title}>Typical monthly temperature</Text>
+            <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.title}>Typical monthly temperature</Text>
           </View>
+          <View style={styles.headingIcon} />
         </View>
         <ClimateBarChart
           accessibilityLabel="Typical monthly temperature chart"
@@ -349,10 +353,11 @@ export function EnvironmentalInsights({
 
         <View style={styles.sectionDivider} />
         <View style={styles.cardHeading}>
-          <Text style={styles.icon}>☂</Text>
+          <View style={styles.headingIcon}><Text style={styles.icon}>☂</Text></View>
           <View style={styles.headingText}>
-            <Text accessibilityRole="header" style={styles.title}>Typical daily rainfall</Text>
+            <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.title}>Typical daily rainfall</Text>
           </View>
+          <View style={styles.headingIcon} />
         </View>
         <ClimateBarChart
           accessibilityLabel="Typical daily rainfall chart"
@@ -402,36 +407,37 @@ const styles = StyleSheet.create({
   },
   monthCard: { shadowColor: "#7ba287", shadowOpacity: 0.12, shadowRadius: 16 },
   climateCard: { shadowColor: "#83b495", shadowOpacity: 0.15, shadowRadius: 20 },
-  cardHeading: { flexDirection: "row", alignItems: "center", gap: 11 },
-  icon: { width: 32, color: "#747b78", fontSize: 25, fontWeight: "400", textAlign: "center" },
+  cardHeading: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 28 },
+  // Equal side slots keep the title centred in the card, not the remaining space.
+  headingIcon: { width: 24, alignItems: "center", justifyContent: "center" },
+  icon: { color: "#747b78", fontSize: 20, fontWeight: "400", textAlign: "center" },
   calendarIcon: {
-    width: 29,
-    height: 27,
-    marginHorizontal: 2,
-    borderWidth: 3,
+    width: 22,
+    height: 21,
+    borderWidth: 2,
     borderColor: "#747b78",
-    borderRadius: 5,
+    borderRadius: 4,
   },
   calendarRing: {
     position: "absolute",
-    top: -6,
-    width: 3,
-    height: 10,
+    top: -5,
+    width: 2,
+    height: 8,
     borderRadius: 2,
     backgroundColor: "#747b78",
   },
-  calendarRingLeft: { left: 5 },
-  calendarRingRight: { right: 5 },
+  calendarRingLeft: { left: 4 },
+  calendarRingRight: { right: 4 },
   calendarHeader: {
     position: "absolute",
-    top: 6,
+    top: 5,
     left: -1,
     right: -1,
-    height: 3,
+    height: 2,
     backgroundColor: "#747b78",
   },
-  headingText: { flex: 1 },
-  title: { color: "#34423a", fontSize: 18, fontWeight: "600" },
+  headingText: { flex: 1, minWidth: 0 },
+  title: { color: "#34423a", fontSize: 18, fontWeight: "600", textAlign: "center" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
   radialChart: {
     alignSelf: "center",
