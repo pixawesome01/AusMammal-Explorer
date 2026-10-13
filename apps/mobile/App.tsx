@@ -180,11 +180,11 @@ export function ExplorerWorkspace({
   const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? compactSheetHeight);
   const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
   const viewportHeight = mapViewportHeight ?? windowHeight;
-  const zoomCenterY = viewportHeight / 2;
+  const zoomCenterY = viewportHeight / 2 - Math.min(32, Math.round(viewportHeight * 0.04));
   const zoomTopLimit = (topControlsHeight || (activeTab === "prediction" ? 300 : 160)) + 12;
   const zoomBottomLimit = viewportHeight -
     (activeTab === "prediction" ? predictionDockHeight : sheetHeight) - 12;
-  // Keep the rail centred on the screen, not the differently sized tab overlays.
+  // Keep the rail slightly above centre, independent of the differently sized tab overlays.
   // If space is limited, shorten it symmetrically instead of moving its centre.
   const zoomSliderHeight = Math.min(196, 2 * Math.min(
     zoomCenterY - zoomTopLimit, zoomBottomLimit - zoomCenterY,
