@@ -368,11 +368,12 @@ export function ExplorerWorkspace({
                   showsVerticalScrollIndicator={false}
                 >
                   <EnvironmentalInsights
-                    collection={occurrenceState.unfilteredRecords?.collection}
+                    collection={occurrenceState.records?.collection}
                     speciesName={selectedSpecies.commonName}
-                    status={occurrenceState.unfilteredRecords
-                      ? (occurrenceState.unfilteredRecords.collection.features.length ? "ready" : "empty")
-                      : occurrenceState.status}
+                    status={occurrenceState.status}
+                    coverage={manifest.files[selectedSpecies.id].coverage}
+                    temporalFilter={temporalFilter}
+                    dateRange={dateRange}
                   />
                   <OccurrenceSummary species={selectedSpecies} state={occurrenceState} />
                   <StateRanking
@@ -412,7 +413,7 @@ export function ExplorerWorkspace({
                   <View style={styles.modalHeaderSpacer} />
                 </View>
                 <ScrollView contentContainerStyle={styles.aboutContent}>
-                  <AboutOccurrenceData species={selectedSpecies} state={occurrenceState} />
+                  <AboutOccurrenceData species={selectedSpecies} state={occurrenceState} manifest={manifest} />
                   <Text style={styles.dataNote}>
                     Occurrence records show where a species has been recorded. They do not guarantee
                     a current sighting.

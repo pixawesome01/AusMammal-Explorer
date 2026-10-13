@@ -12,6 +12,8 @@ const RECORDS: LoadedOccurrenceRecords = {
   source: OCCURRENCE_SNAPSHOT.source,
   storageUrl: OCCURRENCE_SNAPSHOT.storageUrl,
   license: OCCURRENCE_SNAPSHOT.license,
+  attribution: OCCURRENCE_SNAPSHOT.attribution,
+  limitations: OCCURRENCE_SNAPSHOT.limitations,
   speciesId: "koala",
   file: OCCURRENCE_SNAPSHOT.files.koala,
   collection: {

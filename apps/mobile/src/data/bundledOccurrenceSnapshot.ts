@@ -52,6 +52,7 @@ function bundledFile(file: OccurrenceSnapshotFile): OccurrenceSnapshotFile {
     ...file,
     fileName: file.fileName.replace("cleaned_", "sample20_"),
     recordCount: bundledSampleSize(file.recordCount),
+    sourceRecordCount: file.recordCount,
     monthlyRecordCounts: BUNDLED_MONTHLY_RECORD_COUNTS[file.speciesId],
   };
 }

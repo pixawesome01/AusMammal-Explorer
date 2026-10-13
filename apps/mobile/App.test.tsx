@@ -193,6 +193,9 @@ describe("ExplorerWorkspace species flow", () => {
       await fireEvent.press(screen.getByRole("button", { name: "About this data" }));
       expect(screen.getByLabelText(`About ${species.commonName} occurrence data`)).toBeTruthy();
       expect(screen.getByText(`Scientific name: ${species.scientificName}`)).toBeTruthy();
+      expect(screen.getByTestId("about-filtered-count")).toHaveTextContent(
+        `Records in current view: ${index + 1}`,
+      );
       await fireEvent.press(
         screen.getByRole("button", { name: "Close about this data" }),
       );

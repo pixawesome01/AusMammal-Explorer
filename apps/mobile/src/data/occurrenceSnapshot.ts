@@ -5,6 +5,8 @@ export type OccurrenceSnapshotFile = {
   scientificName: string;
   fileName: string;
   recordCount: number;
+  /** Original full file count when this file is a derived sample. */
+  sourceRecordCount?: number;
   /** Records per calendar month, January first, when known for this file. */
   monthlyRecordCounts?: readonly number[];
   coverage: {

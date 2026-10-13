@@ -19,6 +19,10 @@ export type OccurrenceProperties = {
   uncertaintyUnknown: boolean;
   observationCount: number;
   geographicOutlier: boolean;
+  providerName?: string | null;
+  providerAttribution?: string | null;
+  providerUrl?: string | null;
+  sourceUpdatedAt?: string | null;
 };
 
 export type OccurrenceFeature = {
@@ -42,6 +46,8 @@ export type LoadedOccurrenceRecords = {
   source: string;
   storageUrl: string;
   license: string;
+  attribution: string;
+  limitations: readonly string[];
   speciesId: SpeciesId;
   file: OccurrenceSnapshotFile;
   collection: OccurrenceFeatureCollection;
@@ -143,9 +149,18 @@ function parseFeature(
   }
   if (
     typeof properties.license !== "string" ||
-    !properties.license.toLowerCase().includes(requiredLicense.toLowerCase())
+    properties.license.trim().toLowerCase() !== requiredLicense.trim().toLowerCase()
   ) {
-    return invalidRecord(index, `license must include ${requiredLicense}`);
+    return invalidRecord(index, `license must match ${requiredLicense}`);
+  }
+  for (const key of ["providerName", "providerAttribution", "providerUrl", "sourceUpdatedAt"]) {
+    const field = properties[key];
+    if (field !== undefined && field !== null && typeof field !== "string") {
+      return invalidRecord(index, `${key} must be a string or null`);
+    }
+  }
+  if (properties.sourceUpdatedAt && !isValidDate(properties.sourceUpdatedAt)) {
+    return invalidRecord(index, "sourceUpdatedAt must be a valid YYYY-MM-DD date");
   }
 
   const uncertainty = properties.coordinateUncertaintyM;
@@ -231,6 +246,8 @@ export async function loadOccurrenceRecords(
     source: manifest.source,
     storageUrl: manifest.storageUrl,
     license: manifest.license,
+    attribution: manifest.attribution,
+    limitations: manifest.limitations,
     speciesId,
     file,
     collection: parseOccurrenceFeatureCollection(rawAsset, file, manifest.license),

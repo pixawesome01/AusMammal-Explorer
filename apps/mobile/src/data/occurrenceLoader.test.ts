@@ -38,6 +38,23 @@ function collection(feature: OccurrenceFeature = VALID_KOALA_FEATURE) {
 }
 
 describe("occurrence snapshot loading", () => {
+  it("rejects ambiguous licences instead of accepting a matching substring", async () => {
+    const invalid = { ...VALID_KOALA_FEATURE,
+      properties: { ...VALID_KOALA_FEATURE.properties, license: "NOT CC-BY 4.0 (Int)" } };
+    await expect(loadOccurrenceRecords("koala", async () => collection(invalid), TEST_MANIFEST))
+      .rejects.toThrow("license must match");
+  });
+
+  it("retains provider provenance and rejects malformed provider metadata", async () => {
+    const feature = { ...VALID_KOALA_FEATURE, properties: { ...VALID_KOALA_FEATURE.properties,
+      providerName: "Museum A", providerAttribution: "Museum A contributors", sourceUpdatedAt: "2026-08-05" } };
+    const result = await loadOccurrenceRecords("koala", async () => collection(feature), TEST_MANIFEST);
+    expect(result.collection.features[0].properties.providerName).toBe("Museum A");
+    expect(result.attribution).toBe(TEST_MANIFEST.attribution);
+    feature.properties.sourceUpdatedAt = "2026-02-30";
+    await expect(loadOccurrenceRecords("koala", async () => collection(feature), TEST_MANIFEST))
+      .rejects.toThrow("sourceUpdatedAt must be a valid");
+  });
   it("loads and validates the selected species asset", async () => {
     const readAsset = jest.fn().mockResolvedValue(collection());
 
@@ -108,7 +125,7 @@ describe("occurrence snapshot loading", () => {
 
     await expect(
       loadOccurrenceRecords("koala", async () => collection(invalid), TEST_MANIFEST),
-    ).rejects.toThrow("license must include CC-BY 4.0 (Int)");
+    ).rejects.toThrow("license must match CC-BY 4.0 (Int)");
   });
 
   it("rejects an asset whose record count differs from the frozen catalogue", async () => {

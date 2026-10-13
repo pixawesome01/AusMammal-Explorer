@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
 
 import type { Species } from "../species";
 import type { UseOccurrenceRecordsResult } from "../data/useOccurrenceRecords";
@@ -20,6 +21,10 @@ function formatDate(date: string) {
 export function OccurrenceSummary({ species, state }: OccurrenceSummaryProps) {
   const records = state.records;
   const mappedCount = records?.collection.features.length;
+  const latestDate = useMemo(() => records?.collection.features.reduce(
+    (latest, feature) => feature.properties.eventDate > latest ? feature.properties.eventDate : latest,
+    "",
+  ), [records]);
 
   return (
     <View accessibilityLabel={`Occurrence summary for ${species.commonName}`} style={styles.card}>
@@ -35,8 +40,8 @@ export function OccurrenceSummary({ species, state }: OccurrenceSummaryProps) {
           <Text style={styles.metricLabel}>mapped records</Text>
         </View>
         <View style={styles.metric}>
-          <Text style={styles.metricValue}>{records ? formatDate(records.file.coverage.to) : "—"}</Text>
-          <Text style={styles.metricLabel}>latest record</Text>
+          <Text style={styles.metricValue}>{latestDate ? formatDate(latestDate) : "—"}</Text>
+          <Text style={styles.metricLabel}>latest matching record</Text>
         </View>
       </View>
     </View>
