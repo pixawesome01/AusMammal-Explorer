@@ -6,6 +6,7 @@ import {
   formatRecordCoordinates,
   formatRecordDetail,
   getClusterPressTarget,
+  getLatestRecord,
   getPressedRecordId,
   getResponsiveMapHeight,
   MAP_GLYPHS_URL,
@@ -356,7 +357,7 @@ describe("OccurrenceMap", () => {
     ).toBeNull();
   });
 
-  describe("record coordinate tooltip", () => {
+  describe("record annotations", () => {
     const collection = {
       type: "FeatureCollection" as const,
       features: [
@@ -393,6 +394,60 @@ describe("OccurrenceMap", () => {
         ],
       },
     };
+
+    it("selects the latest record and resolves same-day ties without changing the data order", () => {
+      const base = collection.features[0];
+      const records = [
+        { ...base, id: "0000000000000003", properties: { ...base.properties, eventDate: "2026-08-15" } },
+        { ...base, id: "0000000000000001", properties: { ...base.properties, eventDate: "2025-01-01" } },
+        { ...base, id: "0000000000000002", properties: { ...base.properties, eventDate: "2026-08-15" } },
+      ];
+      expect(getLatestRecord({ ...collection, features: records })).toBe(records[2]);
+      expect(getLatestRecord({ ...collection, features: [...records].reverse() })).toBe(records[2]);
+      expect(records.map(record => record.id)).toEqual([
+        "0000000000000003", "0000000000000001", "0000000000000002",
+      ]);
+      expect(getLatestRecord()).toBeUndefined();
+      expect(getLatestRecord({ ...collection, features: [] })).toBeUndefined();
+    });
+
+    it("anchors a persistent latest point and arrow at the exact coordinate, including at clustered zoom", async () => {
+      const { getByTestId, getByLabelText } = await render(
+        <OccurrenceMap collection={collection} speciesName="Koala" />,
+      );
+      expect(getByTestId("marker-occurrence-latest-record").props).toMatchObject({
+        lngLat: [153.028123, -27.470456], anchor: "right", offset: [7, 0],
+      });
+      expect(getByLabelText("Latest record for Koala: 4.8.2026")).toBeTruthy();
+      expect(getByTestId("latest-record")).toHaveTextContent("Latest 4.8.2026");
+      expect(getByTestId("latest-record-point")).toBeTruthy();
+      expect(getByTestId("latest-record-arrow")).toBeTruthy();
+      expect(getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
+      await fireEvent(getByTestId("occurrence-map"), "mapPress", {
+        nativeEvent: { lngLat: [150, -30], point: [10, 10] },
+      });
+      expect(getByTestId("marker-occurrence-latest-record")).toBeTruthy();
+    });
+
+    it("moves the latest annotation with filtered data and hides it for empty data or predictions", async () => {
+      const base = collection.features[0];
+      const older = {
+        ...base, id: "0000000000000001",
+        geometry: { type: "Point" as const, coordinates: [145, -37] as [number, number] },
+        properties: { ...base.properties, eventDate: "2025-01-03" },
+      };
+      const { getByTestId, queryByTestId, rerender } = await render(
+        <OccurrenceMap collection={{ ...collection, features: [older, base] }} speciesName="Koala" />,
+      );
+      expect(getByTestId("latest-record")).toHaveTextContent("Latest 4.8.2026");
+      await rerender(<OccurrenceMap collection={{ ...collection, features: [older] }} speciesName="Koala" />);
+      expect(getByTestId("latest-record")).toHaveTextContent("Latest 3.1.2025");
+      expect(getByTestId("marker-occurrence-latest-record").props.lngLat).toEqual([145, -37]);
+      await rerender(<OccurrenceMap collection={{ ...collection, features: [] }} speciesName="Koala" />);
+      expect(queryByTestId("latest-record")).toBeNull();
+      await rerender(<OccurrenceMap collection={collection} speciesName="Koala" mode="prediction" />);
+      expect(queryByTestId("latest-record")).toBeNull();
+    });
 
     it("shows a pressed record's exact coordinates until the empty map is pressed", async () => {
       const { getByTestId, getByText, queryByTestId } = await render(

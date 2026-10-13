@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Modal,
   Platform,
@@ -46,11 +46,6 @@ import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
 const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
 const runtimeOccurrenceSnapshot = getRuntimeOccurrenceSnapshot();
-
-function formatRecordDate(date: string) {
-  const [year, month, day] = date.split("-");
-  return `${Number(day)}.${Number(month)}.${year}`;
-}
 
 type ExplorerWorkspaceProps = {
   dateRange?: OccurrenceDateRange;
@@ -166,13 +161,6 @@ export function ExplorerWorkspace({
   const suitabilityLayer =
     activeTab === "prediction" ? getSuitabilityLayer(selectedSpecies.id) : undefined;
   const mappedCount = occurrenceState.records?.collection.features.length;
-  const latestRecordDate = useMemo(() => {
-    const latest = occurrenceState.records?.collection.features.reduce(
-      (date, feature) => feature.properties.eventDate > date ? feature.properties.eventDate : date,
-      "",
-    );
-    return latest ? formatRecordDate(latest) : "—";
-  }, [occurrenceState.records]);
   const mappedCountLabel =
     occurrenceState.status === "loading"
       ? "Loading records…"
@@ -305,14 +293,8 @@ export function ExplorerWorkspace({
               </Text>
             </View>
           ) : (
-            <View accessibilityLiveRegion="polite" style={styles.mapCountPill}>
-              <View testID="map-record-summary" style={styles.mapCountRow}>
-                <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
-                <Text style={styles.mapCountText}>/</Text>
-                <Text testID="latest-record" style={styles.mapCountText}>
-                  {latestRecordDate} latest
-                </Text>
-              </View>
+            <View testID="map-record-summary" accessibilityLiveRegion="polite" style={styles.mapCountPill}>
+              <Text style={styles.mapCountText}>{mappedCountLabel}</Text>
             </View>
           )}
           </SafeAreaView>
@@ -539,13 +521,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14,
     shadowRadius: 10,
     elevation: 4,
-  },
-  mapCountRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    columnGap: 4,
-    rowGap: 2,
   },
   mapCountText: { color: "#47524c", fontSize: 11, fontWeight: "600" },
   bottomSheet: {

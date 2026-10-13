@@ -26,6 +26,7 @@ import {
 } from "react-native";
 
 import type {
+  OccurrenceFeature,
   OccurrenceFeatureCollection,
   OccurrenceProperties,
 } from "../data/occurrenceLoader";
@@ -199,6 +200,23 @@ export function getResponsiveMapHeight(windowHeight: number) {
   return Math.max(260, Math.min(420, Math.round(windowHeight * 0.42)));
 }
 
+export function getLatestRecord(collection?: OccurrenceFeatureCollection) {
+  // Dates have day precision. Break same-day ties by ID so the highlighted
+  // record does not jump when the same collection arrives in a different order.
+  return collection?.features.reduce<OccurrenceFeature | undefined>((latest, record) => {
+    if (!latest || record.properties.eventDate > latest.properties.eventDate ||
+        (record.properties.eventDate === latest.properties.eventDate && record.id < latest.id)) {
+      return record;
+    }
+    return latest;
+  }, undefined);
+}
+
+function formatLatestRecordDate(date: string) {
+  const [year, month, day] = date.split("-");
+  return `${Number(day)}.${Number(month)}.${year}`;
+}
+
 export const OccurrenceMap = forwardRef<OccurrenceMapHandle, OccurrenceMapProps>(
 function OccurrenceMap(
   {
@@ -218,6 +236,7 @@ function OccurrenceMap(
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+  const latestRecord = useMemo(() => getLatestRecord(collection), [collection]);
   // Looked up in the current data, so the tooltip closes by itself when a
   // filter or species change removes the record.
   const selectedRecord = useMemo(
@@ -404,6 +423,30 @@ function OccurrenceMap(
             />
           </GeoJSONSource>
         ) : null}
+        {latestRecord && mode === "records" ? (
+          <Marker
+            key={latestRecord.id}
+            id="occurrence-latest-record"
+            lngLat={latestRecord.geometry.coordinates}
+            anchor="right"
+            offset={[7, 0]}
+            accessible
+            accessibilityLabel={`Latest record for ${speciesName}: ${formatLatestRecordDate(latestRecord.properties.eventDate)}`}
+            pointerEvents="none"
+          >
+            <View style={styles.latestMarker}>
+              <View style={styles.latestLabel}>
+                <Text testID="latest-record" style={styles.latestTitle}>
+                  Latest{"\n"}
+                  <Text style={styles.latestDate}>{formatLatestRecordDate(latestRecord.properties.eventDate)}</Text>
+                </Text>
+              </View>
+              <View testID="latest-record-arrow" style={styles.latestArrowLine} />
+              <View style={styles.latestArrowHead} />
+              <View testID="latest-record-point" style={styles.latestPoint} />
+            </View>
+          </Marker>
+        ) : null}
         {selectedRecord && mode === "records" ? (
           <Marker
             id="occurrence-record-tooltip"
@@ -568,6 +611,27 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
+  latestMarker: { flexDirection: "row", alignItems: "center" },
+  latestLabel: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: TOOLTIP_BACKGROUND,
+  },
+  latestTitle: { color: "#ffffff", fontSize: 11, fontWeight: "700", lineHeight: 15, textAlign: "center" },
+  latestDate: { fontWeight: "400" },
+  latestArrowLine: { width: 16, height: 2, backgroundColor: "#163c2c" },
+  latestArrowHead: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 4,
+    borderBottomWidth: 4,
+    borderLeftWidth: 6,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "#163c2c",
+  },
+  latestPoint: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: "#ffffff", backgroundColor: "#b75820" },
   tooltip: {
     alignItems: "center",
   },

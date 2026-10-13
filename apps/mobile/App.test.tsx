@@ -19,6 +19,8 @@ jest.mock("@maplibre/maplibre-react-native", () => {
   return {
     Map: ({ children, ...props }: { children?: import("react").ReactNode }) =>
       mockReact.createElement(MockPressable, props, children),
+    Marker: ({ children, id, ...props }: Record<string, unknown> & { children?: import("react").ReactNode; id: string }) =>
+      mockReact.createElement(MockView, { ...props, testID: `marker-${id}` }, children),
     Camera: ({ ref, ...props }: Record<string, unknown> & { ref?: import("react").Ref<unknown> }) => {
       mockReact.useImperativeHandle(ref, () => ({ flyTo: jest.fn(), zoomTo: mockMapZoomTo }));
       return mockReact.createElement(MockView, props);
@@ -135,7 +137,7 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 172 });
   });
 
-  it("formats the map badge as an ungrouped count and dotted latest date", async () => {
+  it("keeps only the ungrouped count in the badge and shows the latest date at its map coordinate", async () => {
     const manifest: OccurrenceSnapshotManifest = {
       ...TEST_MANIFEST,
       files: {
@@ -157,8 +159,10 @@ describe("ExplorerWorkspace species flow", () => {
     await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={manifest} /></SpeciesProvider>);
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
     await waitFor(() => expect(screen.getByText("8557 records")).toBeTruthy());
-    expect(screen.getByText("/")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.8.2026 latest");
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^8557 records$/);
+    expect(screen.queryByText("/")).toBeNull();
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.8.2026");
+    expect(screen.getByTestId("marker-occurrence-latest-record").props.lngLat).toEqual([131, -30]);
     expect(screen.queryByText("8,557 records")).toBeNull();
   });
 
@@ -171,10 +175,10 @@ describe("ExplorerWorkspace species flow", () => {
     await waitFor(() => expect(screen.getByText(
       status === "loading" ? "Loading records…" : "Records unavailable",
     )).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("— latest");
+    expect(screen.queryByTestId("latest-record")).toBeNull();
   });
 
-  it("shows only count and latest date on the map and keeps sample details in About", async () => {
+  it("shows count and a latest point on the map and keeps sample details in About", async () => {
     const manifest: OccurrenceSnapshotManifest = {
       ...TEST_MANIFEST,
       files: {
@@ -188,7 +192,7 @@ describe("ExplorerWorkspace species flow", () => {
     await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={manifest} /></SpeciesProvider>);
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
     await waitFor(() => expect(screen.getByText("1 record")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2026 latest");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2026");
     expect(screen.queryByText("20% sample · counts describe sampled records")).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "About this data" }));
     expect(screen.getByText(/This is a 20% sample: 1 records from 5 frozen source records/)).toBeTruthy();
@@ -280,12 +284,12 @@ describe("ExplorerWorkspace species flow", () => {
       expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(
         index + 1,
       );
-      expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2026 latest");
-      expect(screen.getByTestId("map-record-summary")).toHaveStyle({ flexDirection: "row" });
+      expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2026");
+      expect(screen.getByTestId("map-record-summary")).not.toHaveTextContent(/Latest/i);
 
       await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
       expect(screen.getByText(`${index + 1} ${index === 0 ? "record" : "records"}`)).toBeTruthy();
-      expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2026 latest");
+      expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2026");
       expect(screen.queryByLabelText(`Occurrence summary for ${species.commonName}`)).toBeNull();
       expect(screen.queryByText("Map summary")).toBeNull();
       expect(screen.queryByText("total records")).toBeNull();
@@ -349,7 +353,8 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.getByText("2 records")).toBeTruthy();
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByText("2 records")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2024 latest");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2024");
+    expect(screen.getByTestId("marker-occurrence-latest-record").props.lngLat).toEqual([132, -30]);
 
     warning.mockRestore();
   });
@@ -379,11 +384,11 @@ describe("ExplorerWorkspace species flow", () => {
     );
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
     await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2025 latest");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2025");
 
     await incrementSlider("Year", 5);
     await waitFor(() => expect(screen.getByText("3 records")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.7.2024 latest");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.7.2024");
     await incrementSlider("Season", 3);
     await waitFor(() => expect(screen.getByText("2 records")).toBeTruthy());
     await incrementSlider("Month", 6);
@@ -392,7 +397,7 @@ describe("ExplorerWorkspace species flow", () => {
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByText("1 record")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2024 latest");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2024");
     expect(screen.getAllByTestId(/^state-count-/).reduce(
       (sum, row) => sum + Number(row.props.children), 0,
     )).toBe(1);
@@ -400,14 +405,14 @@ describe("ExplorerWorkspace species flow", () => {
 
     await incrementSlider("Season", 1);
     await waitFor(() => expect(screen.getByText("0 records")).toBeTruthy());
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("— latest");
+    expect(screen.queryByTestId("latest-record")).toBeNull();
     expect(screen.queryByTestId("source-occurrence-records")).toBeNull();
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
     await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByText("4 records")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("15.6.2025 latest");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2025");
     expect(screen.getAllByTestId(/^state-count-/).reduce(
       (sum, row) => sum + Number(row.props.children), 0,
     )).toBe(4);
