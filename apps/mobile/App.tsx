@@ -223,6 +223,7 @@ export function ExplorerWorkspace({
         <View pointerEvents="box-none" style={styles.mapUi}>
           <SafeAreaView pointerEvents="box-none" style={styles.topSafeArea}>
             <View style={styles.topControl}>
+            <View style={styles.topLeadingControls}>
             <Pressable
               accessibilityLabel="Back to species selection"
               accessibilityRole="button"
@@ -231,6 +232,7 @@ export function ExplorerWorkspace({
             >
               <Text style={styles.backIcon}>‹</Text>
             </Pressable>
+            </View>
 
             <Pressable
               accessibilityLabel="Change species"
@@ -483,6 +485,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.72)",
   },
+  // Match the two zoom buttons so the title is centred in the whole bar.
+  topLeadingControls: { width: 88 + StyleSheet.hairlineWidth, alignItems: "flex-start" },
   backIcon: { marginTop: -3, color: "#263239", fontSize: 34, fontWeight: "300", lineHeight: 36 },
   speciesControl: {
     flex: 1,
@@ -497,6 +501,7 @@ const styles = StyleSheet.create({
   speciesControlText: { maxWidth: 155, color: "#1d262b", fontSize: 15, fontWeight: "700" },
   chevron: { marginTop: -2, color: "#445057", fontSize: 14, fontWeight: "600" },
   zoomControls: {
+    width: 88 + StyleSheet.hairlineWidth,
     height: 44,
     flexDirection: "row",
     alignItems: "center",
