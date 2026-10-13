@@ -34,6 +34,8 @@ import type { SuitabilityLayer } from "../data/suitabilityLayers";
 
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
 const AUSTRALIA_VIEW_PADDING = { top: 12, right: 12, bottom: 12, left: 12 };
+// Leave room for the upper-right Latest label at east-coast record locations.
+const RECORDS_VIEW_PADDING = { ...AUSTRALIA_VIEW_PADDING, right: 112 };
 export const MAP_ZOOM_RANGE = { min: 2, max: 16, initial: 3 };
 export const MAP_GLYPHS_URL =
   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
@@ -324,7 +326,10 @@ function OccurrenceMap(
         <Camera
           ref={cameraRef}
           testID="occurrence-map-camera"
-          initialViewState={{ bounds: AUSTRALIA_BOUNDS, padding: AUSTRALIA_VIEW_PADDING }}
+          initialViewState={{
+            bounds: AUSTRALIA_BOUNDS,
+            padding: mode === "records" ? RECORDS_VIEW_PADDING : AUSTRALIA_VIEW_PADDING,
+          }}
           minZoom={MAP_ZOOM_RANGE.min}
           maxZoom={MAP_ZOOM_RANGE.max}
           maxBounds={AUSTRALIA_BOUNDS}
@@ -428,21 +433,20 @@ function OccurrenceMap(
             key={latestRecord.id}
             id="occurrence-latest-record"
             lngLat={latestRecord.geometry.coordinates}
-            anchor="right"
-            offset={[7, 0]}
+            anchor="bottom-left"
+            offset={[-7, 7]}
             accessible
             accessibilityLabel={`Latest record for ${speciesName}: ${formatLatestRecordDate(latestRecord.properties.eventDate)}`}
             pointerEvents="none"
           >
             <View style={styles.latestMarker}>
-              <View style={styles.latestLabel}>
+              <View testID="latest-record-arrow" style={styles.latestArrowLine} />
+              <View testID="latest-record-label" style={styles.latestLabel}>
                 <Text testID="latest-record" style={styles.latestTitle}>
                   Latest{"\n"}
                   <Text style={styles.latestDate}>{formatLatestRecordDate(latestRecord.properties.eventDate)}</Text>
                 </Text>
               </View>
-              <View testID="latest-record-arrow" style={styles.latestArrowLine} />
-              <View style={styles.latestArrowHead} />
               <View testID="latest-record-point" style={styles.latestPoint} />
             </View>
           </Marker>
@@ -611,27 +615,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  latestMarker: { flexDirection: "row", alignItems: "center" },
+  // The point stays at the bottom-left anchor; the label sits above and to its right.
+  latestMarker: { paddingLeft: 32, paddingBottom: 24 },
   latestLabel: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: TOOLTIP_BACKGROUND,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
   },
-  latestTitle: { color: "#ffffff", fontSize: 11, fontWeight: "700", lineHeight: 15, textAlign: "center" },
+  latestTitle: { color: "#626966", fontSize: 11, fontWeight: "600", lineHeight: 15, textAlign: "center" },
   latestDate: { fontWeight: "400" },
-  latestArrowLine: { width: 16, height: 2, backgroundColor: "#163c2c" },
-  latestArrowHead: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 4,
-    borderBottomWidth: 4,
-    borderLeftWidth: 6,
-    borderTopColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: "#163c2c",
+  latestArrowLine: {
+    position: "absolute",
+    left: 2,
+    bottom: 19,
+    width: 36,
+    height: 1.5,
+    borderRadius: 1,
+    backgroundColor: "rgba(98, 105, 102, 0.65)",
+    transform: [{ rotate: "-45deg" }],
   },
-  latestPoint: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: "#ffffff", backgroundColor: "#b75820" },
+  latestPoint: {
+    position: "absolute", left: 0, bottom: 0,
+    width: 14, height: 14, borderRadius: 7, borderWidth: 2,
+    borderColor: "#ffffff", backgroundColor: "#b75820",
+  },
   tooltip: {
     alignItems: "center",
   },

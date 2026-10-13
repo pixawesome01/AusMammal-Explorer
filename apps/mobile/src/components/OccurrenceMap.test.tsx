@@ -104,13 +104,13 @@ describe("OccurrenceMap", () => {
     expect(getResponsiveMapHeight(1200)).toBe(420);
   });
 
-  it("uses the agreed Australian viewport and bounds", async () => {
+  it("keeps Australian bounds and reserves room for the upper-right Latest label", async () => {
     const { getByTestId } = await render(<OccurrenceMap speciesName="Koala" />);
 
     const camera = getByTestId("occurrence-map-camera");
     expect(camera.props.initialViewState).toEqual({
       bounds: [110, -45, 155, -6],
-      padding: { top: 12, right: 12, bottom: 12, left: 12 },
+      padding: { top: 12, right: 112, bottom: 12, left: 12 },
     });
     expect(camera.props.minZoom).toBe(2);
     expect(camera.props.maxBounds).toEqual([110, -45, 155, -6]);
@@ -129,6 +129,9 @@ describe("OccurrenceMap", () => {
     const { getByTestId } = await render(<OccurrenceMap mode="prediction" speciesName="Koala" />);
 
     expect(getByTestId("occurrence-map").props.mapStyle).toMatch(/^https:\/\//);
+    expect(getByTestId("occurrence-map-camera").props.initialViewState.padding).toEqual({
+      top: 12, right: 12, bottom: 12, left: 12,
+    });
   });
 
   it("sets continuous slider zoom through its ref and clamps to camera limits", async () => {
@@ -411,17 +414,25 @@ describe("OccurrenceMap", () => {
       expect(getLatestRecord({ ...collection, features: [] })).toBeUndefined();
     });
 
-    it("anchors a persistent latest point and arrow at the exact coordinate, including at clustered zoom", async () => {
+    it("anchors the latest point exactly with a light upper-right label and plain leader line", async () => {
       const { getByTestId, getByLabelText } = await render(
         <OccurrenceMap collection={collection} speciesName="Koala" />,
       );
       expect(getByTestId("marker-occurrence-latest-record").props).toMatchObject({
-        lngLat: [153.028123, -27.470456], anchor: "right", offset: [7, 0],
+        lngLat: [153.028123, -27.470456], anchor: "bottom-left", offset: [-7, 7],
       });
       expect(getByLabelText("Latest record for Koala: 4.8.2026")).toBeTruthy();
       expect(getByTestId("latest-record")).toHaveTextContent("Latest 4.8.2026");
-      expect(getByTestId("latest-record-point")).toBeTruthy();
-      expect(getByTestId("latest-record-arrow")).toBeTruthy();
+      expect(getByTestId("latest-record-point")).toHaveStyle({
+        position: "absolute", left: 0, bottom: 0, width: 14, height: 14,
+      });
+      expect(getByTestId("latest-record-label")).toHaveStyle({
+        backgroundColor: "rgba(255, 255, 255, 0.8)",
+      });
+      expect(getByTestId("latest-record")).toHaveStyle({ color: "#626966" });
+      expect(getByTestId("latest-record-arrow")).toHaveStyle({
+        height: 1.5, width: 36, transform: [{ rotate: "-45deg" }],
+      });
       expect(getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
       await fireEvent(getByTestId("occurrence-map"), "mapPress", {
         nativeEvent: { lngLat: [150, -30], point: [10, 10] },
