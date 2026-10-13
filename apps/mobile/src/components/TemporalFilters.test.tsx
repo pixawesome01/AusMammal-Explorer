@@ -55,8 +55,12 @@ describe("TemporalFilters", () => {
       expect(screen.getByTestId(`season-slider-${side}`)).toHaveStyle({ width: 116, flexShrink: 1 });
     }
     expect(within(seasonHeading).getByRole("tab", { name: "Season", selected: true })).toBeTruthy();
-    await incrementSlider("Season", 4);
-    expect(within(seasonHeading).getByText("Spring (Sep–Nov)")).toBeTruthy();
+    for (const season of ["Summer", "Autumn", "Winter", "Spring"]) {
+      await incrementSlider("Season", 1);
+      expect(within(seasonHeading).getByText(season)).toBeTruthy();
+      expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe(season);
+    }
+    expect(screen.queryByText(/\((Dec|Mar|Jun|Sep)–/)).toBeNull();
   });
 
   it("switches between month and season, clears the hidden restriction, and preserves the year", async () => {
@@ -79,7 +83,7 @@ describe("TemporalFilters", () => {
     expect(onChange).toHaveBeenLastCalledWith({ year: 2024, season: "autumn" });
 
     expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2024");
-    expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("Autumn (Mar–May)");
+    expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("Autumn");
     await fireEvent.press(screen.getByRole("tab", { name: "Month" }));
     expect(onChange).toHaveBeenLastCalledWith({ year: 2024 });
     expect(screen.queryByRole("adjustable", { name: "Season" })).toBeNull();

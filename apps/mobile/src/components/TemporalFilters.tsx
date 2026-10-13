@@ -173,7 +173,7 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
   const selectedMonthIndex = value.month ?? 0;
   const seasonOptions: SliderOption[] = [
     { label: "All seasons", value: undefined },
-    ...["Summer (Dec–Feb)", "Autumn (Mar–May)", "Winter (Jun–Aug)", "Spring (Sep–Nov)"].map((label, index) => ({ label, value: index })),
+    ...["Summer", "Autumn", "Winter", "Spring"].map((label, index) => ({ label, value: index })),
   ];
   const selectedSeasonIndex = value.season === undefined ? 0 : OCCURRENCE_SEASONS.indexOf(value.season) + 1;
   const hasActiveFilter = value.year !== undefined || value.month !== undefined || value.season !== undefined;
