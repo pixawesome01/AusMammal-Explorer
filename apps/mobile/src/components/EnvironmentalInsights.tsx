@@ -90,8 +90,9 @@ function ClimateBarChart({
   return (
     <View accessibilityLabel={accessibilityLabel}>
       {highlightedMonths === undefined ? (
-        <Text style={[styles.climateMetric, { color }]}>
-          {largest.toFixed(1)}{unit} · {MONTHLY_CLIMATE[peakIndex].name}
+        <Text style={[styles.climateMetric, { color }]}
+          accessibilityLabel={`${MONTHLY_CLIMATE[peakIndex].name}: ${largest.toFixed(1)}${unit}`}>
+          {largest.toFixed(1)}{unit}
         </Text>
       ) : (
         <Text
@@ -101,10 +102,12 @@ function ClimateBarChart({
               : READABLE_COLOURS.muted,
           }]}
           accessibilityLiveRegion="polite"
+          accessibilityLabel={selectedBar === null ? undefined
+            : `${MONTHLY_CLIMATE[selectedBar].name}: ${values[selectedBar].toFixed(1)}${unit}`}
         >
           {selectedBar === null
             ? `Tap a bar to see ${metricName}`
-            : `${MONTHLY_CLIMATE[selectedBar].name} · ${values[selectedBar].toFixed(1)}${unit}`}
+            : `${values[selectedBar].toFixed(1)}${unit}`}
         </Text>
       )}
       <ScrollView horizontal contentContainerStyle={styles.barChart}>
@@ -508,7 +511,7 @@ const styles = StyleSheet.create({
   },
   monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
   description: { marginTop: 13, color: READABLE_COLOURS.muted, fontSize: 13, lineHeight: 19 },
-  climateMetric: { marginTop: 18, fontSize: 25, fontWeight: "500", textAlign: "center" },
+  climateMetric: { marginTop: 18, fontSize: 16, fontWeight: "500", textAlign: "center" },
   chartHint: { fontSize: 14, fontWeight: "400", color: READABLE_COLOURS.muted },
   barChart: { height: 138, flexDirection: "row", alignItems: "flex-end", gap: 3, marginTop: 5 },
   barColumn: { flex: 1, minWidth: 24, height: "100%", alignItems: "center" },
