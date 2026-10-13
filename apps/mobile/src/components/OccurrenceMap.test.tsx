@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 
 import {
   countClusteredRecords,
@@ -14,6 +14,9 @@ import {
   type OccurrenceMapHandle,
 } from "./OccurrenceMap";
 import { getSuitabilityLayer } from "../data/suitabilityLayers";
+import { loadSuitabilityImage } from "../data/suitabilityImageCache";
+
+jest.mock("../data/suitabilityImageCache", () => ({ loadSuitabilityImage: jest.fn() }));
 
 const mockFlyTo = jest.fn();
 const mockZoomTo = jest.fn();
@@ -96,6 +99,7 @@ describe("OccurrenceMap", () => {
     mockFlyTo.mockClear();
     mockZoomTo.mockClear();
     mockGetClusterExpansionZoom.mockReset().mockResolvedValue(8);
+    jest.mocked(loadSuitabilityImage).mockReset().mockResolvedValue("file:///cache/koala.png");
   });
 
   it("resizes within usable portrait and landscape limits", () => {
@@ -242,11 +246,26 @@ describe("OccurrenceMap", () => {
     );
 
     expect(getByLabelText("Habitat suitability map for Koala")).toBeTruthy();
+    await waitFor(() => expect(getByTestId("source-suitability-image").props.url).toBe("file:///cache/koala.png"));
     expect(getByTestId("source-suitability-image").props.coordinates).toBe(
       suitabilityLayer.coordinates,
     );
     expect(getByTestId("layer-suitability-overlay").props.type).toBe("raster");
     expect(queryByTestId("source-occurrence-records")).toBeNull();
+  });
+
+  it("keeps failed image preparation out of MapLibre and lets the user retry", async () => {
+    jest.mocked(loadSuitabilityImage).mockRejectedValueOnce(new Error("server stopped"));
+    const { getByTestId, queryByTestId, getByRole } = await render(
+      <OccurrenceMap mode="prediction" speciesName="Koala" suitabilityLayer={getSuitabilityLayer("koala")} />,
+    );
+    await fireEvent.press(getByTestId("occurrence-map"));
+    await waitFor(() => expect(getByRole("button", { name: "Retry prediction image" })).toBeTruthy());
+    expect(queryByTestId("source-suitability-image")).toBeNull();
+    expect(getByTestId("prediction-image-status")).toHaveTextContent(/Connect and try again/);
+    await fireEvent.press(getByRole("button", { name: "Retry prediction image" }));
+    await waitFor(() => expect(getByTestId("source-suitability-image").props.url).toBe("file:///cache/koala.png"));
+    expect(queryByTestId("prediction-image-status")).toBeNull();
   });
 
   it("zooms to the native expansion level when a cluster is pressed", async () => {

@@ -27,9 +27,17 @@ npm run start     # reconnect an installed development build to Metro
 npm run start:demo # production-mode bundle without Fast Refresh banners
 ```
 
-Use `npm run start:demo` for presentations. The blue `Refreshing...` banner belongs to
-Expo Fast Refresh in development mode; it is not rendered by the app or included in a
-production build.
+`npm run start:demo` hides Fast Refresh banners but still serves JavaScript from Metro.
+Keep Metro running for development-build launches/reloads; use the computer's LAN IP
+on a physical phone, not `127.0.0.1`. Prefer a standalone release build for the final
+presentation so launching the app does not depend on the development computer.
+
+On entering the species workspace, all seven prediction images are prepared in the
+device's asset cache. MapLibre receives only local file URLs, so switching prediction
+layers does not need Metro once preparation has succeeded. If preparation fails, the
+app shows a Retry button instead of passing an unreachable image URL to MapLibre.
+The OS may clear cached files; rehearse every species before the demo. A release build
+bundles these images, but basemap tiles still need internet access.
 
 The bundled sample is the default. To test the complete frozen snapshot instead, copy
 the seven full GeoJSON files from the project's `Datasets` Drive folder into

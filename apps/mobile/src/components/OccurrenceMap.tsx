@@ -31,6 +31,7 @@ import type {
   OccurrenceProperties,
 } from "../data/occurrenceLoader";
 import type { SuitabilityLayer } from "../data/suitabilityLayers";
+import { useSuitabilityImage } from "../data/useSuitabilityImage";
 
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
 const AUSTRALIA_VIEW_PADDING = { top: 12, right: 12, bottom: 12, left: 12 };
@@ -239,6 +240,7 @@ function OccurrenceMap(
   const [mapKey, setMapKey] = useState(0);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const latestRecord = useMemo(() => getLatestRecord(collection), [collection]);
+  const suitabilityImage = useSuitabilityImage(mode === "prediction" ? suitabilityLayer : undefined);
   // Looked up in the current data, so the tooltip closes by itself when a
   // filter or species change removes the record.
   const selectedRecord = useMemo(
@@ -334,10 +336,11 @@ function OccurrenceMap(
           maxZoom={MAP_ZOOM_RANGE.max}
           maxBounds={AUSTRALIA_BOUNDS}
         />
-        {suitabilityLayer && mode === "prediction" ? (
+        {suitabilityLayer && mode === "prediction" && suitabilityImage.status === "ready" ? (
           <ImageSource
+            key={`${suitabilityLayer.modelVersion}:${suitabilityImage.uri}`}
             id="suitability-image"
-            url={suitabilityLayer.image}
+            url={suitabilityImage.uri}
             coordinates={suitabilityLayer.coordinates}
           >
             <Layer
@@ -477,6 +480,24 @@ function OccurrenceMap(
         ) : null}
       </Map>
 
+      {mode === "prediction" && suitabilityLayer && suitabilityImage.status !== "ready" && mapState !== "error" ? (
+        <View accessibilityLiveRegion="polite" style={styles.predictionImageNotice} testID="prediction-image-status">
+          <View style={styles.predictionImageNoticeCard}>
+            <Text style={styles.predictionImageNoticeText}>
+              {suitabilityImage.status === "loading"
+                ? "Preparing prediction map…"
+                : "Prediction map is not saved on this device yet. Connect and try again."}
+            </Text>
+            {suitabilityImage.status === "error" ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Retry prediction image"
+                onPress={suitabilityImage.retry} style={styles.retryButton}>
+                <Text style={styles.retryText}>Retry</Text>
+              </Pressable>
+            ) : <ActivityIndicator color="#2b7652" />}
+          </View>
+        </View>
+      ) : null}
+
       {mapState === "loading" ? (
         <View style={styles.stateOverlay} testID="map-loading-state">
           <ActivityIndicator color="#ffffff" size="large" />
@@ -550,6 +571,15 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  predictionImageNotice: {
+    position: "absolute", top: "42%", left: 58, right: 24,
+    alignItems: "center",
+  },
+  predictionImageNoticeCard: {
+    padding: 14, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.95)",
+    alignItems: "center", gap: 8,
+  },
+  predictionImageNoticeText: { color: "#34423a", fontSize: 13, textAlign: "center" },
   stateOverlay: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",

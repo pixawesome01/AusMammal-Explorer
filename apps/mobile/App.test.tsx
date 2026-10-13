@@ -11,6 +11,11 @@ import { MVP_SPECIES } from "./src/species";
 
 const mockMapZoomTo = jest.fn();
 
+jest.mock("./src/data/suitabilityImageCache", () => ({
+  loadSuitabilityImage: jest.fn(async () => "file:///cache/suitability.png"),
+  preloadSuitabilityImages: jest.fn(async () => []),
+}));
+
 jest.mock("@maplibre/maplibre-react-native", () => {
   const mockReact = jest.requireActual<typeof import("react")>("react");
   const { Pressable: MockPressable, View: MockView } =
@@ -485,7 +490,7 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.queryByText("Higher suitability")).toBeNull();
     expect(screen.getByText("Less suitable area")).toBeTruthy();
     expect(screen.getByText("More potential observation")).toHaveStyle({ textAlign: "right", flexShrink: 1 });
-    expect(screen.getByTestId("source-suitability-image")).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId("source-suitability-image").props.url).toBe("file:///cache/suitability.png"));
     expect(screen.queryByText("FUTURE FEATURE")).toBeNull();
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));

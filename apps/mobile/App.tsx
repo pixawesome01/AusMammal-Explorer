@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   Platform,
@@ -42,6 +42,7 @@ import {
   SUITABILITY_LEGEND_COLORS,
 } from "./src/data/suitabilityLayers";
 import { useOccurrenceRecords } from "./src/data/useOccurrenceRecords";
+import { preloadSuitabilityImages } from "./src/data/suitabilityImageCache";
 import { SpeciesProvider, useSpeciesSelection } from "./src/SpeciesContext";
 
 const runtimeOccurrenceAssetReader = createRuntimeOccurrenceAssetReader();
@@ -129,6 +130,7 @@ export function ExplorerWorkspace({
   readAsset = runtimeOccurrenceAssetReader,
   manifest = runtimeOccurrenceSnapshot,
 }: ExplorerWorkspaceProps) {
+  useEffect(() => { void preloadSuitabilityImages(); }, []);
   const { height: windowHeight } = useWindowDimensions();
   const { selectedSpecies } = useSpeciesSelection();
   const mapRef = useRef<OccurrenceMapHandle>(null);
