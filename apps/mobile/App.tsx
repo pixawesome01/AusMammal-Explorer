@@ -26,7 +26,7 @@ import { ModelInfoPanel } from "./src/components/ModelInfoPanel";
 import { MapZoomSlider } from "./src/components/MapZoomSlider";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { StateRanking } from "./src/components/StateRanking";
-import { TemporalFilters } from "./src/components/TemporalFilters";
+import { TemporalFilters, type TemporalFilterMode } from "./src/components/TemporalFilters";
 import {
   createRuntimeOccurrenceAssetReader,
   getRuntimeOccurrenceSnapshot,
@@ -149,6 +149,7 @@ export function ExplorerWorkspace({
     if (Platform.OS !== "ios") focusAccessibleElement(aboutTriggerRef);
   };
   const [temporalFilter, setTemporalFilter] = useState<OccurrenceTemporalFilter>({});
+  const [timeFilterMode, setTimeFilterMode] = useState<TemporalFilterMode>("month");
   const occurrenceState = useOccurrenceRecords({
     speciesId: selectedSpecies.id,
     dateRange,
@@ -207,6 +208,7 @@ export function ExplorerWorkspace({
           imageRevision={selectorImageRevision}
           manifest={manifest}
           onSpeciesPress={(_species, month) => {
+            setTimeFilterMode("month");
             setTemporalFilter(month === undefined ? {} : { month });
             setExplorerOpen(true);
           }}
@@ -361,6 +363,8 @@ export function ExplorerWorkspace({
                 >
                   <TemporalFilters
                     coverage={manifest.files[selectedSpecies.id].coverage}
+                    mode={timeFilterMode}
+                    onModeChange={setTimeFilterMode}
                     onChange={setTemporalFilter}
                     value={temporalFilter}
                   />

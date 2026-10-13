@@ -19,9 +19,13 @@ const MONTHS = [
   "December",
 ] as const;
 
+export type TemporalFilterMode = "month" | "season";
+
 type TemporalFiltersProps = {
   coverage: { from: string; to: string };
   value: OccurrenceTemporalFilter;
+  mode: TemporalFilterMode;
+  onModeChange: (mode: TemporalFilterMode) => void;
   onChange: (value: OccurrenceTemporalFilter) => void;
 };
 
@@ -135,7 +139,7 @@ function DiscreteSlider({
   );
 }
 
-export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersProps) {
+export function TemporalFilters({ coverage, value, mode, onModeChange, onChange }: TemporalFiltersProps) {
   const firstYear = Number(coverage.from.slice(0, 4));
   const lastYear = Number(coverage.to.slice(0, 4));
   const years = Array.from({ length: lastYear - firstYear + 1 }, (_, index) => firstYear + index);
@@ -155,6 +159,12 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
   ];
   const selectedSeasonIndex = value.season === undefined ? 0 : OCCURRENCE_SEASONS.indexOf(value.season) + 1;
   const hasActiveFilter = value.year !== undefined || value.month !== undefined || value.season !== undefined;
+  const selectMode = (nextMode: TemporalFilterMode) => {
+    if (nextMode === mode) return;
+    onModeChange(nextMode);
+    // Never leave an invisible month/season restriction active after a switch.
+    onChange({ year: value.year });
+  };
 
   return (
     <View accessibilityLabel="Occurrence time filters" style={styles.card}>
@@ -170,22 +180,42 @@ export function TemporalFilters({ coverage, value, onChange }: TemporalFiltersPr
 
       <DiscreteSlider
         accessibilityLabel="Year"
-        onSelect={(year) => onChange({ ...value, year })}
+        onSelect={(year) => onChange(mode === "month" ? { year, month: value.month } : { year, season: value.season })}
         options={yearOptions}
         selectedIndex={selectedYearIndex}
       />
-      <DiscreteSlider
-        accessibilityLabel="Month"
-        onSelect={(month) => onChange({ ...value, month })}
-        options={monthOptions}
-        selectedIndex={selectedMonthIndex}
-      />
-      <DiscreteSlider
-        accessibilityLabel="Season"
-        onSelect={(index) => onChange({ ...value, season: index === undefined ? undefined : OCCURRENCE_SEASONS[index] })}
-        options={seasonOptions}
-        selectedIndex={selectedSeasonIndex}
-      />
+      <View accessibilityRole="tablist" accessibilityLabel="Time filter type" style={styles.modeToggle}>
+        {(["month", "season"] as const).map((option) => (
+          <Pressable
+            key={option}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === option }}
+            onPress={() => selectMode(option)}
+            style={({ pressed }) => [styles.modeOption, mode === option && styles.modeOptionSelected, pressed && styles.pressed]}
+          >
+            <Text style={[styles.modeText, mode === option && styles.modeTextSelected]}>
+              {option === "month" ? "Month" : "Season"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {mode === "month" ? (
+        <DiscreteSlider
+          key="month"
+          accessibilityLabel="Month"
+          onSelect={(month) => onChange({ year: value.year, month })}
+          options={monthOptions}
+          selectedIndex={selectedMonthIndex}
+        />
+      ) : (
+        <DiscreteSlider
+          key="season"
+          accessibilityLabel="Season"
+          onSelect={(index) => onChange({ year: value.year, season: index === undefined ? undefined : OCCURRENCE_SEASONS[index] })}
+          options={seasonOptions}
+          selectedIndex={selectedSeasonIndex}
+        />
+      )}
     </View>
   );
 }
@@ -204,6 +234,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   clearText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "700" },
+  modeToggle: {
+    alignSelf: "center",
+    flexDirection: "row",
+    width: 196,
+    padding: 3,
+    marginVertical: 8,
+    borderRadius: 18,
+    backgroundColor: "#e4ece6",
+  },
+  modeOption: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 15 },
+  modeOptionSelected: { backgroundColor: "#ffffff" },
+  modeText: { color: READABLE_COLOURS.muted, fontSize: 12, fontWeight: "500" },
+  modeTextSelected: { color: "#163c2c", fontWeight: "700" },
+  pressed: { opacity: 0.7 },
   sliderBlock: { marginTop: 1, marginBottom: 3 },
   sliderValue: {
     alignSelf: "center",

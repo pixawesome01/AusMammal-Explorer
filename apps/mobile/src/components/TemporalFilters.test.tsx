@@ -2,15 +2,18 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { useState } from "react";
 
 import type { OccurrenceTemporalFilter } from "../data/occurrenceFilter";
-import { TemporalFilters } from "./TemporalFilters";
+import { TemporalFilters, type TemporalFilterMode } from "./TemporalFilters";
 
-function Harness() {
+function Harness({ onChange = (_value: OccurrenceTemporalFilter) => {} }) {
   const [value, setValue] = useState<OccurrenceTemporalFilter>({});
+  const [mode, setMode] = useState<TemporalFilterMode>("month");
   return (
     <TemporalFilters
       coverage={{ from: "2020-01-01", to: "2026-08-20" }}
       value={value}
-      onChange={setValue}
+      mode={mode}
+      onModeChange={setMode}
+      onChange={(next) => { setValue(next); onChange(next); }}
     />
   );
 }
@@ -26,30 +29,50 @@ describe("TemporalFilters", () => {
     }
   }
 
-  it("combines year, month and Australian season without discarding other filters", async () => {
-    await render(<Harness />);
+  it("switches between month and season, clears the hidden restriction, and preserves the year", async () => {
+    const onChange = jest.fn();
+    await render(<Harness onChange={onChange} />);
 
     expect(screen.queryByText("Combine filters · Australian seasons")).toBeNull();
     expect(screen.queryByText("Filter by time")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Month", selected: true })).toBeTruthy();
+    expect(screen.queryByRole("adjustable", { name: "Season" })).toBeNull();
 
-    await incrementSlider("Season", 3);
     await incrementSlider("Year", 5);
-    await incrementSlider("Month", 6);
+    await incrementSlider("Month", 7);
+    expect(onChange).toHaveBeenLastCalledWith({ year: 2024, month: 7 });
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    expect(onChange).toHaveBeenLastCalledWith({ year: 2024 });
+    expect(screen.queryByRole("adjustable", { name: "Month" })).toBeNull();
+    expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("All seasons");
+    await incrementSlider("Season", 2);
+    expect(onChange).toHaveBeenLastCalledWith({ year: 2024, season: "autumn" });
 
     expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2024");
+    expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("Autumn (Mar–May)");
+    await fireEvent.press(screen.getByRole("tab", { name: "Month" }));
+    expect(onChange).toHaveBeenLastCalledWith({ year: 2024 });
+    expect(screen.queryByRole("adjustable", { name: "Season" })).toBeNull();
+    expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("All months");
+    await incrementSlider("Month", 6);
+    expect(onChange).toHaveBeenLastCalledWith({ year: 2024, month: 6 });
+    await fireEvent.press(screen.getByRole("tab", { name: "Month" }));
     expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("June");
-    expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("Winter (Jun–Aug)");
   });
 
   it("clears every active filter", async () => {
     await render(<Harness />);
     await incrementSlider("Year", 6);
     await incrementSlider("Month", 1);
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
     await incrementSlider("Season", 1);
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
 
     expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("All years");
-    expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("All months");
+    expect(screen.queryByRole("adjustable", { name: "Month" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "Season", selected: true })).toBeTruthy();
     expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("All seasons");
+    await fireEvent.press(screen.getByRole("tab", { name: "Month" }));
+    expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("All months");
   });
 });

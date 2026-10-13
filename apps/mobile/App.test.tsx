@@ -359,9 +359,9 @@ describe("ExplorerWorkspace species flow", () => {
     warning.mockRestore();
   });
 
-  it("updates map records for combined time filters and clears them", async () => {
+  it("switches month/season filters without hidden restrictions and keeps year, insights and latest point consistent", async () => {
     const warning = jest.spyOn(console, "warn").mockImplementation(() => undefined);
-    const dates = ["2024-01-15", "2024-06-15", "2024-07-15", "2025-06-15"];
+    const dates = ["2024-01-15", "2024-04-15", "2024-06-15", "2024-07-15", "2025-06-15"];
     const manifest: OccurrenceSnapshotManifest = {
       ...TEST_MANIFEST,
       files: {
@@ -383,39 +383,56 @@ describe("ExplorerWorkspace species flow", () => {
       </SpeciesProvider>,
     );
     await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
-    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("5 records")).toBeTruthy());
     expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2025");
 
     await incrementSlider("Year", 5);
-    await waitFor(() => expect(screen.getByText("3 records")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
     expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.7.2024");
-    await incrementSlider("Season", 3);
-    await waitFor(() => expect(screen.getByText("2 records")).toBeTruthy());
-    await incrementSlider("Month", 6);
+    await incrementSlider("Month", 7);
+    await waitFor(() => expect(screen.getByText("1 record")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
+    expect(screen.queryByRole("adjustable", { name: "Month" })).toBeNull();
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2024");
+    // Preserve Season mode even when its value is All and the controls unmount.
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
+    expect(screen.getByRole("tab", { name: "Season", selected: true })).toBeTruthy();
+    expect(screen.getByRole("adjustable", { name: "Season" }).props.accessibilityValue.text).toBe("All seasons");
+    await incrementSlider("Season", 2);
     await waitFor(() => expect(screen.getByText("1 record")).toBeTruthy());
     expect(screen.getByTestId("source-occurrence-records").props.data.features).toHaveLength(1);
 
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByText("1 record")).toBeTruthy();
-    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2024");
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.4.2024");
     expect(screen.getAllByTestId(/^state-count-/).reduce(
       (sum, row) => sum + Number(row.props.children), 0,
     )).toBe(1);
     await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
 
     await incrementSlider("Season", 1);
+    await waitFor(() => expect(screen.getByText("2 records")).toBeTruthy());
+    await fireEvent.press(screen.getByRole("tab", { name: "Month" }));
+    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
+    await incrementSlider("Month", 1);
+    await waitFor(() => expect(screen.getByText("1 record")).toBeTruthy());
+    expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.1.2024");
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    await incrementSlider("Season", 4);
     await waitFor(() => expect(screen.getByText("0 records")).toBeTruthy());
     expect(screen.queryByTestId("latest-record")).toBeNull();
     expect(screen.queryByTestId("source-occurrence-records")).toBeNull();
 
     await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
-    await waitFor(() => expect(screen.getByText("4 records")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("5 records")).toBeTruthy());
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
-    expect(screen.getByText("4 records")).toBeTruthy();
+    expect(screen.getByText("5 records")).toBeTruthy();
     expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2025");
     expect(screen.getAllByTestId(/^state-count-/).reduce(
       (sum, row) => sum + Number(row.props.children), 0,
-    )).toBe(4);
+    )).toBe(5);
     expect(readAsset).toHaveBeenCalledTimes(1);
     warning.mockRestore();
   });
