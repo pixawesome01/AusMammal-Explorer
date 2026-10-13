@@ -29,6 +29,10 @@ describe("EnvironmentalInsights", () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready"
       coverage={{ from: "2020-01-01", to: "2026-08-15" }} temporalFilter={{ year: 2026 }} />);
     expect(screen.getByText("Average records by month")).toBeTruthy();
+    expect(screen.queryByText(/^Seasonal pattern$/i)).toBeNull();
+    expect(screen.queryByText(/^Climate reference$/i)).toBeNull();
+    expect(screen.getByRole("header", { name: "Typical monthly temperature" })).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Typical daily rainfall" })).toBeTruthy();
     await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
       { nativeEvent: { locationX: 235, locationY: 135 } });
     expect(screen.getByTestId("month-readout")).toHaveTextContent(/1\.0 average per month/);

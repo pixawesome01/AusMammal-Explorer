@@ -196,7 +196,6 @@ export function EnvironmentalInsights({
             <View style={styles.calendarHeader} />
           </View>
           <View style={styles.headingText}>
-            <Text style={styles.eyebrow}>Seasonal pattern</Text>
             <Text accessibilityRole="header" style={styles.title}>
               {averages ? "Average records by month" : "Records by month"}
             </Text>
@@ -330,7 +329,6 @@ export function EnvironmentalInsights({
         <View style={styles.cardHeading}>
           <Text style={styles.icon}>℃</Text>
           <View style={styles.headingText}>
-            <Text style={styles.eyebrow}>Climate reference</Text>
             <Text accessibilityRole="header" style={styles.title}>Typical monthly temperature</Text>
           </View>
         </View>
@@ -353,7 +351,6 @@ export function EnvironmentalInsights({
         <View style={styles.cardHeading}>
           <Text style={styles.icon}>☂</Text>
           <View style={styles.headingText}>
-            <Text style={styles.eyebrow}>Climate reference</Text>
             <Text accessibilityRole="header" style={styles.title}>Typical daily rainfall</Text>
           </View>
         </View>
@@ -434,8 +431,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#747b78",
   },
   headingText: { flex: 1 },
-  eyebrow: { color: READABLE_COLOURS.muted, fontSize: 11, fontWeight: "600", letterSpacing: 1.1, textTransform: "uppercase" },
-  title: { marginTop: 2, color: "#34423a", fontSize: 18, fontWeight: "600" },
+  title: { color: "#34423a", fontSize: 18, fontWeight: "600" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
   radialChart: {
     alignSelf: "center",
