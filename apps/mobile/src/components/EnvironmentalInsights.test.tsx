@@ -109,7 +109,7 @@ describe("monthly chart scrubbing", () => {
       const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
       const canvas = StyleSheet.flatten(screen.getByTestId("monthly-chart-canvas").props.style);
       expect(viewport.height).toBeLessThan(200);
-      expect(viewport.overflow).toBe("visible");
+      expect(viewport.overflow).toBe("hidden");
       expect(canvas.height).toBe(270);
       const bounds = Array.from({ length: 12 }, (_, index) => {
         const height = index + 1 === month ? 104 : 52;
@@ -125,7 +125,7 @@ describe("monthly chart scrubbing", () => {
       expect(bottomGap).toBeGreaterThanOrEqual(6 - 0.001);
       expect(bottomGap).toBeLessThan(7 + 0.001);
       const label = screen.getByTestId(`month-label-${month}`);
-      expect(label).toHaveStyle({ color: "#6f7772", fontWeight: "400" });
+      expect(label).toHaveStyle({ color: "#ffffff", fontSize: 14, fontWeight: "400" });
       expect(label.props.pointerEvents).toBe("none");
       const position = StyleSheet.flatten(label.props.style);
       const angle = (month - 1) * Math.PI / 6;
@@ -133,6 +133,23 @@ describe("monthly chart scrubbing", () => {
       expect(position.top + position.lineHeight / 2).toBeCloseTo(135 - Math.cos(angle) * 80);
       expect(position.top + canvas.top).toBeGreaterThan(0);
       expect(position.top + position.lineHeight + canvas.top).toBeLessThan(viewport.height);
+    }
+  });
+
+  it("limits each white separator to the neighbouring bars and keeps it inside the plot", async () => {
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
+    const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
+    const canvas = StyleSheet.flatten(screen.getByTestId("monthly-chart-canvas").props.style);
+    for (let index = 0; index < 12; index += 1) {
+      const height = index === 3 || (index + 1) % 12 === 3 ? 104 : 52;
+      const length = height / Math.cos(Math.PI / 12);
+      const separator = StyleSheet.flatten(screen.getByTestId(`month-separator-${index + 1}`).props.style);
+      expect(separator.height).toBeCloseTo(length);
+      expect(separator.top).toBeCloseTo(135 - length);
+      const angle = (index * 30 + 15) * Math.PI / 180;
+      const endY = canvas.top + 135 - separator.height * Math.cos(angle);
+      expect(endY).toBeGreaterThan(0);
+      expect(endY).toBeLessThan(viewport.height);
     }
   });
 

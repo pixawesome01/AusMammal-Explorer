@@ -44,8 +44,7 @@ const RADIAL_CENTRE_SIZE = 40;
 const RADIAL_CHART_CENTRE = RADIAL_CHART_SIZE / 2;
 const RADIAL_CENTRE_OFFSET = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
 const RADIAL_LABEL_WIDTH = 40;
-const RADIAL_LABEL_HEIGHT = 22;
-const RADIAL_MAX_PETAL_HEIGHT = 104;
+const RADIAL_LABEL_HEIGHT = 18;
 
 const TEMPERATURE_COMPARISON = {
   higher: "warmer than",
@@ -281,18 +280,28 @@ export function EnvironmentalInsights({
                     </View>
                   );
                 })}
-                {monthlySeries.map((item, index) => (
-                  <View
-                    key={`separator-${item.month}`}
-                    pointerEvents="none"
-                    style={[
-                      styles.radialSpoke,
-                      { transform: [{ rotate: `${index * 30 + 15}deg` }] },
-                    ]}
-                  >
-                    <View style={styles.radialSeparator} />
-                  </View>
-                ))}
+                {monthlySeries.map((item, index) => {
+                  // Follow the shared edge of the two neighbouring petals.
+                  // A fixed maximum-length line can escape a short bar and
+                  // paint across the heading after the canvas is trimmed.
+                  const length = Math.max(radialBarHeights[index], radialBarHeights[(index + 1) % 12])
+                    / Math.cos(Math.PI / 12);
+                  return (
+                    <View
+                      key={`separator-${item.month}`}
+                      pointerEvents="none"
+                      style={[
+                        styles.radialSpoke,
+                        { transform: [{ rotate: `${index * 30 + 15}deg` }] },
+                      ]}
+                    >
+                      <View testID={`month-separator-${item.month}`} style={[
+                        styles.radialSeparator,
+                        { top: RADIAL_CHART_CENTRE - length, height: length },
+                      ]} />
+                    </View>
+                  );
+                })}
                 <View style={styles.radialCentre} />
                 {radialLabels.map((item) => (
                   <Text
@@ -464,8 +473,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: RADIAL_CHART_SIZE,
     marginTop: 8,
-    // The inner canvas retains its full size for gesture coordinates.
-    overflow: "visible",
+    // Retain inner gesture coordinates, but keep drawing inside the trimmed
+    // plot so no separator can cross the title or the readout.
+    overflow: "hidden",
   },
   radialChart: { position: "absolute", width: RADIAL_CHART_SIZE, height: RADIAL_CHART_SIZE },
   radialSpoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
@@ -484,9 +494,7 @@ const styles = StyleSheet.create({
   },
   radialSeparator: {
     position: "absolute",
-    top: RADIAL_CHART_CENTRE - RADIAL_MAX_PETAL_HEIGHT,
     width: 2,
-    height: RADIAL_MAX_PETAL_HEIGHT,
     backgroundColor: "rgba(255,255,255,0.94)",
   },
   radialCentre: {
@@ -504,10 +512,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: RADIAL_LABEL_WIDTH,
     lineHeight: RADIAL_LABEL_HEIGHT,
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: "400",
-    color: "#6f7772",
+    color: "#ffffff",
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.28)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
   description: { marginTop: 13, color: READABLE_COLOURS.muted, fontSize: 13, lineHeight: 19 },
