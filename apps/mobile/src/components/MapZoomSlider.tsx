@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
+import { StyleSheet, View, type GestureResponderEvent } from "react-native";
 
 type MapZoomSliderProps = {
   value: number;
@@ -9,8 +9,8 @@ type MapZoomSliderProps = {
   onValueChange: (value: number) => void;
 };
 
-const TRACK_TOP = 34;
-const TRACK_BOTTOM = 18;
+const TRACK_PADDING = 14;
+const THUMB_SIZE = 14;
 
 export function MapZoomSlider({ value, min, max, height, onValueChange }: MapZoomSliderProps) {
   const [dragValue, setDragValue] = useState<number | null>(null);
@@ -18,13 +18,13 @@ export function MapZoomSlider({ value, min, max, height, onValueChange }: MapZoo
   const clamp = (next: number) => Math.max(min, Math.min(max, next));
   // Native camera events may arrive while dragging; keep the thumb under the finger.
   const currentValue = clamp(dragValue ?? value);
-  const trackHeight = Math.max(1, height - TRACK_TOP - TRACK_BOTTOM);
+  const trackHeight = Math.max(1, height - TRACK_PADDING * 2);
   const progress = (currentValue - min) / (max - min);
-  const thumbTop = TRACK_TOP + (1 - progress) * trackHeight;
+  const thumbTop = TRACK_PADDING + (1 - progress) * trackHeight;
 
   const updateFromY = (y: number) => {
     if (!Number.isFinite(y)) return;
-    const next = clamp(max - ((y - TRACK_TOP) / trackHeight) * (max - min));
+    const next = clamp(max - ((y - TRACK_PADDING) / trackHeight) * (max - min));
     setDragValue(next);
     onValueChange(next);
   };
@@ -63,38 +63,26 @@ export function MapZoomSlider({ value, min, max, height, onValueChange }: MapZoo
       style={[styles.container, { height }]}
     >
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <Text style={styles.label}>Zoom</Text>
-        <View style={[styles.track, { top: TRACK_TOP, height: trackHeight }]} />
+        <View style={[styles.track, { top: TRACK_PADDING, height: trackHeight }]} />
         <View style={[styles.fill, { top: thumbTop, height: progress * trackHeight }]} />
-        <View testID="zoom-slider-thumb" style={[styles.thumb, { top: thumbTop - 11 }]} />
+        <View testID="zoom-slider-thumb" style={[styles.thumb, { top: thumbTop - THUMB_SIZE / 2 }]} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.74)",
-    backgroundColor: "rgba(250,252,250,0.91)",
-    shadowColor: "#58675e",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  label: { marginTop: 9, fontSize: 10, fontWeight: "600", color: "#47524c", textAlign: "center" },
-  track: { position: "absolute", left: 19, width: 4, borderRadius: 2, backgroundColor: "#c5d1c8" },
-  fill: { position: "absolute", left: 19, width: 4, borderRadius: 2, backgroundColor: "#2b7652" },
+  // Keep a 44-point touch target without drawing a surrounding panel.
+  container: { width: 44 },
+  track: { position: "absolute", left: 20, width: 4, borderRadius: 2, backgroundColor: "#c5d1c8" },
+  fill: { position: "absolute", left: 20, width: 4, borderRadius: 2, backgroundColor: "#2b7652" },
   thumb: {
     position: "absolute",
-    left: 10,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
+    left: (44 - THUMB_SIZE) / 2,
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: THUMB_SIZE / 2,
+    borderWidth: 1.5,
     borderColor: "#2b7652",
     backgroundColor: "#ffffff",
   },

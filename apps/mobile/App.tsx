@@ -179,10 +179,16 @@ export function ExplorerWorkspace({
     Math.min(expandedRecordsHeight, Math.max(collapsedRecordsHeight, height));
   const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? compactSheetHeight);
   const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
-  const zoomAreaTop = (topControlsHeight || (activeTab === "prediction" ? 300 : 160)) + 12;
-  const zoomAreaHeight = (mapViewportHeight ?? windowHeight) - zoomAreaTop -
+  const viewportHeight = mapViewportHeight ?? windowHeight;
+  const zoomCenterY = viewportHeight / 2;
+  const zoomTopLimit = (topControlsHeight || (activeTab === "prediction" ? 300 : 160)) + 12;
+  const zoomBottomLimit = viewportHeight -
     (activeTab === "prediction" ? predictionDockHeight : sheetHeight) - 12;
-  const zoomSliderHeight = Math.min(196, zoomAreaHeight);
+  // Keep the rail centred on the screen, not the differently sized tab overlays.
+  // If space is limited, shorten it symmetrically instead of moving its centre.
+  const zoomSliderHeight = Math.min(196, 2 * Math.min(
+    zoomCenterY - zoomTopLimit, zoomBottomLimit - zoomCenterY,
+  ));
   const snapRecordsHeight = (height: number) => {
     const stops = [collapsedRecordsHeight, clampRecordsHeight(compactSheetHeight), expandedRecordsHeight];
     setRecordsHeight(stops.reduce((closest, stop) =>
@@ -303,7 +309,7 @@ export function ExplorerWorkspace({
 
           {activeTab !== "insights" && zoomSliderHeight >= 96 ? (
             <View testID="map-zoom-control" style={[styles.mapZoomControl, {
-              top: zoomAreaTop + (zoomAreaHeight - zoomSliderHeight) / 2,
+              top: zoomCenterY - zoomSliderHeight / 2,
             }]}>
               <MapZoomSlider
                 min={MAP_ZOOM_RANGE.min}

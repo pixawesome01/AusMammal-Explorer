@@ -107,6 +107,14 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.queryByRole("button", { name: "Zoom in" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Zoom out" })).toBeNull();
     expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ left: 12, position: "absolute" });
+    await fireEvent(screen.getByTestId("explorer-screen"), "layout", {
+      nativeEvent: { layout: { height: 900 } },
+    });
+    await fireEvent(screen.getByTestId("map-top-controls"), "layout", {
+      nativeEvent: { layout: { height: 160 } },
+    });
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 352 });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 196 });
     await fireEvent(screen.getByTestId("occurrence-map"), "regionIsChanging", { nativeEvent: { zoom: 6.5 } });
     const slider = screen.getByRole("adjustable", { name: "Map zoom" });
     expect(slider.props.accessibilityValue.now).toBe(6.5);
@@ -116,6 +124,11 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent(screen.getByTestId("occurrence-map"), "regionDidChange", { nativeEvent: { zoom: 5 } });
     expect(slider.props.accessibilityValue.now).toBe(5);
     await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
+    await fireEvent(screen.getByTestId("map-top-controls"), "layout", {
+      nativeEvent: { layout: { height: 320 } },
+    });
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 352 });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 196 });
     expect(screen.getByRole("adjustable", { name: "Map zoom" }).props.accessibilityValue.now).toBe(5);
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.queryByRole("adjustable", { name: "Map zoom" })).toBeNull();
@@ -133,7 +146,7 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent(screen.getByTestId("records-sheet-handle"), "accessibilityAction", {
       nativeEvent: { actionName: "decrement" },
     });
-    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 188 });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 136 });
     expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 172 });
   });
 

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 import { MapZoomSlider } from "./MapZoomSlider";
 
@@ -7,7 +8,13 @@ it("maps rail taps and vertical drags to zoom and clamps at both ends", async ()
   await render(<MapZoomSlider value={9} min={2} max={16} height={200} onValueChange={onValueChange} />);
   const slider = screen.getByRole("adjustable", { name: "Map zoom" });
   expect(slider).toHaveStyle({ width: 44, height: 200 });
-  await fireEvent(slider, "responderGrant", { nativeEvent: { locationY: 108, pageY: 400 } });
+  expect(screen.queryByText("Zoom")).toBeNull();
+  const containerStyle = StyleSheet.flatten(slider.props.style);
+  expect(containerStyle.backgroundColor).toBeUndefined();
+  expect(containerStyle.borderWidth).toBeUndefined();
+  expect(containerStyle.shadowOpacity).toBeUndefined();
+  expect(screen.getByTestId("zoom-slider-thumb")).toHaveStyle({ width: 14, height: 14 });
+  await fireEvent(slider, "responderGrant", { nativeEvent: { locationY: 100, pageY: 400 } });
   expect(onValueChange).toHaveBeenLastCalledWith(9);
   await fireEvent(slider, "responderMove", { nativeEvent: { pageY: 250 } });
   expect(onValueChange).toHaveBeenLastCalledWith(16);
@@ -25,7 +32,7 @@ it("follows external zoom while keeping the thumb under an active drag", async (
   const slider = screen.getByRole("adjustable", { name: "Map zoom" });
   await rerender(view(7));
   expect(slider.props.accessibilityValue.now).toBe(7);
-  await fireEvent(slider, "responderGrant", { nativeEvent: { locationY: 34, pageY: 100 } });
+  await fireEvent(slider, "responderGrant", { nativeEvent: { locationY: 14, pageY: 100 } });
   await rerender(view(10));
   expect(slider.props.accessibilityValue.now).toBe(16);
   await fireEvent(slider, "responderTerminate");
