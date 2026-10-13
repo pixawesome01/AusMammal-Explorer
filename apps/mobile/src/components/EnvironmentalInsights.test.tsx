@@ -89,25 +89,44 @@ describe("EnvironmentalInsights", () => {
 
 
 describe("monthly chart scrubbing", () => {
-  it("trims blank space above the chart while keeping top-month labels visible", async () => {
+  it("trims both vertical gaps and places peak labels over their bars for every month", async () => {
     const { rerender } = await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
-    expect(screen.getByText("Apr")).toHaveStyle({ color: "#6f7772", fontWeight: "400" });
-    const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
-    expect(viewport.height).toBeLessThan(230);
-    expect(viewport.height).toBeGreaterThan(190);
-    expect(viewport.overflow).toBe("visible");
-    expect(screen.getByTestId("monthly-chart-canvas")).toHaveStyle({ top: viewport.height - 270, height: 270 });
-
-    const januaryCollection = {
-      ...collection,
-      features: collection.features.map(record => ({
-        ...record, properties: { ...record.properties, eventDate: "2026-01-10" },
-      })),
-    };
-    await rerender(<EnvironmentalInsights collection={januaryCollection} speciesName="Koala" status="ready" />);
-    expect(screen.getByText("Jan")).toHaveStyle({ color: "#6f7772", fontWeight: "400" });
-    expect(screen.getByTestId("monthly-chart-viewport")).toHaveStyle({ height: 270 });
-    expect(screen.getByTestId("monthly-chart-canvas")).toHaveStyle({ top: 0 });
+    for (let month = 1; month <= 12; month += 1) {
+      const monthlyCollection = {
+        ...collection,
+        features: collection.features.map(record => ({
+          ...record, properties: { ...record.properties, eventDate: `2026-${String(month).padStart(2, "0")}-10` },
+        })),
+      };
+      await rerender(<EnvironmentalInsights collection={monthlyCollection} speciesName="Koala" status="ready" />);
+      const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
+      const canvas = StyleSheet.flatten(screen.getByTestId("monthly-chart-canvas").props.style);
+      expect(viewport.height).toBeLessThan(200);
+      expect(viewport.overflow).toBe("visible");
+      expect(canvas.height).toBe(270);
+      const bounds = Array.from({ length: 12 }, (_, index) => {
+        const height = index + 1 === month ? 104 : 52;
+        const angle = index * Math.PI / 6;
+        const y = canvas.top + 135 - height * Math.cos(angle);
+        const halfSpan = height * Math.tan(Math.PI / 12) * Math.abs(Math.sin(angle));
+        return { top: y - halfSpan, bottom: y + halfSpan };
+      });
+      const topGap = Math.min(...bounds.map(bound => bound.top));
+      const bottomGap = viewport.height - Math.max(...bounds.map(bound => bound.bottom));
+      expect(topGap).toBeGreaterThanOrEqual(10 - 0.001);
+      expect(topGap).toBeLessThan(11 + 0.001);
+      expect(bottomGap).toBeGreaterThanOrEqual(6 - 0.001);
+      expect(bottomGap).toBeLessThan(7 + 0.001);
+      const label = screen.getByTestId(`month-label-${month}`);
+      expect(label).toHaveStyle({ color: "#6f7772", fontWeight: "400" });
+      expect(label.props.pointerEvents).toBe("none");
+      const position = StyleSheet.flatten(label.props.style);
+      const angle = (month - 1) * Math.PI / 6;
+      expect(position.left + position.width / 2).toBeCloseTo(135 + Math.sin(angle) * 80);
+      expect(position.top + position.lineHeight / 2).toBeCloseTo(135 - Math.cos(angle) * 80);
+      expect(position.top + canvas.top).toBeGreaterThan(0);
+      expect(position.top + position.lineHeight + canvas.top).toBeLessThan(viewport.height);
+    }
   });
 
   it("softens every radial bar's outer corners without changing its height or selection", async () => {

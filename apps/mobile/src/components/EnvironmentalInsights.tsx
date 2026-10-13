@@ -43,7 +43,8 @@ const RADIAL_CHART_SIZE = 270;
 const RADIAL_CENTRE_SIZE = 40;
 const RADIAL_CHART_CENTRE = RADIAL_CHART_SIZE / 2;
 const RADIAL_CENTRE_OFFSET = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
-const RADIAL_LABEL_RADIUS = 122;
+const RADIAL_LABEL_WIDTH = 40;
+const RADIAL_LABEL_HEIGHT = 22;
 const RADIAL_MAX_PETAL_HEIGHT = 104;
 
 const TEMPERATURE_COMPARISON = {
@@ -176,17 +177,31 @@ export function EnvironmentalInsights({
       : item.count / largestMonthlyCount;
     return 52 + fraction * 52;
   });
-  // Trim only empty canvas above the rotated bars and peak labels. Keep the
-  // original chart coordinates inside so touch-to-month selection is unchanged.
+  const radialLabels = peakMonths.map(item => {
+    const angle = (item.month - 1) * Math.PI / 6;
+    const radius = radialBarHeights[item.month - 1] - 24;
+    return {
+      ...item,
+      left: RADIAL_CHART_CENTRE + Math.sin(angle) * radius - RADIAL_LABEL_WIDTH / 2,
+      top: RADIAL_CHART_CENTRE - Math.cos(angle) * radius - RADIAL_LABEL_HEIGHT / 2,
+    };
+  });
+  // Trim unused canvas at both ends, not the bars themselves. Preserve the
+  // original inner coordinates so touch-to-month selection stays unchanged.
+  const radialBarBounds = radialBarHeights.map((height, index) => {
+    const angle = index * Math.PI / 6;
+    const tipY = RADIAL_CHART_CENTRE - height * Math.cos(angle);
+    const halfSpanY = height * Math.tan(Math.PI / 12) * Math.abs(Math.sin(angle));
+    return { top: tipY - halfSpanY, bottom: tipY + halfSpanY };
+  });
   const radialTopInset = Math.max(0, Math.floor(Math.min(
-    ...radialBarHeights.map((height, index) => {
-      const angle = index * Math.PI / 6;
-      return RADIAL_CHART_CENTRE - height * Math.cos(angle)
-        - height * Math.tan(Math.PI / 12) * Math.abs(Math.sin(angle));
-    }),
-    ...peakMonths.map(item => RADIAL_CHART_CENTRE
-      - Math.cos((item.month - 1) * Math.PI / 6) * RADIAL_LABEL_RADIUS - 11),
+    ...radialBarBounds.map(bounds => bounds.top),
+    ...radialLabels.map(label => label.top),
   )) - 10);
+  const radialBottomInset = Math.max(0, Math.floor(RADIAL_CHART_SIZE - Math.max(
+    ...radialBarBounds.map(bounds => bounds.bottom),
+    ...radialLabels.map(label => label.top + RADIAL_LABEL_HEIGHT),
+  )) - 6);
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
   const peakPhrase = listPhrase(peakMonths.map((item) => item.name));
   const peakSeasons = listPhrase([
@@ -228,7 +243,7 @@ export function EnvironmentalInsights({
 
         {status === "ready" ? (
           <>
-            <View testID="monthly-chart-viewport" style={[styles.radialViewport, { height: RADIAL_CHART_SIZE - radialTopInset }]}>
+            <View testID="monthly-chart-viewport" style={[styles.radialViewport, { height: RADIAL_CHART_SIZE - radialTopInset - radialBottomInset }]}>
               <View testID="monthly-chart-canvas" style={[styles.radialChart, { top: 0 - radialTopInset }]}>
                 {monthlySeries.map((item, index) => {
                   const height = radialBarHeights[index];
@@ -276,23 +291,18 @@ export function EnvironmentalInsights({
                   </View>
                 ))}
                 <View style={styles.radialCentre} />
-                {peakMonths.map((item) => {
-                  const angle = ((item.month - 1) * 30 * Math.PI) / 180;
-                  return (
-                    <Text
-                      key={item.month}
-                      style={[
-                        styles.peakLabel,
-                        {
-                          left: RADIAL_CHART_CENTRE + Math.sin(angle) * RADIAL_LABEL_RADIUS - 28,
-                          top: RADIAL_CHART_CENTRE - Math.cos(angle) * RADIAL_LABEL_RADIUS - 11,
-                        },
-                      ]}
-                    >
-                      {item.name}
-                    </Text>
-                  );
-                })}
+                {radialLabels.map((item) => (
+                  <Text
+                    key={item.month}
+                    testID={`month-label-${item.month}`}
+                    pointerEvents="none"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    style={[styles.peakLabel, { left: item.left, top: item.top }]}
+                  >
+                    {item.name}
+                  </Text>
+                ))}
                 <View
                   style={StyleSheet.absoluteFill}
                   testID="month-scrubber"
@@ -451,7 +461,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: RADIAL_CHART_SIZE,
     marginTop: 8,
-    // Edge month labels may extend slightly beyond the chart's square canvas.
+    // The inner canvas retains its full size for gesture coordinates.
     overflow: "visible",
   },
   radialChart: { position: "absolute", width: RADIAL_CHART_SIZE, height: RADIAL_CHART_SIZE },
@@ -489,7 +499,8 @@ const styles = StyleSheet.create({
   },
   peakLabel: {
     position: "absolute",
-    width: 56,
+    width: RADIAL_LABEL_WIDTH,
+    lineHeight: RADIAL_LABEL_HEIGHT,
     fontSize: 17,
     fontWeight: "400",
     color: "#6f7772",
