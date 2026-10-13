@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Linking,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 
 import type { SuitabilityLayer } from "../data/suitabilityLayers";
+import { focusAccessibleElement, READABLE_COLOURS } from "./accessibility";
 
 type ModelInfoPanelProps = {
   layer: SuitabilityLayer;
@@ -64,11 +66,18 @@ function FactRow({ label, value }: FactRowProps) {
 
 export function ModelInfoPanel({ layer, speciesName }: ModelInfoPanelProps) {
   const [open, setOpen] = useState(false);
+  const headingRef = useRef<Text>(null);
+  const triggerRef = useRef<View>(null);
+  const close = () => {
+    setOpen(false);
+    if (Platform.OS !== "ios") focusAccessibleElement(triggerRef);
+  };
   const { evaluation, variableContribution, model, trainingData, occurrences, predictors } = layer;
 
   return (
     <>
       <Pressable
+        ref={triggerRef}
         accessibilityHint="Shows how accurate the model is, what drives it, and the specifications it was trained on"
         accessibilityLabel="About this model"
         accessibilityRole="button"
@@ -81,24 +90,26 @@ export function ModelInfoPanel({ layer, speciesName }: ModelInfoPanelProps) {
 
       <Modal
         animationType="slide"
-        onRequestClose={() => setOpen(false)}
+        onRequestClose={close}
+        onShow={() => focusAccessibleElement(headingRef)}
+        onDismiss={() => focusAccessibleElement(triggerRef)}
         presentationStyle="overFullScreen"
         transparent
         visible={open}
       >
         <View style={styles.modalBackdrop}>
-          <SafeAreaView style={styles.sheet}>
+          <SafeAreaView testID="model-info-sheet" style={styles.sheet} accessibilityViewIsModal onAccessibilityEscape={close}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Pressable
                 accessibilityLabel="Close about this model"
                 accessibilityRole="button"
-                onPress={() => setOpen(false)}
+                onPress={close}
                 style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
               >
                 <Text style={styles.backIcon}>‹</Text>
               </Pressable>
-              <Text accessibilityRole="header" style={styles.sheetHeaderTitle}>
+              <Text ref={headingRef} accessibilityRole="header" style={styles.sheetHeaderTitle}>
                 About this model
               </Text>
               <View style={styles.headerSpacer} />
@@ -208,10 +219,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    minHeight: 44,
+    borderRadius: 22,
+    backgroundColor: "#f7f9f7",
   },
   pressed: { opacity: 0.65 },
-  infoIcon: { color: "#3e89f7", fontSize: 15, fontWeight: "600" },
-  triggerText: { color: "#3e89f7", fontSize: 12, fontWeight: "700" },
+  infoIcon: { color: READABLE_COLOURS.link, fontSize: 15, fontWeight: "600" },
+  triggerText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "700" },
 
   modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(23,31,27,0.30)" },
   sheet: {
@@ -219,7 +233,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    backgroundColor: "rgba(247,249,247,0.98)",
+    backgroundColor: "#f7f9f7",
   },
   sheetHandle: {
     alignSelf: "center",
@@ -231,8 +245,8 @@ const styles = StyleSheet.create({
   },
   sheetHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", paddingHorizontal: 14 },
   backButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 21,

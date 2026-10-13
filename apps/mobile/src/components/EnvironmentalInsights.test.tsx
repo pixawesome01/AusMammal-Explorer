@@ -58,9 +58,9 @@ describe("EnvironmentalInsights", () => {
     expect(april.props.accessibilityState.selected).toBe(false);
     expect(screen.getByText("Tap a bar to see rainfall")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Apr: 2.0 mm/day, top record month" }));
-    expect(screen.getByText("Apr · 2.0 mm/day")).toHaveStyle({ color: "#5797ca" });
+    expect(screen.getByText("Apr · 2.0 mm/day")).toHaveStyle({ color: "#245b80" });
     await fireEvent.press(screen.getByRole("button", { name: "Jan: 3.9 mm/day" }));
-    expect(screen.getByText("Jan · 3.9 mm/day")).toHaveStyle({ color: "#747b77" });
+    expect(screen.getByText("Jan · 3.9 mm/day")).toHaveStyle({ color: "#566159" });
     expect(screen.getByText("Jan · 23.9°C")).toBeTruthy();
   });
 });

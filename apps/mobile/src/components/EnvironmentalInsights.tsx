@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
 
 import {
   CLIMATE_REFERENCE,
@@ -13,6 +13,7 @@ import {
 import { getAustralianSeason, type OccurrenceDateRange, type OccurrenceTemporalFilter } from "../data/occurrenceFilter";
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { monthlyOccurrenceAverages, seasonalOccurrenceAverages } from "../data/occurrenceStatistics";
+import { READABLE_COLOURS } from "./accessibility";
 
 type EnvironmentalInsightsProps = {
   speciesName: string;
@@ -96,7 +97,7 @@ function ClimateBarChart({
           style={[styles.climateMetric, {
             color: selectedBar !== null && highlightedMonths.includes(selectedBar + 1)
               ? color
-              : "#747b77",
+              : READABLE_COLOURS.muted,
           }]}
           accessibilityLiveRegion="polite"
         >
@@ -105,7 +106,7 @@ function ClimateBarChart({
             : `${MONTHLY_CLIMATE[selectedBar].name} · ${values[selectedBar].toFixed(1)}${unit}`}
         </Text>
       )}
-      <View style={styles.barChart}>
+      <ScrollView horizontal contentContainerStyle={styles.barChart}>
         {values.map((value, index) => {
           const height = 24 + ((value - smallest) / range) * 82;
           const highlighted = highlightedMonths?.includes(index + 1);
@@ -137,7 +138,7 @@ function ClimateBarChart({
             </BarContainer>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -259,7 +260,7 @@ export function EnvironmentalInsights({
                       {
                         left: RADIAL_CHART_CENTRE + Math.sin(angle) * RADIAL_LABEL_RADIUS - 28,
                         top: RADIAL_CHART_CENTRE - Math.cos(angle) * RADIAL_LABEL_RADIUS - 11,
-                        color: MONTH_COLORS[item.month - 1],
+                        color: READABLE_COLOURS.text,
                       },
                     ]}
                   >
@@ -335,7 +336,7 @@ export function EnvironmentalInsights({
         </View>
         <ClimateBarChart
           accessibilityLabel="Typical monthly temperature chart"
-          color="#42a875"
+          color={READABLE_COLOURS.temperature}
           unit="°C"
           metricName="temperature"
           values={temperatures}
@@ -358,7 +359,7 @@ export function EnvironmentalInsights({
         </View>
         <ClimateBarChart
           accessibilityLabel="Typical daily rainfall chart"
-          color="#5797ca"
+          color={READABLE_COLOURS.rainfall}
           unit=" mm/day"
           metricName="rainfall"
           values={rainfall}
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(201,211,203,0.92)",
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "#ffffff",
   },
   monthCard: { shadowColor: "#7ba287", shadowOpacity: 0.12, shadowRadius: 16 },
   climateCard: { shadowColor: "#83b495", shadowOpacity: 0.15, shadowRadius: 20 },
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#747b78",
   },
   headingText: { flex: 1 },
-  eyebrow: { color: "#659477", fontSize: 10, fontWeight: "600", letterSpacing: 1.1, textTransform: "uppercase" },
+  eyebrow: { color: READABLE_COLOURS.muted, fontSize: 11, fontWeight: "600", letterSpacing: 1.1, textTransform: "uppercase" },
   title: { marginTop: 2, color: "#34423a", fontSize: 18, fontWeight: "600" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
   radialChart: {
@@ -476,16 +477,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
-  description: { marginTop: 13, color: "#747b77", fontSize: 13, lineHeight: 19 },
+  description: { marginTop: 13, color: READABLE_COLOURS.muted, fontSize: 13, lineHeight: 19 },
   climateMetric: { marginTop: 18, fontSize: 25, fontWeight: "500", textAlign: "center" },
   barChart: { height: 138, flexDirection: "row", alignItems: "flex-end", gap: 3, marginTop: 5 },
-  barColumn: { flex: 1, height: "100%", alignItems: "center" },
+  barColumn: { flex: 1, minWidth: 24, height: "100%", alignItems: "center" },
   barArea: { flex: 1, width: "100%", alignItems: "center", justifyContent: "flex-end" },
   climateBar: { width: "78%", minWidth: 8, borderTopLeftRadius: 5, borderTopRightRadius: 5 },
-  barMonth: { height: 15, marginTop: 4, color: "#818984", fontSize: 8, fontWeight: "500" },
+  barMonth: { minHeight: 17, marginTop: 4, color: READABLE_COLOURS.muted, fontSize: 10, fontWeight: "500" },
   sectionDivider: { height: 1, marginVertical: 24, backgroundColor: "#e3e9e4" },
-  referenceNote: { marginTop: 20, color: "#8a918d", fontSize: 10, lineHeight: 15, textAlign: "center" },
-  sourceLink: { alignSelf: "center", marginTop: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  sourceLinkText: { color: "#3487e8", fontSize: 12, fontWeight: "600" },
+  referenceNote: { marginTop: 20, color: READABLE_COLOURS.muted, fontSize: 11, lineHeight: 16, textAlign: "center" },
+  sourceLink: { alignSelf: "center", minHeight: 44, justifyContent: "center", marginTop: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  sourceLinkText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "600" },
   pressed: { opacity: 0.65 },
 });

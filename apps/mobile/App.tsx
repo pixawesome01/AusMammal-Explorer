@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import { AboutOccurrenceData } from "./src/components/AboutOccurrenceData";
+import { focusAccessibleElement, READABLE_COLOURS } from "./src/components/accessibility";
 import { EnvironmentalInsights } from "./src/components/EnvironmentalInsights";
 import { OccurrenceDataStatus } from "./src/components/OccurrenceDataStatus";
 import {
@@ -136,6 +137,12 @@ export function ExplorerWorkspace({
   const [recordsHeight, setRecordsHeight] = useState<number | null>(null);
   const sheetDrag = useRef({ y: 0, height: 0 });
   const [aboutOpen, setAboutOpen] = useState(false);
+  const aboutHeadingRef = useRef<Text>(null);
+  const aboutTriggerRef = useRef<View>(null);
+  const closeAbout = () => {
+    setAboutOpen(false);
+    if (Platform.OS !== "ios") focusAccessibleElement(aboutTriggerRef);
+  };
   const [temporalFilter, setTemporalFilter] = useState<OccurrenceTemporalFilter>({});
   const occurrenceState = useOccurrenceRecords({
     speciesId: selectedSpecies.id,
@@ -201,7 +208,8 @@ export function ExplorerWorkspace({
 
       {isExplorerOpen ? (
         <View style={styles.explorerLayer}>
-          <View style={styles.explorerScreen}>
+          <View style={styles.explorerScreen} accessibilityElementsHidden={aboutOpen}
+            importantForAccessibility={aboutOpen ? "no-hide-descendants" : "auto"}>
         <OccurrenceMap
           ref={mapRef}
           collection={occurrenceState.records?.collection}
@@ -315,7 +323,8 @@ export function ExplorerWorkspace({
                   accessibilityRole="adjustable"
                   accessibilityLabel="Records panel height"
                   accessibilityHint="Drag down to show more map. Drag up to edit filters."
-                  accessibilityValue={{ min: collapsedRecordsHeight, max: expandedRecordsHeight, now: currentRecordsHeight }}
+                  accessibilityValue={{ min: collapsedRecordsHeight, max: expandedRecordsHeight, now: currentRecordsHeight,
+                    text: currentRecordsHeight === collapsedRecordsHeight ? "Collapsed" : "Filters expanded" }}
                   accessibilityActions={[{ name: "increment", label: "Expand filters" }, { name: "decrement", label: "Show more map" }]}
                   onAccessibilityAction={({ nativeEvent }) => {
                     if (nativeEvent.actionName === "increment") setRecordsHeight(expandedRecordsHeight);
@@ -354,6 +363,7 @@ export function ExplorerWorkspace({
                     state={occurrenceState}
                   />
                   <Pressable
+                    ref={aboutTriggerRef}
                     accessibilityLabel="About this data"
                     accessibilityRole="button"
                     onPress={() => setAboutOpen(true)}
@@ -393,24 +403,26 @@ export function ExplorerWorkspace({
 
           <Modal
             animationType="slide"
-            onRequestClose={() => setAboutOpen(false)}
+            onRequestClose={closeAbout}
+            onShow={() => focusAccessibleElement(aboutHeadingRef)}
+            onDismiss={() => focusAccessibleElement(aboutTriggerRef)}
             presentationStyle="overFullScreen"
             transparent
             visible={aboutOpen}
           >
             <View style={styles.modalBackdrop}>
-              <SafeAreaView style={styles.aboutSheet}>
+              <SafeAreaView style={styles.aboutSheet} accessibilityViewIsModal onAccessibilityEscape={closeAbout}>
                 <View style={styles.sheetHandle} />
                 <View style={styles.aboutHeader}>
                   <Pressable
                     accessibilityLabel="Close about this data"
                     accessibilityRole="button"
-                    onPress={() => setAboutOpen(false)}
+                    onPress={closeAbout}
                     style={({ pressed }) => [styles.modalBackButton, pressed && styles.pressed]}
                   >
                     <Text style={styles.backIcon}>‹</Text>
                   </Pressable>
-                  <Text accessibilityRole="header" style={styles.aboutHeaderTitle}>
+                  <Text ref={aboutHeadingRef} accessibilityRole="header" style={styles.aboutHeaderTitle}>
                     About this data
                   </Text>
                   <View style={styles.modalHeaderSpacer} />
@@ -447,7 +459,7 @@ const styles = StyleSheet.create({
   mapUi: { ...StyleSheet.absoluteFill },
   topSafeArea: { position: "absolute", top: 0, right: 0, left: 0 },
   topControl: {
-    height: 50,
+    minHeight: 54,
     marginTop: 12,
     marginHorizontal: 12,
     flexDirection: "row",
@@ -464,8 +476,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   topIconButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 20,
@@ -475,7 +487,7 @@ const styles = StyleSheet.create({
   speciesControl: {
     flex: 1,
     minWidth: 0,
-    height: 40,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -485,13 +497,13 @@ const styles = StyleSheet.create({
   speciesControlText: { maxWidth: 155, color: "#1d262b", fontSize: 15, fontWeight: "700" },
   chevron: { marginTop: -2, color: "#445057", fontSize: 14, fontWeight: "600" },
   zoomControls: {
-    height: 40,
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.72)",
   },
-  zoomButton: { width: 36, height: 40, alignItems: "center", justifyContent: "center" },
+  zoomButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   zoomDivider: { width: StyleSheet.hairlineWidth, height: 20, backgroundColor: "#c8ceca" },
   zoomText: { color: "#273239", fontSize: 23, fontWeight: "500" },
   pressed: { opacity: 0.68 },
@@ -524,14 +536,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderBottomWidth: 0,
     borderColor: "rgba(255,255,255,0.74)",
-    backgroundColor: "rgba(247,249,247,0.80)",
+    backgroundColor: "#f7f9f7",
     shadowColor: "#4e5d55",
     shadowOffset: { width: 0, height: -7 },
     shadowOpacity: 0.18,
     shadowRadius: 22,
     elevation: 15,
   },
-  sheetDragHandle: { height: 20, justifyContent: "center", alignItems: "center" },
+  sheetDragHandle: { height: 24, justifyContent: "center", alignItems: "center" },
   sheetHandle: {
     alignSelf: "center",
     width: 46,
@@ -544,7 +556,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   tabBar: {
-    height: 36,
+    minHeight: 52,
     flexDirection: "row",
     gap: 4,
     overflow: "hidden",
@@ -567,6 +579,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(226,237,231,0.38)",
   },
   tab: {
+    minHeight: 44,
     position: "relative",
     flex: 1,
     overflow: "hidden",
@@ -612,6 +625,7 @@ const styles = StyleSheet.create({
   activeTabText: { color: "#111714", fontWeight: "700" },
   sheetScrollContent: { paddingTop: 6, paddingBottom: 14 },
   aboutButton: {
+    minHeight: 44,
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
@@ -620,8 +634,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  infoIcon: { color: "#3e89f7", fontSize: 15, fontWeight: "600" },
-  aboutButtonText: { color: "#3e89f7", fontSize: 12, fontWeight: "700" },
+  infoIcon: { color: READABLE_COLOURS.link, fontSize: 15, fontWeight: "600" },
+  aboutButtonText: { color: READABLE_COLOURS.link, fontSize: 12, fontWeight: "700" },
   predictionLegend: {
     marginTop: 10,
     marginHorizontal: 22,
@@ -680,8 +694,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   modalBackButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 21,

@@ -104,6 +104,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   link: {
+    minHeight: 44,
+    justifyContent: "center",
     alignSelf: "flex-start",
     marginTop: 14,
     paddingVertical: 5,
