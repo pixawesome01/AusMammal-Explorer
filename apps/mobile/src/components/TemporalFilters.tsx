@@ -40,6 +40,7 @@ type DiscreteSliderProps = {
   selectedIndex: number;
   onSelect: (value: number | undefined) => void;
   headerAccessory?: ReactNode;
+  headerTrailingAccessory?: ReactNode;
 };
 
 function DiscreteSlider({
@@ -48,6 +49,7 @@ function DiscreteSlider({
   selectedIndex,
   onSelect,
   headerAccessory,
+  headerTrailingAccessory,
 }: DiscreteSliderProps) {
   const trackWidth = useRef(1);
   const optionsRef = useRef(options);
@@ -83,7 +85,7 @@ function DiscreteSlider({
   return (
     <View style={styles.sliderBlock}>
       <View testID={`${accessibilityLabel.toLowerCase()}-slider-heading`} style={styles.sliderHeading}>
-        {headerAccessory ? (
+        {headerAccessory || headerTrailingAccessory ? (
           <View testID={`${accessibilityLabel.toLowerCase()}-slider-leading`} style={styles.sliderHeadingSide}>
             {headerAccessory}
           </View>
@@ -93,12 +95,14 @@ function DiscreteSlider({
             {options[selectedIndex].label}
           </Text>
         </View>
-        {headerAccessory ? (
+        {headerAccessory || headerTrailingAccessory ? (
           <View
             testID={`${accessibilityLabel.toLowerCase()}-slider-trailing`}
-            pointerEvents="none"
+            pointerEvents={headerTrailingAccessory ? "box-none" : "none"}
             style={styles.sliderHeadingSide}
-          />
+          >
+            {headerTrailingAccessory}
+          </View>
         ) : null}
       </View>
       <View
@@ -206,21 +210,20 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
 
   return (
     <View accessibilityLabel="Occurrence time filters" style={styles.card}>
-      {hasActiveFilter ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onChange({})}
-          style={styles.clearButton}
-        >
-          <Text style={styles.clearText}>Clear all</Text>
-        </Pressable>
-      ) : null}
-
       <DiscreteSlider
         accessibilityLabel="Year"
         onSelect={(year) => onChange(mode === "month" ? { year, month: value.month } : { year, season: value.season })}
         options={yearOptions}
         selectedIndex={selectedYearIndex}
+        headerTrailingAccessory={hasActiveFilter ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => onChange({})}
+            style={styles.clearButton}
+          >
+            <Text style={styles.clearText}>Clear all</Text>
+          </Pressable>
+        ) : null}
       />
       {mode === "month" ? (
         <DiscreteSlider
@@ -278,7 +281,7 @@ const styles = StyleSheet.create({
   modeTextSelected: { color: "#163c2c", fontWeight: "700" },
   pressed: { opacity: 0.7 },
   sliderBlock: { marginTop: 1, marginBottom: 3 },
-  sliderHeading: { flexDirection: "row", alignItems: "center", columnGap: 8 },
+  sliderHeading: { minHeight: 44, flexDirection: "row", alignItems: "center", columnGap: 8 },
   // Equal side slots keep the value at the screen centre, not the remaining space.
   // They can shrink together on narrow phones while the label wraps within its slot.
   sliderHeadingSide: { width: 116, flexShrink: 1 },

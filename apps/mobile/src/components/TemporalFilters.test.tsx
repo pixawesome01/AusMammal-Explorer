@@ -94,6 +94,26 @@ describe("TemporalFilters", () => {
     expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue.text).toBe("June");
   });
 
+  it("aligns Clear all with the centred year value without shifting the heading height", async () => {
+    await render(<Harness />);
+    expect(screen.getByTestId("year-slider-heading")).toHaveStyle({ minHeight: 44, alignItems: "center" });
+    expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
+    await incrementSlider("Year", 2);
+    const heading = screen.getByTestId("year-slider-heading");
+    expect(heading).toHaveStyle({ minHeight: 44, flexDirection: "row", alignItems: "center" });
+    expect(within(heading).getByText("2021")).toHaveStyle({ textAlign: "center" });
+    expect(within(screen.getByTestId("year-slider-trailing")).getByRole("button", { name: "Clear all" }))
+      .toHaveStyle({ minHeight: 44, alignSelf: "flex-end", justifyContent: "center" });
+    expect(screen.getByTestId("year-slider-trailing").props.pointerEvents).toBe("box-none");
+    for (const side of ["leading", "trailing"]) {
+      expect(screen.getByTestId(`year-slider-${side}`)).toHaveStyle({ width: 116, flexShrink: 1 });
+    }
+    await fireEvent.press(within(heading).getByRole("button", { name: "Clear all" }));
+    expect(screen.getByTestId("year-slider-heading")).toHaveStyle({ minHeight: 44 });
+    expect(screen.getByText("All years")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
+  });
+
   it("clears every active filter", async () => {
     await render(<Harness />);
     await incrementSlider("Year", 6);
