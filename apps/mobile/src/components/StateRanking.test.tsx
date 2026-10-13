@@ -35,7 +35,9 @@ describe("StateRanking", () => {
     await render(<StateRanking collection={collection} speciesName="Koala" status="ready" />);
 
     expect(screen.queryByText(/^State summary$/i)).toBeNull();
-    expect(screen.getByRole("header", { name: "State ranking" })).toHaveStyle({ fontSize: 18 });
+    expect(screen.getByRole("header", { name: "State ranking" })).toHaveStyle({
+      fontSize: 18, textAlign: "center", paddingVertical: 4,
+    });
     expect(screen.queryByText("Where records are concentrated")).toBeNull();
     expect(screen.getByTestId("state-count-1").props.children).toBe("2");
     expect(screen.getByTestId("state-count-2").props.children).toBe("1");
