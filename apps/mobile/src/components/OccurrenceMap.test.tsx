@@ -130,18 +130,36 @@ describe("OccurrenceMap", () => {
     expect(getByTestId("occurrence-map").props.mapStyle).toMatch(/^https:\/\//);
   });
 
-  it("exposes the mock-up zoom controls through its ref", async () => {
+  it("sets continuous slider zoom through its ref and clamps to camera limits", async () => {
     const ref = createRef<OccurrenceMapHandle>();
-    await render(<OccurrenceMap ref={ref} speciesName="Koala" />);
+    const onZoomChange = jest.fn();
+    await render(<OccurrenceMap ref={ref} speciesName="Koala" onZoomChange={onZoomChange} />);
 
     await act(async () => {
-      ref.current?.zoomIn();
+      ref.current?.setZoom(7.25);
     });
-    expect(mockZoomTo).toHaveBeenLastCalledWith(4, { duration: 300 });
+    expect(mockZoomTo).toHaveBeenLastCalledWith(7.25, { duration: 0 });
+    expect(onZoomChange).toHaveBeenLastCalledWith(7.25);
     await act(async () => {
-      ref.current?.zoomOut();
+      ref.current?.setZoom(20);
     });
-    expect(mockZoomTo).toHaveBeenLastCalledWith(3, { duration: 300 });
+    expect(mockZoomTo).toHaveBeenLastCalledWith(16, { duration: 0 });
+    await act(async () => { ref.current?.setZoom(-1); });
+    expect(mockZoomTo).toHaveBeenLastCalledWith(2, { duration: 0 });
+    await act(async () => { ref.current?.setZoom(NaN); ref.current?.setZoom(Infinity); });
+    expect(mockZoomTo).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports native pinch, cluster and initial camera zoom without issuing another command", async () => {
+    const onZoomChange = jest.fn();
+    const { getByTestId } = await render(<OccurrenceMap speciesName="Koala" onZoomChange={onZoomChange} />);
+    await fireEvent(getByTestId("occurrence-map"), "regionIsChanging", { nativeEvent: { zoom: 6.25 } });
+    expect(onZoomChange).toHaveBeenLastCalledWith(6.25);
+    await fireEvent(getByTestId("occurrence-map"), "regionDidChange", { nativeEvent: { zoom: 8 } });
+    expect(onZoomChange).toHaveBeenLastCalledWith(8);
+    await fireEvent(getByTestId("occurrence-map"), "regionDidChange", { nativeEvent: { zoom: NaN } });
+    expect(onZoomChange).toHaveBeenCalledTimes(2);
+    expect(mockZoomTo).not.toHaveBeenCalled();
   });
 
   it("shows loading and error states and supports retry", async () => {

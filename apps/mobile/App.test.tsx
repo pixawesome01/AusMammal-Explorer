@@ -9,6 +9,8 @@ import {
 import { SpeciesProvider } from "./src/SpeciesContext";
 import { MVP_SPECIES } from "./src/species";
 
+const mockMapZoomTo = jest.fn();
+
 jest.mock("@maplibre/maplibre-react-native", () => {
   const mockReact = jest.requireActual<typeof import("react")>("react");
   const { Pressable: MockPressable, View: MockView } =
@@ -18,7 +20,7 @@ jest.mock("@maplibre/maplibre-react-native", () => {
     Map: ({ children, ...props }: { children?: import("react").ReactNode }) =>
       mockReact.createElement(MockPressable, props, children),
     Camera: ({ ref, ...props }: Record<string, unknown> & { ref?: import("react").Ref<unknown> }) => {
-      mockReact.useImperativeHandle(ref, () => ({ flyTo: jest.fn() }));
+      mockReact.useImperativeHandle(ref, () => ({ flyTo: jest.fn(), zoomTo: mockMapZoomTo }));
       return mockReact.createElement(MockView, props);
     },
     GeoJSONSource: ({
@@ -93,6 +95,46 @@ async function incrementSlider(label: "Year" | "Month" | "Season", count: number
 }
 
 describe("ExplorerWorkspace species flow", () => {
+  it("replaces zoom buttons with a left slider synced to the camera across map tabs", async () => {
+    const readAsset: OccurrenceAssetReader = async file => ({
+      type: "FeatureCollection", features: [featureFor(file.scientificName, 1)],
+    });
+    mockMapZoomTo.mockClear();
+    await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={TEST_MANIFEST} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    expect(screen.queryByRole("button", { name: "Zoom in" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Zoom out" })).toBeNull();
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ left: 12, position: "absolute" });
+    await fireEvent(screen.getByTestId("occurrence-map"), "regionIsChanging", { nativeEvent: { zoom: 6.5 } });
+    const slider = screen.getByRole("adjustable", { name: "Map zoom" });
+    expect(slider.props.accessibilityValue.now).toBe(6.5);
+    await fireEvent(slider, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+    expect(mockMapZoomTo).toHaveBeenLastCalledWith(7.5, { duration: 0 });
+    expect(slider.props.accessibilityValue.now).toBe(7.5);
+    await fireEvent(screen.getByTestId("occurrence-map"), "regionDidChange", { nativeEvent: { zoom: 5 } });
+    expect(slider.props.accessibilityValue.now).toBe(5);
+    await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
+    expect(screen.getByRole("adjustable", { name: "Map zoom" }).props.accessibilityValue.now).toBe(5);
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.queryByRole("adjustable", { name: "Map zoom" })).toBeNull();
+    await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
+    expect(screen.getByRole("adjustable", { name: "Map zoom" }).props.accessibilityValue.now).toBe(5);
+
+    // On shorter screens, never place the slider over the header or filter sheet.
+    await fireEvent(screen.getByTestId("explorer-screen"), "layout", {
+      nativeEvent: { layout: { height: 480 } },
+    });
+    await fireEvent(screen.getByTestId("map-top-controls"), "layout", {
+      nativeEvent: { layout: { height: 160 } },
+    });
+    expect(screen.queryByRole("adjustable", { name: "Map zoom" })).toBeNull();
+    await fireEvent(screen.getByTestId("records-sheet-handle"), "accessibilityAction", {
+      nativeEvent: { actionName: "decrement" },
+    });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 188 });
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 172 });
+  });
+
   it("formats the map badge as an ungrouped count and dotted latest date", async () => {
     const manifest: OccurrenceSnapshotManifest = {
       ...TEST_MANIFEST,

@@ -11,6 +11,7 @@ import {
   type GeoJSONSourceRef,
   type LngLat,
   type LngLatBounds,
+  type MapProps,
   type StyleSpecification,
 } from "@maplibre/maplibre-react-native";
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
@@ -32,6 +33,7 @@ import type { SuitabilityLayer } from "../data/suitabilityLayers";
 
 const AUSTRALIA_BOUNDS: LngLatBounds = [110, -45, 155, -6];
 const AUSTRALIA_VIEW_PADDING = { top: 12, right: 12, bottom: 12, left: 12 };
+export const MAP_ZOOM_RANGE = { min: 2, max: 16, initial: 3 };
 export const MAP_GLYPHS_URL =
   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
@@ -109,11 +111,11 @@ type OccurrenceMapProps = {
   mode?: "records" | "prediction";
   showRecordCount?: boolean;
   suitabilityLayer?: SuitabilityLayer;
+  onZoomChange?: (zoom: number) => void;
 };
 
 export type OccurrenceMapHandle = {
-  zoomIn: () => void;
-  zoomOut: () => void;
+  setZoom: (zoom: number) => void;
 };
 
 export type ClusterPressTarget = {
@@ -206,6 +208,7 @@ function OccurrenceMap(
     mode = "records",
     showRecordCount = true,
     suitabilityLayer,
+    onZoomChange,
   },
   ref,
 ) {
@@ -214,7 +217,6 @@ function OccurrenceMap(
   const occurrenceSourceRef = useRef<GeoJSONSourceRef>(null);
   const [mapState, setMapState] = useState<MapState>("loading");
   const [mapKey, setMapKey] = useState(0);
-  const [zoom, setZoom] = useState(3);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   // Looked up in the current data, so the tooltip closes by itself when a
   // filter or species change removes the record.
@@ -228,21 +230,20 @@ function OccurrenceMap(
   const mapHeight = getResponsiveMapHeight(windowHeight);
 
   useImperativeHandle(ref, () => ({
-    zoomIn: () => {
-      setZoom((currentZoom) => {
-        const nextZoom = Math.min(16, currentZoom + 1);
-        cameraRef.current?.zoomTo(nextZoom, { duration: 300 });
-        return nextZoom;
-      });
+    setZoom: (zoom) => {
+      if (!Number.isFinite(zoom)) return;
+      const nextZoom = Math.max(MAP_ZOOM_RANGE.min, Math.min(MAP_ZOOM_RANGE.max, zoom));
+      cameraRef.current?.zoomTo(nextZoom, { duration: 0 });
+      onZoomChange?.(nextZoom);
     },
-    zoomOut: () => {
-      setZoom((currentZoom) => {
-        const nextZoom = Math.max(2, currentZoom - 1);
-        cameraRef.current?.zoomTo(nextZoom, { duration: 300 });
-        return nextZoom;
-      });
-    },
-  }));
+  }), [onZoomChange]);
+
+  const reportZoom: NonNullable<MapProps["onRegionDidChange"]> = (event) => {
+    const zoom = event.nativeEvent.zoom;
+    if (Number.isFinite(zoom)) {
+      onZoomChange?.(Math.max(MAP_ZOOM_RANGE.min, Math.min(MAP_ZOOM_RANGE.max, zoom)));
+    }
+  };
 
   const retry = () => {
     setMapState("loading");
@@ -259,8 +260,8 @@ function OccurrenceMap(
     try {
       const zoom = await occurrenceSourceRef.current.getClusterExpansionZoom(target.clusterId);
       if (Number.isFinite(zoom)) {
-        setZoom(zoom);
-        cameraRef.current.flyTo({ center: target.center, zoom, duration: 450 });
+        const nextZoom = Math.max(MAP_ZOOM_RANGE.min, Math.min(MAP_ZOOM_RANGE.max, zoom));
+        cameraRef.current.flyTo({ center: target.center, zoom: nextZoom, duration: 450 });
       }
     } catch {
       // Keep the current map position when the native source cannot resolve a cluster.
@@ -298,18 +299,15 @@ function OccurrenceMap(
             setSelectedRecordId(null);
           }
         }}
-        onRegionDidChange={(event) => {
-          if (Number.isFinite(event.nativeEvent.zoom)) {
-            setZoom(event.nativeEvent.zoom);
-          }
-        }}
+        onRegionIsChanging={reportZoom}
+        onRegionDidChange={reportZoom}
       >
         <Camera
           ref={cameraRef}
           testID="occurrence-map-camera"
           initialViewState={{ bounds: AUSTRALIA_BOUNDS, padding: AUSTRALIA_VIEW_PADDING }}
-          minZoom={2}
-          maxZoom={16}
+          minZoom={MAP_ZOOM_RANGE.min}
+          maxZoom={MAP_ZOOM_RANGE.max}
           maxBounds={AUSTRALIA_BOUNDS}
         />
         {suitabilityLayer && mode === "prediction" ? (

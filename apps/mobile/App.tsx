@@ -19,9 +19,11 @@ import { EnvironmentalInsights } from "./src/components/EnvironmentalInsights";
 import { OccurrenceDataStatus } from "./src/components/OccurrenceDataStatus";
 import {
   OccurrenceMap,
+  MAP_ZOOM_RANGE,
   type OccurrenceMapHandle,
 } from "./src/components/OccurrenceMap";
 import { ModelInfoPanel } from "./src/components/ModelInfoPanel";
+import { MapZoomSlider } from "./src/components/MapZoomSlider";
 import { SpeciesSelector } from "./src/components/SpeciesSelector";
 import { StateRanking } from "./src/components/StateRanking";
 import { TemporalFilters } from "./src/components/TemporalFilters";
@@ -135,6 +137,10 @@ export function ExplorerWorkspace({
   const { height: windowHeight } = useWindowDimensions();
   const { selectedSpecies } = useSpeciesSelection();
   const mapRef = useRef<OccurrenceMapHandle>(null);
+  const [mapZoom, setMapZoom] = useState(MAP_ZOOM_RANGE.initial);
+  const [mapViewportHeight, setMapViewportHeight] = useState<number | null>(null);
+  const [topControlsHeight, setTopControlsHeight] = useState(0);
+  const [predictionDockHeight, setPredictionDockHeight] = useState(100);
   const [isExplorerOpen, setExplorerOpen] = useState(false);
   const [selectorImageRevision, setSelectorImageRevision] = useState(0);
   const [activeTab, setActiveTab] = useState<ExplorerTab>("records");
@@ -184,6 +190,10 @@ export function ExplorerWorkspace({
     Math.min(expandedRecordsHeight, Math.max(collapsedRecordsHeight, height));
   const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? compactSheetHeight);
   const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
+  const zoomAreaTop = (topControlsHeight || (activeTab === "prediction" ? 300 : 160)) + 12;
+  const zoomAreaHeight = (mapViewportHeight ?? windowHeight) - zoomAreaTop -
+    (activeTab === "prediction" ? predictionDockHeight : sheetHeight) - 12;
+  const zoomSliderHeight = Math.min(196, zoomAreaHeight);
   const snapRecordsHeight = (height: number) => {
     const stops = [collapsedRecordsHeight, clampRecordsHeight(compactSheetHeight), expandedRecordsHeight];
     setRecordsHeight(stops.reduce((closest, stop) =>
@@ -217,7 +227,8 @@ export function ExplorerWorkspace({
 
       {isExplorerOpen ? (
         <View style={styles.explorerLayer}>
-          <View style={styles.explorerScreen} accessibilityElementsHidden={aboutOpen}
+          <View testID="explorer-screen" style={styles.explorerScreen} accessibilityElementsHidden={aboutOpen}
+            onLayout={({ nativeEvent }) => setMapViewportHeight(nativeEvent.layout.height)}
             importantForAccessibility={aboutOpen ? "no-hide-descendants" : "auto"}>
         <OccurrenceMap
           ref={mapRef}
@@ -227,10 +238,12 @@ export function ExplorerWorkspace({
           showRecordCount={false}
           speciesName={selectedSpecies.commonName}
           suitabilityLayer={suitabilityLayer}
+          onZoomChange={setMapZoom}
         />
 
         <View pointerEvents="box-none" style={styles.mapUi}>
-          <SafeAreaView pointerEvents="box-none" style={styles.topSafeArea}>
+          <SafeAreaView testID="map-top-controls" pointerEvents="box-none" style={styles.topSafeArea}
+            onLayout={({ nativeEvent }) => setTopControlsHeight(nativeEvent.layout.height)}>
             <View style={styles.topControl}>
             <View style={styles.topLeadingControls}>
             <Pressable
@@ -255,25 +268,7 @@ export function ExplorerWorkspace({
               <Text style={styles.chevron}>⌄</Text>
             </Pressable>
 
-            <View style={styles.zoomControls}>
-              <Pressable
-                accessibilityLabel="Zoom out"
-                accessibilityRole="button"
-                onPress={() => mapRef.current?.zoomOut()}
-                style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
-              >
-                <Text style={styles.zoomText}>−</Text>
-              </Pressable>
-              <View style={styles.zoomDivider} />
-              <Pressable
-                accessibilityLabel="Zoom in"
-                accessibilityRole="button"
-                onPress={() => mapRef.current?.zoomIn()}
-                style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
-              >
-                <Text style={styles.zoomText}>+</Text>
-              </Pressable>
-            </View>
+            <View style={styles.topControlSpacer} />
             </View>
 
           {activeTab === "prediction" && suitabilityLayer ? (
@@ -322,8 +317,23 @@ export function ExplorerWorkspace({
           )}
           </SafeAreaView>
 
+          {activeTab !== "insights" && zoomSliderHeight >= 96 ? (
+            <View testID="map-zoom-control" style={[styles.mapZoomControl, {
+              top: zoomAreaTop + (zoomAreaHeight - zoomSliderHeight) / 2,
+            }]}>
+              <MapZoomSlider
+                min={MAP_ZOOM_RANGE.min}
+                max={MAP_ZOOM_RANGE.max}
+                value={mapZoom}
+                height={zoomSliderHeight}
+                onValueChange={(zoom) => mapRef.current?.setZoom(zoom)}
+              />
+            </View>
+          ) : null}
+
           {activeTab === "prediction" ? (
-            <View style={styles.predictionDock}>
+            <View style={styles.predictionDock}
+              onLayout={({ nativeEvent }) => setPredictionDockHeight(nativeEvent.layout.height)}>
               <View style={styles.sheetHandle} />
               <ExplorerTabs activeTab={activeTab} onChange={setActiveTab} />
             </View>
@@ -496,8 +506,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.72)",
   },
-  // Match the two zoom buttons so the title is centred in the whole bar.
-  topLeadingControls: { width: 88 + StyleSheet.hairlineWidth, alignItems: "flex-start" },
+  // Match the back button with an empty slot to keep the species name centred.
+  topLeadingControls: { width: 44, alignItems: "flex-start" },
+  topControlSpacer: { width: 44 },
   backIcon: { marginTop: -3, color: "#263239", fontSize: 34, fontWeight: "300", lineHeight: 36 },
   speciesControl: {
     flex: 1,
@@ -511,17 +522,7 @@ const styles = StyleSheet.create({
   },
   speciesControlText: { maxWidth: 155, color: "#1d262b", fontSize: 15, fontWeight: "700" },
   chevron: { marginTop: -2, color: "#445057", fontSize: 14, fontWeight: "600" },
-  zoomControls: {
-    width: 88 + StyleSheet.hairlineWidth,
-    height: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.72)",
-  },
-  zoomButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  zoomDivider: { width: StyleSheet.hairlineWidth, height: 20, backgroundColor: "#c8ceca" },
-  zoomText: { color: "#273239", fontSize: 23, fontWeight: "500" },
+  mapZoomControl: { position: "absolute", left: 12 },
   pressed: { opacity: 0.68 },
   mapCountPill: {
     alignSelf: "center",
