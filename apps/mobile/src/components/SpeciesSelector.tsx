@@ -183,8 +183,8 @@ export function SpeciesSelector({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: "hidden", backgroundColor: "#27313b" },
-  header: { alignItems: "center", paddingHorizontal: 18, paddingTop: 16, paddingBottom: 10 },
-  logo: { width: "84%", maxWidth: 280, height: 60, alignSelf: "center" },
+  header: { alignItems: "center", paddingHorizontal: 18, paddingTop: 16, paddingBottom: 24 },
+  logo: { width: "76%", maxWidth: 250, height: 54, alignSelf: "center" },
   toolbar: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingBottom: 14 },
   searchBox: {
     flex: 1, height: 42, flexDirection: "row", alignItems: "center", paddingHorizontal: 12,
