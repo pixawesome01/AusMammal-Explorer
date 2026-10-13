@@ -22,7 +22,6 @@ export function StateRanking({ speciesName, status, collection }: StateRankingPr
 
   return (
     <View accessibilityLabel={`State ranking for ${speciesName}`} style={styles.card}>
-      <Text style={styles.eyebrow}>State summary</Text>
       <Text accessibilityRole="header" style={styles.title}>Where records are concentrated</Text>
       <Text style={styles.source}>Counts follow the active time filters.</Text>
 
@@ -89,14 +88,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#ffffff",
   },
-  eyebrow: {
-    color: "#346b50",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  title: { marginTop: 5, color: "#163c2c", fontSize: 21, fontWeight: "700" },
+  title: { color: "#163c2c", fontSize: 21, fontWeight: "700" },
   message: {
     marginTop: 16,
     padding: 13,

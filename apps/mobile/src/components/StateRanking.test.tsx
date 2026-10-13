@@ -34,6 +34,8 @@ describe("StateRanking", () => {
     };
     await render(<StateRanking collection={collection} speciesName="Koala" status="ready" />);
 
+    expect(screen.queryByText(/^State summary$/i)).toBeNull();
+    expect(screen.getByRole("header", { name: "Where records are concentrated" })).toBeTruthy();
     expect(screen.getByTestId("state-count-1").props.children).toBe("2");
     expect(screen.getByTestId("state-count-2").props.children).toBe("1");
     expect(screen.getByText(/1 record could not be assigned/)).toBeTruthy();
