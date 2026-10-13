@@ -224,18 +224,27 @@ export function EnvironmentalInsights({
                     style={[styles.radialSpoke, { transform: [{ rotate: `${index * 30}deg` }] }]}
                   >
                     <View
+                      testID={`month-bar-${item.month}`}
                       style={[
-                        styles.radialPetal,
+                        styles.radialPetalClip,
                         {
                           top: RADIAL_CHART_CENTRE - height,
+                          width: halfWidth * 2,
+                          height,
+                          opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
+                        },
+                      ]}
+                    >
+                      <View style={[
+                        styles.radialPetal,
+                        {
                           borderLeftWidth: halfWidth,
                           borderRightWidth: halfWidth,
                           borderTopWidth: height,
                           borderTopColor: MONTH_COLORS[index],
-                          opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
                         },
-                      ]}
-                    />
+                      ]} />
+                    </View>
                   </View>
                 );
               })}
@@ -430,6 +439,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   radialSpoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
+  radialPetalClip: {
+    position: "absolute",
+    overflow: "hidden",
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+  },
   radialPetal: {
     position: "absolute",
     width: 0,

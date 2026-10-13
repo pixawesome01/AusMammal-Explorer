@@ -88,6 +88,21 @@ describe("EnvironmentalInsights", () => {
 
 
 describe("monthly chart scrubbing", () => {
+  it("softens every radial bar's outer corners without changing its height or selection", async () => {
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
+    for (let month = 1; month <= 12; month += 1) {
+      expect(screen.getByTestId(`month-bar-${month}`)).toHaveStyle({
+        overflow: "hidden", borderTopLeftRadius: 6, borderTopRightRadius: 6,
+        height: month === 4 ? 104 : 52, opacity: 1,
+      });
+    }
+    await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
+      { nativeEvent: { locationX: 235, locationY: 135 } });
+    expect(screen.getByTestId("month-bar-4")).toHaveStyle({ height: 104, opacity: 1 });
+    expect(screen.getByTestId("month-bar-1")).toHaveStyle({ height: 52, opacity: 0.4 });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^1 record$/);
+  });
+
   it("shows a compact count while preserving the selected month for accessibility and dragging", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
     const hintStyle = { fontSize: 14, fontWeight: "400", color: "#566159" } as const;
