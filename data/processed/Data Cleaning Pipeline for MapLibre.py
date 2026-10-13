@@ -22,6 +22,13 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
 MANIFEST_DIR = REPO_ROOT / "data" / "metadata"
 ALA_ATTRIBUTION = "Atlas of Living Australia (https://www.ala.org.au)"
+# Field names verified against https://api.ala.org.au/occurrences/index/fields.
+# New captures retain provider metadata; do not re-query or rewrite the frozen snapshot.
+ALA_FIELDS = [
+    "scientificName", "decimalLatitude", "decimalLongitude",
+    "coordinateUncertaintyInMeters", "basisOfRecord", "eventDate", "dcterms:license",
+    "dataResourceName", "rightsHolder", "references", "modified",
+]
 
 # Matches the `id` slugs in apps/mobile/src/species.ts for output filenames.
 SPECIES_ID_BY_SCIENTIFIC_NAME = {
@@ -106,8 +113,7 @@ def fetch_ala_occurrences(email):
     # manifest (R8) rather than only ever appearing in console output.
     doi, raw_df = galah.atlas_occurrences(
         taxa=marsupials,
-        fields=["scientificName", "decimalLatitude", "decimalLongitude",
-                "coordinateUncertaintyInMeters", "basisOfRecord", "eventDate", "dcterms:license"],
+        fields=ALA_FIELDS,
         use_data_profile=True,
         mint_doi=True,
         print_doi=False,
@@ -134,7 +140,15 @@ def clean_and_format_marsupials(doi, raw_df, output_geojson):
         "basisOfRecord": "basis_of_record",
         "eventDate": "event_date",
         "dcterms:license": "license",
+        "dataResourceName": "provider_name",
+        "rightsHolder": "provider_attribution",
+        "references": "provider_url",
+        "modified": "source_updated_at",
     })
+    for field in ["provider_name", "provider_attribution", "provider_url", "source_updated_at"]:
+        if field not in df.columns:
+            df[field] = pd.NA
+    df["source_updated_at"] = pd.to_datetime(df["source_updated_at"], errors="coerce", utc=True)
 
     # Populated by log_step() below; becomes the manifest's transformation_provenance
     # (RTM-58) so a snapshot's outputs retain a record of what was actually filtered out.
@@ -222,7 +236,7 @@ def clean_and_format_marsupials(doi, raw_df, output_geojson):
     if "license" not in df.columns:
         df["license"] = pd.NA
     df["license"] = df["license"].astype("string").str.strip()
-    df = df[df["license"].str.contains(ALLOWED_LICENSE, case=False, regex=False, na=False)]
+    df = df[df["license"].str.casefold().eq(ALLOWED_LICENSE.casefold()).fillna(False)]
     log_step("License other than CC-BY 4.0 (Int)", before)
 
     # Step 10: drop uncertainty > 2000m; unknown uncertainty is kept and flagged.
@@ -301,6 +315,13 @@ def clean_and_format_marsupials(doi, raw_df, output_geojson):
                     "uncertaintyUnknown": bool(row.uncertainty_unknown),
                     "observationCount": int(row.observation_count),
                     "geographicOutlier": bool(row.geographic_outlier),
+                    "providerName": optional_text(row.provider_name),
+                    "providerAttribution": optional_text(row.provider_attribution),
+                    "providerUrl": optional_text(row.provider_url),
+                    "sourceUpdatedAt": (
+                        row.source_updated_at.strftime("%Y-%m-%d")
+                        if pd.notna(row.source_updated_at) else None
+                    ),
                 }
             })
 
@@ -325,6 +346,11 @@ def clean_and_format_marsupials(doi, raw_df, output_geojson):
     write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps, doi)
 
 
+def optional_text(value):
+    """Missing provider information remains explicit; never substitute ALA for a provider."""
+    return None if pd.isna(value) or not str(value).strip() else str(value).strip()
+
+
 def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps, doi):
     """Freeze this run's outputs into a checksummed, version-controlled manifest.
 
@@ -344,11 +370,7 @@ def write_snapshot_manifest(df, snapshot_files, marsupials, transformation_steps
         source="Atlas of Living Australia",
         query={
             "taxa": marsupials,
-            "fields": [
-                "scientificName", "decimalLatitude", "decimalLongitude",
-                "coordinateUncertaintyInMeters", "basisOfRecord", "eventDate",
-                "dcterms:license",
-            ],
+            "fields": ALA_FIELDS,
             "data_profile": "CSDM",
             "min_event_date": MIN_EVENT_DATE.strftime("%Y-%m-%d"),
             "max_coordinate_uncertainty_m": MAX_COORDINATE_UNCERTAINTY_M,
