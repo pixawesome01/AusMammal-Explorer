@@ -178,10 +178,15 @@ export function SeasonalSpeciesView({
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 onPress={() => onMonthChange(visibleMonth)}
-                style={styles.monthStop}
+                style={[styles.monthStop, selected && styles.monthStopSelected]}
               >
                 <View style={[styles.monthDot, selected && styles.monthDotSelected]} />
-                <Text style={[styles.monthText, selected && styles.monthTextSelected]}>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  style={[styles.monthText, selected && styles.monthTextSelected]}
+                >
                   {selected ? MONTHS[visibleMonth - 1] : MONTHS[visibleMonth - 1].slice(0, 3)}
                 </Text>
               </Pressable>
@@ -261,7 +266,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(255,255,255,0.24)",
   },
-  monthStop: { flex: 1, alignItems: "center" },
+  monthStop: { flex: 1, minWidth: 0, alignItems: "center" },
+  // The selected month uses its full name, so give it more space than abbreviations.
+  monthStopSelected: { flex: 2 },
   monthDot: {
     width: 7,
     height: 7,
@@ -270,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#808a92",
   },
   monthDotSelected: { width: 13, height: 13, marginTop: 2, borderRadius: 7, backgroundColor: "#9fc7aa" },
-  monthText: { marginTop: 10, color: "#9ca5ad", fontSize: 9, fontWeight: "400" },
+  monthText: { width: "100%", textAlign: "center", marginTop: 10, color: "#9ca5ad", fontSize: 9, fontWeight: "400" },
   monthTextSelected: { marginTop: 7, color: "#ffffff", fontSize: 11, fontWeight: "600" },
   pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
 });

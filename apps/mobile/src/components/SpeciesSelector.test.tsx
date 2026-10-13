@@ -97,6 +97,20 @@ describe("SpeciesSelector", () => {
     expect(screen.queryByText("42,786 records")).toBeNull();
   });
 
+  it("keeps the full September timeline label on one line with extra space", async () => {
+    await render(<SpeciesProvider><SpeciesSelector initialMonth={9} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: "Seasonal view" }));
+
+    const label = screen.getByText("September", { exact: true });
+    expect(label.props.numberOfLines).toBe(1);
+    expect(label.props.adjustsFontSizeToFit).toBe(true);
+    const selectedStop = screen.getByRole("button", { name: "September", selected: true });
+    const adjacentStop = screen.getByRole("button", { name: "August" });
+    expect(StyleSheet.flatten(selectedStop.props.style).flex).toBeGreaterThan(
+      StyleSheet.flatten(adjacentStop.props.style).flex,
+    );
+  });
+
   it("sizes seasonal bubbles by the selected month's record count", async () => {
     await render(
       <SpeciesProvider>
