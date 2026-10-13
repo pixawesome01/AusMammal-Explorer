@@ -25,6 +25,18 @@ const collection: OccurrenceFeatureCollection = {
 };
 
 describe("EnvironmentalInsights", () => {
+  it("shows monthly and seasonal averages for the selected window", async () => {
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready"
+      coverage={{ from: "2020-01-01", to: "2026-08-15" }} temporalFilter={{ year: 2026 }} />);
+    expect(screen.getByText("Average records by month")).toBeTruthy();
+    await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
+      { nativeEvent: { locationX: 235, locationY: 135 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/1\.0 average per month/);
+    expect(screen.getByLabelText("Seasonal occurrence averages")).toBeTruthy();
+    expect(screen.getByText(/autumn: 0.3 records per month/)).toBeTruthy();
+    expect(screen.getByText(/spring: — records per month/)).toBeTruthy();
+  });
+
   it("shows record seasonality and sourced climate charts", async () => {
     await render(
       <EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />,

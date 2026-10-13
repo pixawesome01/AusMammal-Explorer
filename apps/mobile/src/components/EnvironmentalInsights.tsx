@@ -10,13 +10,17 @@ import {
   countOccurrencesByMonth,
   getPeakOccurrenceMonths,
 } from "../data/climateContext";
-import { getAustralianSeason } from "../data/occurrenceFilter";
+import { getAustralianSeason, type OccurrenceDateRange, type OccurrenceTemporalFilter } from "../data/occurrenceFilter";
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
+import { monthlyOccurrenceAverages, seasonalOccurrenceAverages } from "../data/occurrenceStatistics";
 
 type EnvironmentalInsightsProps = {
   speciesName: string;
   status: "loading" | "ready" | "empty" | "error";
   collection?: OccurrenceFeatureCollection;
+  coverage?: { from: string; to: string };
+  temporalFilter?: OccurrenceTemporalFilter;
+  dateRange?: OccurrenceDateRange;
 };
 
 const MONTH_COLORS = [
@@ -142,8 +146,15 @@ export function EnvironmentalInsights({
   speciesName,
   status,
   collection,
+  coverage,
+  temporalFilter,
+  dateRange,
 }: EnvironmentalInsightsProps) {
   const monthlySeries = useMemo(() => countOccurrencesByMonth(collection), [collection]);
+  const averages = useMemo(() => {
+    if (!coverage) return null;
+    return monthlyOccurrenceAverages(collection, coverage, temporalFilter, dateRange);
+  }, [collection, coverage, temporalFilter, dateRange]);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const selected = selectedMonth === null ? null : monthlySeries[selectedMonth];
   const scrubMonth = (event: GestureResponderEvent) => {
@@ -157,6 +168,7 @@ export function EnvironmentalInsights({
   };
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
   const largestMonthlyCount = Math.max(1, ...monthlySeries.map((item) => item.count));
+  const largestAverage = Math.max(0.001, ...(averages?.map(item => item.average ?? 0) ?? []));
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
   const peakPhrase = listPhrase(peakMonths.map((item) => item.name));
   const peakSeasons = listPhrase([
@@ -184,19 +196,24 @@ export function EnvironmentalInsights({
           </View>
           <View style={styles.headingText}>
             <Text style={styles.eyebrow}>Seasonal pattern</Text>
-            <Text accessibilityRole="header" style={styles.title}>Records by month</Text>
+            <Text accessibilityRole="header" style={styles.title}>
+              {averages ? "Average records by month" : "Records by month"}
+            </Text>
           </View>
         </View>
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
         {status === "error" ? <Text style={styles.message}>Monthly insights are unavailable.</Text> : null}
-        {status === "empty" ? <Text style={styles.message}>No records are available for this species.</Text> : null}
+        {status === "empty" ? <Text style={styles.message}>No records match the active filters.</Text> : null}
 
         {status === "ready" ? (
           <>
             <View style={styles.radialChart}>
               {monthlySeries.map((item, index) => {
-                const height = 52 + (item.count / largestMonthlyCount) * 52;
+                const fraction = averages
+                  ? (averages[index].average ?? 0) / largestAverage
+                  : item.count / largestMonthlyCount;
+                const height = 52 + fraction * 52;
                 const halfWidth = height * Math.tan(Math.PI / 12);
                 return (
                   <View
@@ -259,7 +276,7 @@ export function EnvironmentalInsights({
                 accessibilityHint="Drag around the chart, or swipe up or down to change month."
                 accessibilityValue={{
                   min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
-                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} records`,
+                  text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} records${averages ? `, ${averages[selectedMonth ?? 0].average?.toFixed(1) ?? "unavailable"} average records per month` : ""}`,
                 }}
                 accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
                 onAccessibilityAction={({ nativeEvent }) => {
@@ -279,15 +296,34 @@ export function EnvironmentalInsights({
               {selected
                 ? `${selected.name} · ${selected.count.toLocaleString()} ${selected.count === 1 ? "record" : "records"}`
                 : "Slide around the chart to explore each month"}
+              {selected && averages
+                ? ` · ${averages[selected.month - 1].average?.toFixed(1) ?? "—"} average per month`
+                : ""}
             </Text>
             <Text style={styles.description}>
-              Based on all {total.toLocaleString()} loaded records, {speciesLabel} records
+              Based on {total.toLocaleString()} records in this view, {speciesLabel} records
               {peakPhrase ? ` appear most often in ${peakPhrase} (${peakSeasons})` : " do not yet show a monthly peak"}.
-              {" Time filters do not affect this pattern."}
+              {" Counts and averages follow the active time filters."}
             </Text>
           </>
         ) : null}
       </View>
+
+      {averages && (status === "ready" || status === "empty") ? (
+        <View style={styles.card} accessibilityLabel="Seasonal occurrence averages">
+          <Text accessibilityRole="header" style={styles.title}>Seasonal averages</Text>
+          {seasonalOccurrenceAverages(averages).map(item => (
+            <Text key={item.season} style={styles.description}>
+              {item.season}: {item.average?.toFixed(1) ?? "—"} records per month
+              {item.periods ? ` (${item.count.toLocaleString()} records / ${item.periods} covered months)` : " (outside the selected period)"}
+            </Text>
+          ))}
+          <Text style={styles.description}>
+            Averages include months with zero records. Partial first and last months count
+            as one month each. No estimate is made for months outside the selected period.
+          </Text>
+        </View>
+      ) : null}
 
       <View accessibilityLabel="Australia climate context" style={[styles.card, styles.climateCard]}>
         <View style={styles.cardHeading}>
