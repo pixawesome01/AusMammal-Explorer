@@ -93,3 +93,17 @@ Before closing RTM-19–26, record the actual final pitch, reviewer feedback,
 submission, release artefact and handover approval. These are external team
 activities; code/test completion is not evidence they happened. Preserve the
 current frozen dataset until the team agrees how to recover provider attribution.
+
+### Dependency and native-build follow-up
+
+The first CI run exposed an existing Expo patch-version mismatch. Updated only the
+SDK 57 patch versions recommended by `expo install --check`, and refreshed the lockfile.
+Also updated the transitive `shell-quote` package to remove its reported critical
+advisory. The remaining npm audit report still contains high/moderate transitive
+advisories; assess exploitability and SDK-compatible upgrades before distribution.
+No forced major/downgrade audit fix was applied.
+
+This Mac has no `pod` executable on PATH, so a fresh iOS native build is not verified.
+The simulator smoke observations above used the preinstalled development client
+before the dependency patch update; repeat native device checks after rebuilding.
+JavaScript exports and unit/integration tests are separate from that native-build gate.
