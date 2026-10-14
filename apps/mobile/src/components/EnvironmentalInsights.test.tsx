@@ -236,7 +236,8 @@ describe("occurrence and climate relationship", () => {
       <EnvironmentalInsights collection={springRecords} speciesName="Koala" status="ready" />,
     );
 
-    expect(screen.getByText(/appear most often in Sep, Oct and Nov \(spring\)\./)).toBeTruthy();
+    expect(screen.getByText(/appear most often in Sep, Oct and Nov\./)).toBeTruthy();
+    expect(screen.queryByText(/appear most often in .*\((summer|autumn|winter|spring)/)).toBeNull();
     expect(
       screen.getByText(
         /Green bars mark koala's top recorded months \(Sep, Oct and Nov\), which average 19\.7°C, close to the yearly average of 19\.6°C\./,

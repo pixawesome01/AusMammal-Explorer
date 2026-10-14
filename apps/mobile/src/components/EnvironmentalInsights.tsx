@@ -10,7 +10,7 @@ import {
   countOccurrencesByMonth,
   getPeakOccurrenceMonths,
 } from "../data/climateContext";
-import { getAustralianSeason, type OccurrenceDateRange } from "../data/occurrenceFilter";
+import type { OccurrenceDateRange } from "../data/occurrenceFilter";
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { monthlyOccurrenceAverages } from "../data/occurrenceStatistics";
 import { READABLE_COLOURS } from "./accessibility";
@@ -147,9 +147,6 @@ export function EnvironmentalInsights({
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
   const peakPhrase = listPhrase(peakMonths.map((item) => item.name));
-  const peakSeasons = listPhrase([
-    ...new Set(peakMonths.map((item) => getAustralianSeason(item.month))),
-  ]);
   const peakClimate =
     status === "ready" ? compareClimateWithYear(peakMonths.map((item) => item.month)) : null;
   const speciesLabel = speciesName.toLowerCase();
@@ -206,7 +203,7 @@ export function EnvironmentalInsights({
             </Text>
             <Text style={styles.description}>
               Based on {total.toLocaleString()} records in this chart, {speciesLabel} records
-              {peakPhrase ? ` appear most often in ${peakPhrase} (${peakSeasons})` : " do not yet show a monthly peak"}.
+              {peakPhrase ? ` appear most often in ${peakPhrase}` : " do not yet show a monthly peak"}.
             </Text>
           </>
         ) : null}
