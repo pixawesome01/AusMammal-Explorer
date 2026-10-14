@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "AusMammal Explorer",
+    "name": "AusMammal",
     "slug": "ausmammal-explorer",
     "version": "0.1.0",
+    "icon": "./assets/branding/ausmammal-icon.png",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "ios": {

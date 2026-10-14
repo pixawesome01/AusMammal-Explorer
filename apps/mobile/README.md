@@ -46,7 +46,7 @@ prediction images are packaged inside the app. It replaces the installed develop
 app with the same bundle identifier; no uninstall or simulator reset is needed.
 
 After installation, open **Simulator**, go to its Home Screen, and tap
-**AusMammal Explorer**. No terminal or development server is needed for subsequent
+**AusMammal**. No terminal or development server is needed for subsequent
 launches, including after restarting the Mac. Keep an internet connection for the
 basemap. After changing source code, rebuild with the command above; this release
 app does not use Reload or Fast Refresh. To return to development, run `npm run ios`.
