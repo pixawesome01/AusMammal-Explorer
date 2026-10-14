@@ -17,6 +17,11 @@ export const MIN_BUBBLE_DIAMETER = 40;
 const MAX_BUBBLE_DIAMETER = 130;
 const BUBBLE_GAP = 6;
 
+export function seasonalBubbleLabelWidth(canvasWidth: number) {
+  // At narrow phone widths, three middle-row labels must still fit side by side.
+  return Math.min(BUBBLE_LABEL_WIDTH, Math.floor(canvasWidth * (SLOTS[0].x - SLOTS[3].x)) - 2);
+}
+
 export type SeasonalBubbleInput = {
   value: number;
   /** Height of the text under the bubble, excluding BUBBLE_LABEL_GAP. */
@@ -31,11 +36,11 @@ export type SeasonalBubblePlacement = {
 
 type PlacedBubble = SeasonalBubblePlacement & { labelHeight: number };
 
-function labelBox(bubble: PlacedBubble) {
+function labelBox(bubble: PlacedBubble, labelWidth: number) {
   const top = bubble.centerY + bubble.diameter / 2 + BUBBLE_LABEL_GAP;
   return {
-    left: bubble.centerX - BUBBLE_LABEL_WIDTH / 2,
-    right: bubble.centerX + BUBBLE_LABEL_WIDTH / 2,
+    left: bubble.centerX - labelWidth / 2,
+    right: bubble.centerX + labelWidth / 2,
     top,
     bottom: top + bubble.labelHeight,
   };
@@ -63,9 +68,10 @@ function seasonalBubblesFit(
   canvasWidth: number,
   canvasHeight: number,
 ) {
+  const labelWidth = seasonalBubbleLabelWidth(canvasWidth);
   return bubbles.every((bubble, index) => {
     const radius = bubble.diameter / 2;
-    const label = labelBox(bubble);
+    const label = labelBox(bubble, labelWidth);
     if (
       bubble.centerX - radius < 0 ||
       bubble.centerX + radius > canvasWidth ||
@@ -81,7 +87,7 @@ function seasonalBubblesFit(
         (Math.hypot(bubble.centerX - other.centerX, bubble.centerY - other.centerY) >=
           radius + other.diameter / 2 + BUBBLE_GAP &&
           circleClearOfBox(other, label) &&
-          boxesApart(label, labelBox(other))),
+          boxesApart(label, labelBox(other, labelWidth))),
     );
   });
 }

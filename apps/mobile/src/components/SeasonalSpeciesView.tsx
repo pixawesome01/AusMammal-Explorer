@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import {
-  Image,
+  AccessibilityInfo,
+  Animated,
   type ImageSourcePropType,
   Pressable,
   ScrollView,
@@ -13,9 +15,10 @@ import type { OccurrenceSnapshotManifest } from "../data/occurrenceSnapshot";
 import { MVP_SPECIES, type Species } from "../species";
 import {
   BUBBLE_LABEL_GAP,
-  BUBBLE_LABEL_WIDTH,
   SEASONAL_CANVAS_HEIGHT,
   layoutSeasonalBubbles,
+  seasonalBubbleLabelWidth,
+  type SeasonalBubblePlacement,
 } from "./seasonalBubbleLayout";
 
 const MONTHS = [
@@ -53,6 +56,138 @@ function wrapMonth(month: number) {
   return ((month - 1 + 12) % 12) + 1;
 }
 
+function useReducedMotion() {
+  // Stay still until the device preference is known, including on query failure.
+  const [reducedMotion, setReducedMotion] = useState(true);
+  useEffect(() => {
+    let active = true;
+    let preferenceChanged = false;
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => {
+      preferenceChanged = true;
+      setReducedMotion(enabled);
+    });
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (active && !preferenceChanged) setReducedMotion(enabled);
+    }).catch(() => {});
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+  return reducedMotion;
+}
+
+type SeasonalBubbleProps = {
+  species: Species;
+  month: number;
+  monthRecords: number | undefined;
+  isSelected: boolean;
+  imageRevision: number;
+  imageSource: ImageSourcePropType;
+  placement: SeasonalBubblePlacement;
+  labelWidth: number;
+  reducedMotion: boolean;
+  onPress: () => void;
+};
+
+function SeasonalBubble({
+  species, month, monthRecords, isSelected, imageRevision, imageSource,
+  placement, labelWidth, reducedMotion, onPress,
+}: SeasonalBubbleProps) {
+  const { centerX, centerY, diameter } = placement;
+  const hitWidth = Math.max(diameter, labelWidth);
+  const left = centerX - hitWidth / 2;
+  const top = centerY - diameter / 2;
+  // Each species retains its animated values when its monthly rank changes.
+  const [motion] = useState(() => ({
+    position: new Animated.ValueXY({ x: left, y: top }),
+    diameter: new Animated.Value(diameter),
+    width: new Animated.Value(hitWidth),
+  }));
+  const previousTarget = useRef({ left, top, diameter, hitWidth });
+
+  useEffect(() => {
+    const previous = previousTarget.current;
+    previousTarget.current = { left, top, diameter, hitWidth };
+    if (reducedMotion) {
+      motion.position.setValue({ x: left, y: top });
+      motion.diameter.setValue(diameter);
+      motion.width.setValue(hitWidth);
+      return;
+    }
+    if (
+      previous.left === left && previous.top === top &&
+      previous.diameter === diameter && previous.hitWidth === hitWidth
+    ) return;
+
+    const spring = {
+      stiffness: 120,
+      damping: 20,
+      mass: 1,
+      overshootClamping: true,
+      restDisplacementThreshold: 0.1,
+      restSpeedThreshold: 0.1,
+      isInteraction: false,
+      // Position and size are layout properties, so these use the JS driver.
+      useNativeDriver: false,
+    };
+    const animation = Animated.parallel([
+      Animated.spring(motion.position, { ...spring, toValue: { x: left, y: top } }),
+      Animated.spring(motion.diameter, { ...spring, toValue: diameter }),
+      Animated.spring(motion.width, { ...spring, toValue: hitWidth }),
+    ]);
+    animation.start();
+    // A rapid month change continues from the current position; it never queues
+    // another transition. Leaving the seasonal view also stops all animation.
+    return () => animation.stop();
+  }, [diameter, hitWidth, left, motion, reducedMotion, top]);
+
+  return (
+    <Animated.View
+      testID={`seasonal-position-${species.id}`}
+      style={[styles.bubble, motion.position.getLayout(), { width: motion.width }]}
+    >
+      <Pressable
+        accessibilityHint="Opens the occurrence explorer with this month selected"
+        accessibilityLabel={`${species.commonName}, ${MONTHS[month - 1]} records`}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityValue={
+          monthRecords === undefined ? undefined : { text: `${monthRecords.toLocaleString()} records` }
+        }
+        onPress={onPress}
+        style={({ pressed }) => [styles.bubbleButton, pressed && styles.pressed]}
+      >
+        <Animated.Image
+          key={`${species.id}-${imageRevision}`}
+          defaultSource={species.image}
+          fadeDuration={0}
+          source={imageSource}
+          testID={`seasonal-bubble-${species.id}`}
+          style={[
+            styles.bubbleImage,
+            {
+              width: motion.diameter,
+              height: motion.diameter,
+              borderRadius: Animated.divide(motion.diameter, 2),
+              borderColor: species.accent,
+            },
+          ]}
+        />
+        <Text
+          numberOfLines={2}
+          style={[styles.bubbleLabel, { width: labelWidth }, isSelected && styles.primaryLabel]}
+        >
+          {species.commonName}
+        </Text>
+        {monthRecords === undefined ? null : (
+          <Text style={[styles.bubbleCount, { width: labelWidth }]}>{monthRecords.toLocaleString()}</Text>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export function SeasonalSpeciesView({
   imageRevision = 0,
   imageSourceForSpecies,
@@ -64,10 +199,11 @@ export function SeasonalSpeciesView({
 }: SeasonalSpeciesViewProps) {
   const { width } = useWindowDimensions();
   const canvasWidth = Math.min(410, width - 24);
-  // Species keep the same spot as the month changes (largest yearly total in
-  // the centre); only bubble size follows the month's record count.
-  const bubbles = [...MVP_SPECIES]
-    .sort((left, right) => manifest.files[right.id].recordCount - manifest.files[left.id].recordCount)
+  const labelWidth = seasonalBubbleLabelWidth(canvasWidth);
+  const reducedMotion = useReducedMotion();
+  // The month's most-observed species moves to the centre. Stable ties prevent
+  // arbitrary shuffling, and yearly totals still work without monthly metadata.
+  const bubbles = MVP_SPECIES
     .map((species) => {
       const file = manifest.files[species.id];
       const monthRecords = file.monthlyRecordCounts?.[month - 1];
@@ -81,7 +217,8 @@ export function SeasonalSpeciesView({
           2 * (isSelected ? PRIMARY_LABEL_LINE_HEIGHT : LABEL_LINE_HEIGHT) +
           (monthRecords === undefined ? 0 : COUNT_LINE_HEIGHT),
       };
-    });
+    })
+    .sort((left, right) => right.value - left.value || left.species.id.localeCompare(right.species.id));
   const placements = layoutSeasonalBubbles(bubbles, canvasWidth);
   const visibleMonths = [-2, -1, 0, 1, 2].map((offset) => wrapMonth(month + offset));
 
@@ -92,57 +229,21 @@ export function SeasonalSpeciesView({
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.constellation, { width: canvasWidth }]}>
-        {bubbles.map(({ species, monthRecords, isSelected }, index) => {
-          const { centerX, centerY, diameter } = placements[index];
-          const hitWidth = Math.max(diameter, BUBBLE_LABEL_WIDTH);
-
-          return (
-            <Pressable
-              key={species.id}
-              accessibilityHint="Opens the occurrence explorer with this month selected"
-              accessibilityLabel={`${species.commonName}, ${MONTHS[month - 1]} records`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              accessibilityValue={
-                monthRecords === undefined
-                  ? undefined
-                  : { text: `${monthRecords.toLocaleString()} records` }
-              }
-              onPress={() => onSpeciesPress(species)}
-              style={({ pressed }) => [
-                styles.bubble,
-                { left: centerX - hitWidth / 2, top: centerY - diameter / 2, width: hitWidth },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Image
-                key={`${species.id}-${imageRevision}`}
-                defaultSource={species.image}
-                fadeDuration={0}
-                source={imageSourceForSpecies?.(species) ?? species.image}
-                testID={`seasonal-bubble-${species.id}`}
-                style={[
-                  styles.bubbleImage,
-                  {
-                    width: diameter,
-                    height: diameter,
-                    borderRadius: diameter / 2,
-                    borderColor: species.accent,
-                  },
-                ]}
-              />
-              <Text
-                numberOfLines={2}
-                style={[styles.bubbleLabel, isSelected && styles.primaryLabel]}
-              >
-                {species.commonName}
-              </Text>
-              {monthRecords === undefined ? null : (
-                <Text style={styles.bubbleCount}>{monthRecords.toLocaleString()}</Text>
-              )}
-            </Pressable>
-          );
-        })}
+        {bubbles.map(({ species, monthRecords, isSelected }, index) => (
+          <SeasonalBubble
+            key={species.id}
+            species={species}
+            month={month}
+            monthRecords={monthRecords}
+            isSelected={isSelected}
+            imageRevision={imageRevision}
+            imageSource={imageSourceForSpecies?.(species) ?? species.image}
+            placement={placements[index]}
+            labelWidth={labelWidth}
+            reducedMotion={reducedMotion}
+            onPress={() => onSpeciesPress(species)}
+          />
+        ))}
       </View>
 
       <View accessibilityLabel="Month timeline" style={styles.timeline}>
@@ -198,7 +299,8 @@ export function SeasonalSpeciesView({
 const styles = StyleSheet.create({
   content: { alignItems: "center", paddingHorizontal: 12, paddingBottom: 34 },
   constellation: { position: "relative", height: SEASONAL_CANVAS_HEIGHT, marginTop: 8 },
-  bubble: { position: "absolute", alignItems: "center" },
+  bubble: { position: "absolute" },
+  bubbleButton: { width: "100%", alignItems: "center" },
   bubbleImage: {
     borderWidth: 2,
     backgroundColor: "#55616a",
@@ -208,7 +310,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   bubbleLabel: {
-    width: BUBBLE_LABEL_WIDTH,
     marginTop: BUBBLE_LABEL_GAP,
     color: "#dce1e5",
     fontSize: 9,
@@ -223,7 +324,6 @@ const styles = StyleSheet.create({
     lineHeight: PRIMARY_LABEL_LINE_HEIGHT,
   },
   bubbleCount: {
-    width: BUBBLE_LABEL_WIDTH,
     color: "#aab3ba",
     fontSize: 9,
     lineHeight: COUNT_LINE_HEIGHT,
