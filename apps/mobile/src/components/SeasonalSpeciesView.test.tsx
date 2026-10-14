@@ -66,9 +66,28 @@ describe("seasonal bubble movement", () => {
       const label = within(caption).getByText(species.commonName);
       expect(label).toHaveStyle({ color: "#ffffff", textShadowRadius: 3 });
       expect(label.props.numberOfLines).toBe(3);
-      expect(label.props.adjustsFontSizeToFit).toBe(true);
+      expect(label.props.adjustsFontSizeToFit).toBe(false);
     }
     expect(within(screen.getByTestId("seasonal-caption-koala")).getByText("1,036")).toBeTruthy();
+  });
+
+  it("keeps the Ringtail Possum font fixed while its circle grows and shrinks", async () => {
+    const view = await render(seasonalView(10));
+    const expectStableFont = () => {
+      const label = within(screen.getByTestId("seasonal-caption-common-ringtail-possum"))
+        .getByText("Common Ringtail Possum");
+      expect(label.props.adjustsFontSizeToFit).toBe(false);
+      expect(label).toHaveStyle({ width: "100%", fontSize: 9, lineHeight: 11 });
+    };
+    expectStableFont();
+    for (const month of [3, 7, 10]) {
+      await view.rerender(seasonalView(month));
+      expectStableFont();
+      for (const framesToAdvance of [1, 15, 200]) {
+        await advanceFrames(framesToAdvance);
+        expectStableFont();
+      }
+    }
   });
 
   it("cancels pending frames on rapid changes and unmount, preserving the latest month for taps", async () => {

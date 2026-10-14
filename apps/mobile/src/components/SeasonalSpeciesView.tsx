@@ -116,8 +116,9 @@ function SeasonalBubble({
           <View testID={`seasonal-caption-${species.id}`} pointerEvents="none" style={styles.bubbleCaption}>
             <Text
               numberOfLines={3}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
+              // The circle resizes every frame; native auto-fit can repeatedly
+              // shrink/re-measure a long name. Wrap at a fixed font size instead.
+              adjustsFontSizeToFit={false}
               style={[
                 styles.bubbleLabel,
                 isSelected && styles.primaryLabel,
@@ -245,6 +246,7 @@ const styles = StyleSheet.create({
   photoShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.14)" },
   bubbleCaption: { position: "absolute", left: "9%", width: "82%", bottom: "11%", alignItems: "center" },
   bubbleLabel: {
+    width: "100%",
     color: "#ffffff",
     fontSize: 11,
     fontWeight: "600",
