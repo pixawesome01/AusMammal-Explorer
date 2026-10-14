@@ -200,6 +200,10 @@ describe("ExplorerWorkspace species flow", () => {
       status === "loading" ? "Loading records…" : "Records unavailable",
     )).toBeTruthy());
     expect(screen.queryByTestId("latest-record")).toBeNull();
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.getByText(status === "loading"
+      ? "Calculating monthly pattern…" : "Monthly insights are unavailable.")).toBeTruthy();
+    expect(screen.queryByTestId("month-scrubber")).toBeNull();
   });
 
   it("shows count and a latest point on the map and keeps sample details in About", async () => {
@@ -377,10 +381,105 @@ describe("ExplorerWorkspace species flow", () => {
     expect(screen.getByText("2 records")).toBeTruthy();
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.getByText("2 records")).toBeTruthy();
+    expect(screen.getByText(/^Based on 2 records in this chart/)).toBeTruthy();
+    expect(screen.getByTestId("month-scrubber").props.accessibilityValue.text)
+      .toBe("Jan: 1 records, 1.0 average records per month");
     expect(screen.getByTestId("latest-record")).toHaveTextContent("Latest 15.6.2024");
     expect(screen.getByTestId("marker-occurrence-latest-record").props.lngLat).toEqual([132, -30]);
 
     warning.mockRestore();
+  });
+
+  it("changes monthly insights only with the year, even when month/season filters empty the map", async () => {
+    const dates = ["2024-01-10", "2024-01-15", "2024-04-15", "2024-06-15", "2025-01-15", "2025-12-15"];
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: { ...TEST_MANIFEST.files, koala: {
+        ...TEST_MANIFEST.files.koala,
+        recordCount: dates.length,
+        coverage: { from: "2024-01-01", to: "2026-08-15" },
+      } },
+    };
+    const readAsset: OccurrenceAssetReader = jest.fn(async (file) => ({
+      type: "FeatureCollection",
+      features: dates.map((eventDate, index) => ({
+        ...featureFor(file.scientificName, index + 1),
+        properties: { ...featureFor(file.scientificName, index + 1).properties, eventDate },
+      })),
+    }));
+    await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={manifest} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    await waitFor(() => expect(screen.getByText("6 records")).toBeTruthy());
+    const showTab = (name: "Records" | "Insights") => fireEvent.press(screen.getByRole("tab", { name }));
+    const barStyles = () => Array.from({ length: 12 }, (_, index) =>
+      screen.getByTestId(`month-bar-${index + 1}`).props.style,
+    );
+    const expectPattern = (year: string, total: number, january: string) => {
+      expect(screen.getByTestId("monthly-pattern-year")).toHaveTextContent(year);
+      expect(screen.getByText(new RegExp(`^Based on ${total} records in this chart`))).toBeTruthy();
+      expect(screen.getByTestId("month-scrubber").props.accessibilityValue.text).toBe(january);
+    };
+
+    await showTab("Insights");
+    const allYearsBars = barStyles();
+    const allYearsJanuary = "Jan: 3 records, 1.0 average records per month";
+    expectPattern("All years", 6, allYearsJanuary);
+    await showTab("Records");
+    await incrementSlider("Month", 7); // July has no records, but the annual chart still does.
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^0 records$/);
+    await showTab("Insights");
+    expectPattern("All years", 6, allYearsJanuary);
+    expect(barStyles()).toEqual(allYearsBars);
+
+    await showTab("Records");
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    await incrementSlider("Season", 1); // Summer.
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^4 records$/);
+    await showTab("Insights");
+    expectPattern("All years", 6, allYearsJanuary);
+    expect(barStyles()).toEqual(allYearsBars);
+
+    await showTab("Records");
+    await incrementSlider("Season", 1); // Autumn: only April remains on the map/ranking.
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^1 record$/);
+    await showTab("Insights");
+    expectPattern("All years", 6, allYearsJanuary);
+    expect(barStyles()).toEqual(allYearsBars);
+    expect(screen.getAllByTestId(/^state-count-/).reduce((sum, row) => sum + Number(row.props.children), 0)).toBe(1);
+
+    await showTab("Records");
+    await incrementSlider("Year", 1); // 2024.
+    await showTab("Insights");
+    expectPattern("2024", 4, "Jan: 2 records, 2.0 average records per month");
+    const year2024Bars = barStyles();
+    expect(year2024Bars).not.toEqual(allYearsBars);
+
+    await showTab("Records");
+    await incrementSlider("Season", 2); // Spring has no records in either year.
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^0 records$/);
+    await showTab("Insights");
+    expectPattern("2024", 4, "Jan: 2 records, 2.0 average records per month");
+    expect(barStyles()).toEqual(year2024Bars);
+
+    await showTab("Records");
+    await incrementSlider("Year", 1); // 2025 changes the chart despite the empty map.
+    await showTab("Insights");
+    expectPattern("2025", 2, "Jan: 1 records, 1.0 average records per month");
+    expect(barStyles()).not.toEqual(year2024Bars);
+
+    await showTab("Records");
+    await incrementSlider("Year", 1); // 2026 is genuinely empty for the whole year.
+    await showTab("Insights");
+    expect(screen.getByTestId("monthly-pattern-year")).toHaveTextContent(/^2026$/);
+    expect(screen.getByText("No records for 2026.")).toBeTruthy();
+    expect(screen.queryByTestId("month-scrubber")).toBeNull();
+
+    await showTab("Records");
+    await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
+    await showTab("Insights");
+    expectPattern("All years", 6, allYearsJanuary);
+    expect(barStyles()).toEqual(allYearsBars);
+    expect(readAsset).toHaveBeenCalledTimes(1);
   });
 
   it("switches month/season filters without hidden restrictions and keeps year, insights and latest point consistent", async () => {

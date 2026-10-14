@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   Platform,
@@ -31,9 +31,10 @@ import {
   createRuntimeOccurrenceAssetReader,
   getRuntimeOccurrenceSnapshot,
 } from "./src/data/occurrenceAssetReader";
-import type {
-  OccurrenceDateRange,
-  OccurrenceTemporalFilter,
+import {
+  filterOccurrenceRecords,
+  type OccurrenceDateRange,
+  type OccurrenceTemporalFilter,
 } from "./src/data/occurrenceFilter";
 import type { OccurrenceAssetReader } from "./src/data/occurrenceLoader";
 import type { OccurrenceSnapshotManifest } from "./src/data/occurrenceSnapshot";
@@ -159,6 +160,24 @@ export function ExplorerWorkspace({
     readAsset,
     manifest,
   });
+  // Compare all twelve months within the selected year. Reuse the loaded file,
+  // not the map's month/season slice, and don't fetch a second copy for Insights.
+  const unfilteredCollection = occurrenceState.unfilteredRecords?.collection;
+  const year = temporalFilter.year;
+  const fromDate = dateRange?.from;
+  const toDate = dateRange?.to;
+  const dataError = occurrenceState.status === "error";
+  const yearlyCollection = useMemo(() => {
+    if (!unfilteredCollection || dataError) return undefined;
+    return filterOccurrenceRecords(unfilteredCollection, {
+      speciesId: selectedSpecies.id,
+      year,
+      dateRange: { from: fromDate, to: toDate },
+    });
+  }, [unfilteredCollection, selectedSpecies.id, year, fromDate, toDate, dataError]);
+  const insightsStatus = occurrenceState.status === "loading" || occurrenceState.status === "error"
+    ? occurrenceState.status
+    : yearlyCollection?.features.length ? "ready" : "empty";
   // undefined when this species has no suitability model - e.g. too few
   // thinned records for the R pipeline to fit one (see suitabilityLayers.ts).
   const suitabilityLayer =
@@ -391,11 +410,11 @@ export function ExplorerWorkspace({
                   showsVerticalScrollIndicator={false}
                 >
                   <EnvironmentalInsights
-                    collection={occurrenceState.records?.collection}
+                    collection={yearlyCollection}
                     speciesName={selectedSpecies.commonName}
-                    status={occurrenceState.status}
+                    status={insightsStatus}
                     coverage={manifest.files[selectedSpecies.id].coverage}
-                    temporalFilter={temporalFilter}
+                    year={year}
                     dateRange={dateRange}
                   />
                   <StateRanking

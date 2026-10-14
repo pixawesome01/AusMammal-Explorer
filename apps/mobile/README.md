@@ -121,19 +121,19 @@ sample by default and switches to the complete files when an approved asset base
 configured. This keeps the app independent of live ALA requests and avoids committing
 the large GeoJSON files.
 
-RTM-3 adds combinable year, month, and Australian-season filters. Filters reuse the
-loaded species snapshot and update the map, visible count, summary, and rankings without
+RTM-3 combines a year filter with either a month or an Australian-season filter. Filters reuse the
+loaded species snapshot and update the map, visible count, and rankings without
 fetching the asset again. Clearing the controls restores the complete species snapshot.
 
 RTM-4 ranks the filtered records by state or territory. Point-to-state assignment uses
 the compact, bundled ABS ASGS Edition 3 (2021) state boundaries in
 `src/data/absStates2021.json`; records outside those boundaries are reported separately.
 
-The Insights tab follows the active filters for monthly averages, seasonal averages and
-state rankings. A calendar month's count is divided by the number of covered occurrences
-of that month, including zero-record months. Partial boundary months count once; months
-outside the selected window have no average. Seasonal averages are records per covered
-month in that Australian season (summer is December–February).
+The Insights monthly chart uses only the selected year (and any configured date-range
+bounds), ignoring the map's month/season filter. Its heading shows that year or "All years".
+State rankings still follow all active map filters. A calendar month's count is divided by
+the number of covered occurrences of that month, including zero-record months. Partial
+boundary months count once; months outside the selected window have no average.
 
 The temperature and rainfall charts use NASA POWER 2001–2020 climate normals,
 averaged across 12 public Australian city locations; they are an Australia-wide reference,

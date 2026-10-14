@@ -10,7 +10,7 @@ import {
   countOccurrencesByMonth,
   getPeakOccurrenceMonths,
 } from "../data/climateContext";
-import { getAustralianSeason, type OccurrenceDateRange, type OccurrenceTemporalFilter } from "../data/occurrenceFilter";
+import { getAustralianSeason, type OccurrenceDateRange } from "../data/occurrenceFilter";
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { monthlyOccurrenceAverages } from "../data/occurrenceStatistics";
 import { READABLE_COLOURS } from "./accessibility";
@@ -18,9 +18,10 @@ import { READABLE_COLOURS } from "./accessibility";
 type EnvironmentalInsightsProps = {
   speciesName: string;
   status: "loading" | "ready" | "empty" | "error";
+  /** Species records filtered by year/date range only, never by month or season. */
   collection?: OccurrenceFeatureCollection;
   coverage?: { from: string; to: string };
-  temporalFilter?: OccurrenceTemporalFilter;
+  year?: number;
   dateRange?: OccurrenceDateRange;
 };
 
@@ -151,14 +152,14 @@ export function EnvironmentalInsights({
   status,
   collection,
   coverage,
-  temporalFilter,
+  year,
   dateRange,
 }: EnvironmentalInsightsProps) {
   const monthlySeries = useMemo(() => countOccurrencesByMonth(collection), [collection]);
   const averages = useMemo(() => {
     if (!coverage) return null;
-    return monthlyOccurrenceAverages(collection, coverage, temporalFilter, dateRange);
-  }, [collection, coverage, temporalFilter, dateRange]);
+    return monthlyOccurrenceAverages(collection, coverage, { year }, dateRange);
+  }, [collection, coverage, year, dateRange]);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const selected = selectedMonth === null ? null : monthlySeries[selectedMonth];
   const scrubMonth = (event: GestureResponderEvent) => {
@@ -235,13 +236,20 @@ export function EnvironmentalInsights({
             <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.title}>
               {averages ? "Average records by month" : "Records by month"}
             </Text>
+            <Text testID="monthly-pattern-year" style={styles.yearCaption}>
+              {year ?? "All years"}
+            </Text>
           </View>
           <View style={styles.headingIcon} />
         </View>
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
         {status === "error" ? <Text style={styles.message}>Monthly insights are unavailable.</Text> : null}
-        {status === "empty" ? <Text style={styles.message}>No records match the active filters.</Text> : null}
+        {status === "empty" ? (
+          <Text style={styles.message}>
+            {year === undefined ? "No records in the available period." : `No records for ${year}.`}
+          </Text>
+        ) : null}
 
         {status === "ready" ? (
           <>
@@ -350,9 +358,8 @@ export function EnvironmentalInsights({
                 : ""}
             </Text>
             <Text style={styles.description}>
-              Based on {total.toLocaleString()} records in this view, {speciesLabel} records
+              Based on {total.toLocaleString()} records in this chart, {speciesLabel} records
               {peakPhrase ? ` appear most often in ${peakPhrase} (${peakSeasons})` : " do not yet show a monthly peak"}.
-              {" Counts and averages follow the active time filters."}
             </Text>
           </>
         ) : null}
@@ -468,6 +475,7 @@ const styles = StyleSheet.create({
   },
   headingText: { flex: 1, minWidth: 0 },
   title: { color: "#34423a", fontSize: 18, fontWeight: "600", textAlign: "center" },
+  yearCaption: { marginTop: 3, color: "#747b78", fontSize: 11, lineHeight: 14, fontWeight: "400", textAlign: "center" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
   radialViewport: {
     alignSelf: "center",
