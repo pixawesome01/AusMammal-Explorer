@@ -197,12 +197,12 @@ export function ExplorerWorkspace({
   const collapsedRecordsHeight = 108;
   // Fit both filters and About this data above the home indicator by default.
   // Retain scrolling when a short screen or a status message needs more room.
-  const expandedRecordsHeight = Math.max(collapsedRecordsHeight, Math.min(360, viewportHeight - 112));
+  const expandedRecordsHeight = Math.max(collapsedRecordsHeight, Math.min(320, viewportHeight - 112));
   const clampRecordsHeight = (height: number) =>
     Math.min(expandedRecordsHeight, Math.max(collapsedRecordsHeight, height));
   const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? expandedRecordsHeight);
   const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
-  // Lift the rail another 30 points with the taller sheet, in both map tabs.
+  // Keep the rail raised by another 30 points in both map tabs.
   // Ease off that extra lift on short screens so it still clears the header.
   const zoomLift = Math.min(30, Math.max(0, (viewportHeight - 600) / 2));
   const zoomCenterY = viewportHeight / 2 - Math.min(32, Math.round(viewportHeight * 0.04)) - zoomLift;
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     overflow: "hidden",
-    paddingTop: 6,
+    paddingTop: 4,
     paddingHorizontal: 13,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
     elevation: 15,
   },
-  sheetDragHandle: { height: 24, justifyContent: "center", alignItems: "center" },
+  sheetDragHandle: { height: 16, justifyContent: "center", alignItems: "center" },
   sheetHandle: {
     alignSelf: "center",
     width: 46,
@@ -585,11 +585,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   tabBar: {
-    minHeight: 52,
+    minHeight: 48,
     flexDirection: "row",
     gap: 4,
     overflow: "hidden",
-    padding: 3,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.56)",
     borderRadius: 19,
@@ -653,14 +654,14 @@ const styles = StyleSheet.create({
   tabText: { color: "#343d39", fontSize: 11, fontWeight: "600" },
   activeTabText: { color: "#111714", fontWeight: "700" },
   sheetScrollContent: { paddingTop: 6, paddingBottom: 14 },
-  recordsScrollContent: { paddingBottom: 32 },
+  recordsScrollContent: { paddingTop: 2, paddingBottom: 16 },
   aboutButton: {
     minHeight: 44,
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 3,
+    marginTop: 0,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
