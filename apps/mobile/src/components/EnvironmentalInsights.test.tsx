@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
@@ -30,6 +30,20 @@ const collection: OccurrenceFeatureCollection = {
 };
 
 describe("EnvironmentalInsights", () => {
+  it("places only the year slider in a separate compact card above the monthly chart", async () => {
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready"
+      coverage={{ from: "2020-01-01", to: "2026-08-15" }} year={2021} onYearChange={jest.fn()} />);
+    const yearCard = screen.getByTestId("insights-year-card");
+    const monthCard = screen.getByTestId("insights-monthly-card");
+    expect(yearCard).toHaveStyle({ paddingVertical: 6, borderWidth: 1, borderRadius: 22, backgroundColor: "#ffffff" });
+    expect(within(yearCard).getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2021");
+    expect(within(yearCard).queryByRole("header")).toBeNull();
+    expect(within(monthCard).queryByRole("adjustable", { name: "Year" })).toBeNull();
+    expect(within(monthCard).getByRole("header", { name: "Average records by month" })).toBeTruthy();
+    expect(screen.getAllByTestId(/^insights-(year|monthly)-card$/).map(card => card.props.testID))
+      .toEqual(["insights-year-card", "insights-monthly-card"]);
+  });
+
   it("keeps monthly averages without the seasonal averages panel", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready"
       coverage={{ from: "2020-01-01", to: "2026-08-15" }} year={2026} onYearChange={jest.fn()} />);

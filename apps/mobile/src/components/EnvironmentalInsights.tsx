@@ -157,7 +157,13 @@ export function EnvironmentalInsights({
 
   return (
     <View>
+      {coverage && onYearChange ? (
+        <View testID="insights-year-card" style={[styles.card, styles.yearCard]}>
+          <YearFilterSlider coverage={coverage} value={year} onChange={onYearChange} />
+        </View>
+      ) : null}
       <View
+        testID="insights-monthly-card"
         accessibilityLabel={`Monthly occurrence pattern for ${speciesName}`}
         style={[styles.card, styles.monthCard]}
       >
@@ -176,10 +182,6 @@ export function EnvironmentalInsights({
           </View>
           <View style={styles.headingIcon} />
         </View>
-
-        {coverage && onYearChange ? (
-          <YearFilterSlider coverage={coverage} value={year} onChange={onYearChange} />
-        ) : null}
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
         {status === "error" ? <Text style={styles.message}>Monthly insights are unavailable.</Text> : null}
@@ -286,6 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#ffffff",
   },
+  yearCard: { paddingVertical: 6 },
   monthCard: { shadowColor: "#7ba287", shadowOpacity: 0.12, shadowRadius: 16 },
   climateCard: { shadowColor: "#83b495", shadowOpacity: 0.15, shadowRadius: 20 },
   cardHeading: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: 28 },
