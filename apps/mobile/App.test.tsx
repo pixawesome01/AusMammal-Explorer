@@ -118,7 +118,7 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent(screen.getByTestId("map-top-controls"), "layout", {
       nativeEvent: { layout: { height: 160 } },
     });
-    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 320 });
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 290 });
     expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 196 });
     await fireEvent(screen.getByTestId("occurrence-map"), "regionIsChanging", { nativeEvent: { zoom: 6.5 } });
     const slider = screen.getByRole("adjustable", { name: "Map zoom" });
@@ -129,17 +129,19 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent(screen.getByTestId("occurrence-map"), "regionDidChange", { nativeEvent: { zoom: 5 } });
     expect(slider.props.accessibilityValue.now).toBe(5);
     await fireEvent.press(screen.getByRole("tab", { name: "Prediction" }));
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 290 });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 196 });
     await fireEvent(screen.getByTestId("map-top-controls"), "layout", {
       nativeEvent: { layout: { height: 280 } },
     });
-    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 320 });
-    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 196 });
-    // A taller header shortens the rail while preserving its raised centre at 418.
+    expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 292 });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 192 });
+    // A taller header shortens the rail while preserving its raised centre at 388.
     await fireEvent(screen.getByTestId("map-top-controls"), "layout", {
       nativeEvent: { layout: { height: 320 } },
     });
     expect(screen.getByTestId("map-zoom-control")).toHaveStyle({ top: 332 });
-    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 172 });
+    expect(screen.getByRole("adjustable", { name: "Map zoom" })).toHaveStyle({ height: 112 });
     expect(screen.getByRole("adjustable", { name: "Map zoom" }).props.accessibilityValue.now).toBe(5);
     await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
     expect(screen.queryByRole("adjustable", { name: "Map zoom" })).toBeNull();
@@ -236,7 +238,13 @@ describe("ExplorerWorkspace species flow", () => {
     await incrementSlider("Month", 1);
     const value = screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue;
     const handle = screen.getByTestId("records-sheet-handle");
-    const initialHeight = handle.props.accessibilityValue.now;
+    expect(handle.props.accessibilityValue.now).toBe(360);
+    expect(screen.getByTestId("explorer-bottom-sheet")).toHaveStyle({ height: 360 });
+    expect(screen.getByTestId("records-sheet-content").props.alwaysBounceVertical).toBe(false);
+    expect(screen.getByTestId("records-sheet-content").props.contentContainerStyle).toEqual(
+      expect.arrayContaining([expect.objectContaining({ paddingBottom: 32 })]),
+    );
+    expect(screen.getByRole("button", { name: "About this data" })).toBeTruthy();
     await fireEvent(handle, "responderGrant", { nativeEvent: { pageY: 400 } });
     await fireEvent(handle, "responderMove", { nativeEvent: { pageY: 900 } });
     await fireEvent(handle, "responderRelease", { nativeEvent: { pageY: 900 } });
@@ -246,12 +254,29 @@ describe("ExplorerWorkspace species flow", () => {
     await fireEvent(handle, "responderGrant", { nativeEvent: { pageY: 900 } });
     await fireEvent(handle, "responderMove", { nativeEvent: { pageY: 200 } });
     await fireEvent(handle, "responderRelease", { nativeEvent: { pageY: 200 } });
-    expect(handle.props.accessibilityValue.now).toBe(300);
+    expect(handle.props.accessibilityValue.now).toBe(360);
     expect(screen.getByRole("adjustable", { name: "Month" }).props.accessibilityValue).toEqual(value);
     await fireEvent(handle, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
     expect(handle.props.accessibilityValue.now).toBe(108);
     await fireEvent(handle, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
     expect(screen.getByRole("adjustable", { name: "Month" })).toBeTruthy();
+  });
+
+  it("caps the taller Records panel to a short map viewport and restores its height after resize", async () => {
+    const readAsset: OccurrenceAssetReader = async file => ({
+      type: "FeatureCollection", features: [featureFor(file.scientificName, 1)],
+    });
+    await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={TEST_MANIFEST} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    await fireEvent(screen.getByTestId("explorer-screen"), "layout", {
+      nativeEvent: { layout: { height: 400 } },
+    });
+    expect(screen.getByTestId("explorer-bottom-sheet")).toHaveStyle({ height: 288 });
+    expect(screen.getByRole("button", { name: "About this data" })).toBeTruthy();
+    await fireEvent(screen.getByTestId("explorer-screen"), "layout", {
+      nativeEvent: { layout: { height: 900 } },
+    });
+    expect(screen.getByTestId("explorer-bottom-sheet")).toHaveStyle({ height: 360 });
   });
 
   it.each(["Prediction", "Insights"])("keeps %s selected when changing species", async (tab) => {

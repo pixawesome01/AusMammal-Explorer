@@ -189,19 +189,23 @@ export function ExplorerWorkspace({
       : occurrenceState.status === "error"
         ? "Records unavailable"
         : `${mappedCount ?? 0} ${mappedCount === 1 ? "record" : "records"}`;
-  const compactSheetHeight = Math.min(310, Math.max(250, Math.round(windowHeight * 0.34)));
+  const viewportHeight = mapViewportHeight ?? windowHeight;
   const insightsSheetHeight = Math.min(
     windowHeight - 112,
     Math.max(560, Math.round(windowHeight * 0.84)),
   );
   const collapsedRecordsHeight = 108;
-  const expandedRecordsHeight = Math.max(collapsedRecordsHeight, Math.min(300, windowHeight - 112));
+  // Fit both filters and About this data above the home indicator by default.
+  // Retain scrolling when a short screen or a status message needs more room.
+  const expandedRecordsHeight = Math.max(collapsedRecordsHeight, Math.min(360, viewportHeight - 112));
   const clampRecordsHeight = (height: number) =>
     Math.min(expandedRecordsHeight, Math.max(collapsedRecordsHeight, height));
-  const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? compactSheetHeight);
+  const currentRecordsHeight = clampRecordsHeight(recordsHeight ?? expandedRecordsHeight);
   const sheetHeight = activeTab === "insights" ? insightsSheetHeight : currentRecordsHeight;
-  const viewportHeight = mapViewportHeight ?? windowHeight;
-  const zoomCenterY = viewportHeight / 2 - Math.min(32, Math.round(viewportHeight * 0.04));
+  // Lift the rail another 30 points with the taller sheet, in both map tabs.
+  // Ease off that extra lift on short screens so it still clears the header.
+  const zoomLift = Math.min(30, Math.max(0, (viewportHeight - 600) / 2));
+  const zoomCenterY = viewportHeight / 2 - Math.min(32, Math.round(viewportHeight * 0.04)) - zoomLift;
   const zoomTopLimit = (topControlsHeight || 160) + 12;
   const zoomBottomLimit = viewportHeight -
     (activeTab === "prediction" ? predictionDockHeight : sheetHeight) - 12;
@@ -211,7 +215,7 @@ export function ExplorerWorkspace({
     zoomCenterY - zoomTopLimit, zoomBottomLimit - zoomCenterY,
   ));
   const snapRecordsHeight = (height: number) => {
-    const stops = [collapsedRecordsHeight, clampRecordsHeight(compactSheetHeight), expandedRecordsHeight];
+    const stops = [collapsedRecordsHeight, expandedRecordsHeight];
     setRecordsHeight(stops.reduce((closest, stop) =>
       Math.abs(stop - height) < Math.abs(closest - height) ? stop : closest));
   };
@@ -377,7 +381,9 @@ export function ExplorerWorkspace({
 
               {activeTab === "records" && currentRecordsHeight > collapsedRecordsHeight ? (
                 <ScrollView
-                  contentContainerStyle={styles.sheetScrollContent}
+                  testID="records-sheet-content"
+                  contentContainerStyle={[styles.sheetScrollContent, styles.recordsScrollContent]}
+                  alwaysBounceVertical={false}
                   showsVerticalScrollIndicator={false}
                 >
                   <TemporalFilters
@@ -647,6 +653,7 @@ const styles = StyleSheet.create({
   tabText: { color: "#343d39", fontSize: 11, fontWeight: "600" },
   activeTabText: { color: "#111714", fontWeight: "700" },
   sheetScrollContent: { paddingTop: 6, paddingBottom: 14 },
+  recordsScrollContent: { paddingBottom: 32 },
   aboutButton: {
     minHeight: 44,
     alignSelf: "center",
