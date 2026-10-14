@@ -44,7 +44,8 @@ describe("monthly chart morphing", () => {
   function expectCoherentShape() {
     const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
     const canvas = StyleSheet.flatten(screen.getByTestId("monthly-chart-canvas").props.style);
-    expect(viewport.overflow).toBe("hidden");
+    expect(viewport).toMatchObject({ height: 224, width: 270, overflow: "hidden" });
+    expect(canvas).toMatchObject({ top: -21, height: 270 });
     for (let month = 1; month <= 12; month += 1) {
       const petal = bar(month);
       expect(petal.height).toBeGreaterThanOrEqual(52);
@@ -60,6 +61,8 @@ describe("monthly chart morphing", () => {
     }
     for (const label of screen.queryAllByTestId(/^month-label-/)) {
       const position = StyleSheet.flatten(label.props.style);
+      expect(label.props.adjustsFontSizeToFit).toBe(false);
+      expect(position).toMatchObject({ width: 40, fontSize: 14, lineHeight: 18 });
       expect(position.top + canvas.top).toBeGreaterThanOrEqual(0);
       expect(position.top + position.lineHeight + canvas.top).toBeLessThanOrEqual(viewport.height);
     }
@@ -102,6 +105,36 @@ describe("monthly chart morphing", () => {
     expect(frames.size).toBe(1);
     await view.unmount();
     expect(frames.size).toBe(0);
+  });
+
+  it("keeps Sep's font and the page's chart space unchanged while its bar grows and shrinks", async () => {
+    const smallSeptember = seriesFor(1).map(item => ({ ...item, count: item.month === 9 ? 1 : item.count }));
+    const view = await render(chart(smallSeptember));
+    const startLabel = StyleSheet.flatten(screen.getByTestId("month-label-9").props.style);
+    await view.rerender(chart(seriesFor(9)));
+    for (let frame = 0; frame < 35; frame += 1) {
+      await advanceFrames(1);
+      expectCoherentShape();
+      expect(screen.getByTestId("month-label-9")).toHaveTextContent("Sep");
+    }
+    expect(bar(9).height).toBe(104);
+    expect(StyleSheet.flatten(screen.getByTestId("month-label-9").props.style).left).not.toBe(startLabel.left);
+    await view.rerender(chart(smallSeptember));
+    for (let frame = 0; frame < 35; frame += 1) {
+      await advanceFrames(1);
+      expectCoherentShape();
+    }
+    expect(bar(9).height).toBeCloseTo(57.2);
+    expect(frames.size).toBe(0);
+  });
+
+  it("reserves the same space for both minimum and maximum-sized shapes", async () => {
+    const view = await render(chart(seriesFor(1).map(item => ({ ...item, count: 0 }))));
+    expectCoherentShape();
+    await view.rerender(chart(seriesFor(1).map(item => ({ ...item, count: 10 }))));
+    await advanceFrames(35);
+    expectCoherentShape();
+    for (let month = 1; month <= 12; month += 1) expect(bar(month).height).toBe(104);
   });
 
   it("does not animate on selection or equivalent data and keeps scrub gestures working", async () => {

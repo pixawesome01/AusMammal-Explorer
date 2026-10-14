@@ -117,7 +117,7 @@ describe("EnvironmentalInsights", () => {
 
 
 describe("monthly chart scrubbing", () => {
-  it("trims both vertical gaps and places peak labels over their bars for every month", async () => {
+  it("keeps the chart frame fixed and places peak labels over their bars for every month", async () => {
     const { rerender } = await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready" />);
     for (let month = 1; month <= 12; month += 1) {
       const monthlyCollection = {
@@ -129,9 +129,10 @@ describe("monthly chart scrubbing", () => {
       await rerender(<EnvironmentalInsights collection={monthlyCollection} speciesName="Koala" status="ready" />);
       const viewport = StyleSheet.flatten(screen.getByTestId("monthly-chart-viewport").props.style);
       const canvas = StyleSheet.flatten(screen.getByTestId("monthly-chart-canvas").props.style);
-      expect(viewport.height).toBeLessThan(200);
+      expect(viewport.height).toBe(224);
       expect(viewport.overflow).toBe("hidden");
       expect(canvas.height).toBe(270);
+      expect(canvas.top).toBe(-21);
       const bounds = Array.from({ length: 12 }, (_, index) => {
         const height = index + 1 === month ? 104 : 52;
         const angle = index * Math.PI / 6;
@@ -142,12 +143,11 @@ describe("monthly chart scrubbing", () => {
       const topGap = Math.min(...bounds.map(bound => bound.top));
       const bottomGap = viewport.height - Math.max(...bounds.map(bound => bound.bottom));
       expect(topGap).toBeGreaterThanOrEqual(10 - 0.001);
-      expect(topGap).toBeLessThan(11 + 0.001);
       expect(bottomGap).toBeGreaterThanOrEqual(6 - 0.001);
-      expect(bottomGap).toBeLessThan(7 + 0.001);
       const label = screen.getByTestId(`month-label-${month}`);
       expect(label).toHaveStyle({ color: "#ffffff", fontSize: 14, fontWeight: "400" });
       expect(label.props.pointerEvents).toBe("none");
+      expect(label.props.adjustsFontSizeToFit).toBe(false);
       const position = StyleSheet.flatten(label.props.style);
       const angle = (month - 1) * Math.PI / 6;
       expect(position.left + position.width / 2).toBeCloseTo(135 + Math.sin(angle) * 80);

@@ -14,6 +14,12 @@ const CENTRE = CHART_SIZE / 2;
 const CENTRE_SIZE = 40;
 const LABEL_WIDTH = 40;
 const LABEL_HEIGHT = 18;
+const MIN_BAR_HEIGHT = 52;
+const MAX_BAR_HEIGHT = 104;
+// Reserve the largest possible shape with the same 10pt/6pt edge padding.
+// Neither the scroll height nor the chart centre should move during a morph.
+const VIEWPORT_HEIGHT = MAX_BAR_HEIGHT * 2 + 16;
+const CANVAS_TOP = -(CENTRE - MAX_BAR_HEIGHT - 10);
 const MORPH_DURATION_MS = 480;
 
 function useMorphedHeights(target: readonly number[]) {
@@ -63,7 +69,7 @@ export function MonthlyOccurrenceChart({ series, averages, selectedMonth, onSele
   const targetHeights = useMemo(() => {
     const largestCount = Math.max(1, ...series.map(item => item.count));
     const largestAverage = Math.max(0.001, ...(averages?.map(item => item.average ?? 0) ?? []));
-    return series.map((item, index) => 52 + 52 * (averages
+    return series.map((item, index) => MIN_BAR_HEIGHT + (MAX_BAR_HEIGHT - MIN_BAR_HEIGHT) * (averages
       ? (averages[index].average ?? 0) / largestAverage
       : item.count / largestCount));
   }, [series, averages]);
@@ -78,20 +84,6 @@ export function MonthlyOccurrenceChart({ series, averages, selectedMonth, onSele
       top: CENTRE - Math.cos(angle) * radius - LABEL_HEIGHT / 2,
     };
   });
-  // Trim the unused canvas using the current animated shape. Keep original
-  // touch coordinates and bound separators/labels to the same drawing frame.
-  const bounds = heights.map((height, index) => {
-    const angle = index * Math.PI / 6;
-    const tipY = CENTRE - height * Math.cos(angle);
-    const halfSpanY = height * Math.tan(Math.PI / 12) * Math.abs(Math.sin(angle));
-    return { top: tipY - halfSpanY, bottom: tipY + halfSpanY };
-  });
-  const topInset = Math.max(0, Math.min(
-    ...bounds.map(bound => bound.top), ...labels.map(label => label.top),
-  ) - 10);
-  const bottomInset = Math.max(0, CHART_SIZE - Math.max(
-    ...bounds.map(bound => bound.bottom), ...labels.map(label => label.top + LABEL_HEIGHT),
-  ) - 6);
   const selected = series[selectedMonth ?? 0];
   const scrubMonth = (event: GestureResponderEvent) => {
     const x = event.nativeEvent.locationX - CENTRE;
@@ -102,8 +94,8 @@ export function MonthlyOccurrenceChart({ series, averages, selectedMonth, onSele
   };
 
   return (
-    <View testID="monthly-chart-viewport" style={[styles.viewport, { height: CHART_SIZE - topInset - bottomInset }]}>
-      <View testID="monthly-chart-canvas" style={[styles.canvas, { top: -topInset }]}>
+    <View testID="monthly-chart-viewport" style={styles.viewport}>
+      <View testID="monthly-chart-canvas" style={styles.canvas}>
         {series.map((item, index) => {
           const height = heights[index];
           const halfWidth = height * Math.tan(Math.PI / 12);
@@ -135,7 +127,7 @@ export function MonthlyOccurrenceChart({ series, averages, selectedMonth, onSele
         <View style={styles.centre} />
         {labels.map(item => (
           <Text key={item.month} testID={`month-label-${item.month}`} pointerEvents="none"
-            numberOfLines={1} adjustsFontSizeToFit style={[styles.peakLabel, { left: item.left, top: item.top }]}>
+            numberOfLines={1} adjustsFontSizeToFit={false} style={[styles.peakLabel, { left: item.left, top: item.top }]}>
             {item.name}
           </Text>
         ))}
@@ -169,8 +161,8 @@ export function MonthlyOccurrenceChart({ series, averages, selectedMonth, onSele
 }
 
 const styles = StyleSheet.create({
-  viewport: { alignSelf: "center", width: CHART_SIZE, marginTop: 8, overflow: "hidden" },
-  canvas: { position: "absolute", width: CHART_SIZE, height: CHART_SIZE },
+  viewport: { alignSelf: "center", width: CHART_SIZE, height: VIEWPORT_HEIGHT, marginTop: 8, overflow: "hidden" },
+  canvas: { position: "absolute", top: CANVAS_TOP, width: CHART_SIZE, height: CHART_SIZE },
   spoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
   petalClip: { position: "absolute", overflow: "hidden", borderTopLeftRadius: 6, borderTopRightRadius: 6 },
   petal: { position: "absolute", width: 0, height: 0, borderLeftColor: "transparent", borderRightColor: "transparent" },
