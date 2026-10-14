@@ -42,7 +42,7 @@ export function AboutOccurrenceData({ species, state, manifest = OCCURRENCE_SNAP
             Latest provider update: {summary.latestUpdate || "Not retained in this snapshot"}
             {summary.latestUpdate && summary.missingUpdates ? " (not available for every record)" : ""}
           </Text>
-          <Text accessibilityRole="header" style={styles.title}>Top contributing providers</Text>
+          <Text accessibilityRole="header" style={[styles.title, styles.sectionTitle]}>Top contributing providers</Text>
           {summary.topProviders.map(([name, count]) => (
             <Text key={name} style={styles.detail}>{name}: {count.toLocaleString()} records ({(100 * count / summary.count).toFixed(1)}%)</Text>
           ))}
@@ -67,7 +67,7 @@ export function AboutOccurrenceData({ species, state, manifest = OCCURRENCE_SNAP
           describe this sample, not the full dataset or animal abundance.
         </Text>
       ) : <Text style={styles.detail}>Full frozen dataset: {file.recordCount.toLocaleString()} records before filters.</Text>}
-      <Text accessibilityRole="header" style={styles.title}>Coverage and limitations</Text>
+      <Text accessibilityRole="header" style={[styles.title, styles.sectionTitle]}>Coverage and limitations</Text>
       {snapshot.limitations.map(text => <Text key={text} style={styles.detail}>• {text}</Text>)}
       <Pressable
         accessibilityRole="link"
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+  sectionTitle: { marginTop: 20 },
   description: {
     marginTop: 8,
     color: "#294b3a",

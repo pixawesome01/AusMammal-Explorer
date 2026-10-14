@@ -34,6 +34,14 @@ it("shows provenance, current-view counts, coverage and explicit historical omis
   }
 });
 
+it("separates subsection headings from the preceding details without moving the first heading", async () => {
+  await render(<AboutOccurrenceData species={MVP_SPECIES[0]} state={state(loaded)} />);
+  for (const name of ["Top contributing providers", "Coverage and limitations"]) {
+    expect(screen.getByRole("header", { name })).toHaveStyle({ marginTop: 20 });
+  }
+  expect(screen.getByRole("header", { name: "About this data" })).not.toHaveStyle({ marginTop: 20 });
+});
+
 it("refreshes source shares, count and dates after filtering and handles empty results", async () => {
   const view = await render(<AboutOccurrenceData species={MVP_SPECIES[0]} state={state(loaded)} />);
   await view.rerender(<AboutOccurrenceData species={MVP_SPECIES[0]} state={state({ ...loaded,
