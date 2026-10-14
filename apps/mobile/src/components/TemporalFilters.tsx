@@ -119,6 +119,7 @@ function DiscreteSlider({
           now: selectedIndex,
           text: options[selectedIndex].label,
         }}
+        hitSlop={{ bottom: 20 }}
         onAccessibilityAction={(event) => {
           if (event.nativeEvent.actionName === "increment") {
             selectIndex(selectedIndex + 1);
@@ -153,7 +154,11 @@ function DiscreteSlider({
           <View style={styles.sliderThumbHighlight} />
         </View>
       </View>
-      <View style={styles.sliderRange}>
+      <View
+        testID={`${accessibilityLabel.toLowerCase()}-slider-range`}
+        pointerEvents="none"
+        style={styles.sliderRange}
+      >
         <Text style={styles.sliderRangeText}>All</Text>
         <Text style={styles.sliderRangeText}>{options.at(-1)?.label}</Text>
       </View>
@@ -303,8 +308,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   sliderTouchArea: {
-    height: 44,
-    marginTop: 1,
+    // Keep the rail close to its value. The bottom hit slop extends into the
+    // non-interactive range-label row, retaining a 44-point touch target.
+    height: 24,
+    marginTop: 0,
     marginHorizontal: 9,
     justifyContent: "center",
   },
@@ -356,6 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.68)",
   },
   sliderRange: {
+    minHeight: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 9,

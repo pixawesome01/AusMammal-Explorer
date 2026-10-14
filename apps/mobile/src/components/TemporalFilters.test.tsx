@@ -114,6 +114,26 @@ describe("TemporalFilters", () => {
     expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
   });
 
+  it("keeps each value close to its rail while preserving the slider touch area", async () => {
+    await render(<Harness />);
+    await incrementSlider("Year", 1);
+    expect(screen.getByText("2020")).toBeTruthy();
+    expect(screen.getByText("All months")).toBeTruthy();
+    const expectCompactSlider = (name: "Year" | "Month" | "Season") => {
+      const slider = screen.getByRole("adjustable", { name });
+      expect(slider).toHaveStyle({ height: 24, marginTop: 0 });
+      expect(slider.props.hitSlop).toEqual({ bottom: 20 });
+      const range = screen.getByTestId(`${name.toLowerCase()}-slider-range`);
+      expect(range).toHaveStyle({ minHeight: 20 });
+      expect(range.props.pointerEvents).toBe("none");
+      expect(screen.getByTestId(`${name.toLowerCase()}-slider-heading`)).toHaveStyle({ minHeight: 44 });
+    };
+    expectCompactSlider("Year");
+    expectCompactSlider("Month");
+    await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    expectCompactSlider("Season");
+  });
+
   it("clears every active filter", async () => {
     await render(<Harness />);
     await incrementSlider("Year", 6);
