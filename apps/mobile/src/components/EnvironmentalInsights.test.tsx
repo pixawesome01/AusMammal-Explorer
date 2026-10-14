@@ -37,6 +37,7 @@ describe("EnvironmentalInsights", () => {
     const monthCard = screen.getByTestId("insights-monthly-card");
     expect(yearCard).toHaveStyle({ paddingVertical: 6, borderWidth: 1, borderRadius: 22, backgroundColor: "#ffffff" });
     expect(within(yearCard).getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2021");
+    expect(within(yearCard).getByTestId("year-slider-thumb")).toHaveStyle({ backgroundColor: "#d6d9d7" });
     expect(within(yearCard).queryByRole("header")).toBeNull();
     expect(within(monthCard).queryByRole("adjustable", { name: "Year" })).toBeNull();
     expect(within(monthCard).getByRole("header", { name: "Average records by month" })).toBeTruthy();

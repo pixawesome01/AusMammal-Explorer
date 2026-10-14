@@ -123,6 +123,9 @@ describe("TemporalFilters", () => {
       const slider = screen.getByRole("adjustable", { name });
       expect(slider).toHaveStyle({ height: 24, marginTop: 0 });
       expect(slider.props.hitSlop).toEqual({ bottom: 20 });
+      expect(screen.getByTestId(`${name.toLowerCase()}-slider-thumb`)).toHaveStyle({
+        width: 18, height: 18, backgroundColor: "#d6d9d7", borderColor: "#b7bfba",
+      });
       const range = screen.getByTestId(`${name.toLowerCase()}-slider-range`);
       expect(range).toHaveStyle({ minHeight: 20 });
       expect(range.props.pointerEvents).toBe("none");

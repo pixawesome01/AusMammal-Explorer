@@ -150,7 +150,7 @@ function DiscreteSlider({
             />
           );
         })}
-        <View pointerEvents="none" style={[styles.sliderThumb, { left: position }]}>
+        <View testID={`${accessibilityLabel.toLowerCase()}-slider-thumb`} pointerEvents="none" style={[styles.sliderThumb, { left: position }]}>
           <View style={styles.sliderThumbHighlight} />
         </View>
       </View>
@@ -362,9 +362,9 @@ const styles = StyleSheet.create({
     height: 18,
     marginLeft: -9,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.94)",
+    borderColor: "#b7bfba",
     borderRadius: 9,
-    backgroundColor: "rgba(250,253,251,0.82)",
+    backgroundColor: "#d6d9d7",
     shadowColor: "#4a6a58",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.24,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     left: 3,
     height: 4,
     borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.68)",
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
   sliderRange: {
     minHeight: 20,
