@@ -1,116 +1,119 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { AccessibilityInfo, Animated, StyleSheet } from "react-native";
+import { act, fireEvent, render, screen, within } from "@testing-library/react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 
 import { BUNDLED_OCCURRENCE_SNAPSHOT } from "../data/bundledOccurrenceSnapshot";
 import { MVP_SPECIES } from "../species";
 import { SeasonalSpeciesView } from "./SeasonalSpeciesView";
 
 function seasonalView(month: number, onSpeciesPress = jest.fn()) {
-  return (
-    <SeasonalSpeciesView
-      manifest={BUNDLED_OCCURRENCE_SNAPSHOT}
-      month={month}
-      onMonthChange={jest.fn()}
-      onSpeciesPress={onSpeciesPress}
-      selectedSpecies={MVP_SPECIES[0]}
-    />
-  );
+  return <SeasonalSpeciesView manifest={BUNDLED_OCCURRENCE_SNAPSHOT} month={month}
+    onMonthChange={jest.fn()} onSpeciesPress={onSpeciesPress} selectedSpecies={MVP_SPECIES[0]} />;
 }
 
-function position(speciesId: string) {
-  return StyleSheet.flatten(screen.getByTestId(`seasonal-position-${speciesId}`).props.style);
-}
+const position = (id: string) => StyleSheet.flatten(screen.getByTestId(`seasonal-position-${id}`).props.style);
 
 describe("seasonal bubble movement", () => {
+  let frames: Map<number, FrameRequestCallback>;
+  let nextId: number;
+  let time: number;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    frames = new Map();
+    nextId = 0;
+    time = 0;
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+    jest.spyOn(global, "requestAnimationFrame").mockImplementation((callback) => {
+      frames.set(++nextId, callback);
+      return nextId;
+    });
+    jest.spyOn(global, "cancelAnimationFrame").mockImplementation((id) => {
+      if (id != null) frames.delete(id);
+    });
   });
 
   afterEach(() => jest.restoreAllMocks());
 
-  it("starts still, then animates both position and size when the month changes", async () => {
-    const spring = jest.spyOn(Animated, "spring");
+  async function advanceFrames(count: number) {
+    await act(() => {
+      for (let index = 0; index < count; index += 1) {
+        const callbacks = [...frames.values()];
+        frames.clear();
+        time += 1000 / 60;
+        for (const callback of callbacks) callback(time);
+      }
+    });
+  }
+
+  it("starts still, simulates a month change, and stops once the cluster settles", async () => {
     const view = await render(seasonalView(10));
-    expect(spring).not.toHaveBeenCalled();
-
-    await view.rerender(seasonalView(8));
-    expect(spring).toHaveBeenCalledTimes(21); // Position, diameter, hit width for seven bubbles.
-    expect(spring.mock.calls.some(([, config]) => typeof config.toValue === "object")).toBe(true);
-    expect(spring.mock.calls.some(([, config]) => typeof config.toValue === "number")).toBe(true);
-    for (const [, config] of spring.mock.calls) {
-      expect(config).toMatchObject({ overshootClamping: true, isInteraction: false });
-    }
-    expect(screen.getByRole("button", { name: "Koala, August records" }).props.accessibilityValue)
-      .toEqual({ text: "805 records" });
-  });
-
-  it("moves the month's leading species to the centre without changing the selection", async () => {
-    jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockResolvedValue(true);
-    const onSpeciesPress = jest.fn();
-    const view = await render(seasonalView(10, onSpeciesPress));
-    const koalaOctober = position("koala");
-    const brushtailOctober = position("common-brushtail-possum");
-    expect(koalaOctober.top).toBeGreaterThan(brushtailOctober.top);
-
-    await view.rerender(seasonalView(6, onSpeciesPress));
-    expect(position("common-brushtail-possum").top).toBeGreaterThan(position("koala").top);
-    expect(screen.getByRole("button", { name: "Koala, June records", selected: true })).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Common Brushtail Possum, June records" }));
-    expect(onSpeciesPress).toHaveBeenCalledWith(
-      MVP_SPECIES.find((species) => species.id === "common-brushtail-possum"),
-    );
-  });
-
-  it("interrupts old transitions on rapid month changes and stops them on unmount", async () => {
-    const parallel = jest.spyOn(Animated, "parallel");
-    const view = await render(seasonalView(10));
-    await view.rerender(seasonalView(8));
-    const oldStops = parallel.mock.results.map(({ value }) => jest.spyOn(value, "stop"));
-    expect(oldStops).toHaveLength(7);
-
-    await view.rerender(seasonalView(6));
-    for (const stop of oldStops) expect(stop).toHaveBeenCalled();
-    const currentStops = parallel.mock.results.slice(7).map(({ value }) => jest.spyOn(value, "stop"));
-    expect(currentStops).toHaveLength(7);
-    await view.unmount();
-    for (const stop of currentStops) expect(stop).toHaveBeenCalled();
-  });
-
-  it("respects reduced motion from the start and updates the layout without springs", async () => {
-    jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockResolvedValue(true);
-    const spring = jest.spyOn(Animated, "spring");
-    const view = await render(seasonalView(10));
+    expect(frames.size).toBe(0);
     const oldPosition = position("koala");
     await view.rerender(seasonalView(6));
-    expect(position("koala").top).not.toEqual(oldPosition.top);
-    expect(spring).not.toHaveBeenCalled();
+    expect(frames.size).toBe(1);
+    await advanceFrames(200);
+    expect(frames.size).toBe(0);
+    expect(position("koala").left).not.toBe(oldPosition.left);
+    expect(screen.getByRole("button", { name: "Koala, June records" }).props.accessibilityValue)
+      .toEqual({ text: "662 records" });
   });
 
-  it("stops moving immediately if reduced motion is enabled while animating", async () => {
+  it("places names and numeric counts inside the circle with white shadowed text", async () => {
+    await render(seasonalView(10));
+    for (const species of MVP_SPECIES) {
+      const caption = screen.getByTestId(`seasonal-caption-${species.id}`);
+      expect(caption).toHaveStyle({ position: "absolute", bottom: "11%", width: "82%" });
+      const label = within(caption).getByText(species.commonName);
+      expect(label).toHaveStyle({ color: "#ffffff", textShadowRadius: 3 });
+      expect(label.props.numberOfLines).toBe(3);
+      expect(label.props.adjustsFontSizeToFit).toBe(true);
+    }
+    expect(within(screen.getByTestId("seasonal-caption-koala")).getByText("1,036")).toBeTruthy();
+  });
+
+  it("cancels pending frames on rapid changes and unmount, preserving the latest month for taps", async () => {
+    const onSpeciesPress = jest.fn();
+    const view = await render(seasonalView(10, onSpeciesPress));
+    await view.rerender(seasonalView(8, onSpeciesPress));
+    await advanceFrames(6);
+    const oldFrame = [...frames.keys()][0];
+    await view.rerender(seasonalView(6, onSpeciesPress));
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(oldFrame);
+    expect(frames.size).toBe(1);
+    await fireEvent.press(screen.getByRole("button", { name: "Koala, June records", selected: true }));
+    expect(onSpeciesPress).toHaveBeenCalledWith(MVP_SPECIES[0]);
+    await view.unmount();
+    expect(frames.size).toBe(0);
+  });
+
+  it("updates the packed layout without scheduling animation for reduced motion", async () => {
+    jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockResolvedValue(true);
+    const view = await render(seasonalView(10));
+    const before = position("koala");
+    await view.rerender(seasonalView(6));
+    expect(position("koala").left).not.toBe(before.left);
+    expect(frames.size).toBe(0);
+  });
+
+  it("settles immediately when reduced motion is enabled during movement", async () => {
     const subscribe = jest.spyOn(AccessibilityInfo, "addEventListener");
-    const parallel = jest.spyOn(Animated, "parallel");
     const view = await render(seasonalView(10));
     await view.rerender(seasonalView(8));
-    const stops = parallel.mock.results.map(({ value }) => jest.spyOn(value, "stop"));
-    // Jest infers only the last (announcementFinished) overload of this API.
+    await advanceFrames(5);
+    expect(frames.size).toBe(1);
     const subscriptions = subscribe.mock.calls as unknown as [string, (enabled: boolean) => void][];
     const handler = subscriptions.find(([event]) => event === "reduceMotionChanged")?.[1];
-    expect(handler).toBeDefined();
     await act(() => handler!(true));
-    for (const stop of stops) expect(stop).toHaveBeenCalled();
-
-    parallel.mockClear();
+    expect(frames.size).toBe(0);
     await view.rerender(seasonalView(6));
-    expect(parallel).not.toHaveBeenCalled();
+    expect(frames.size).toBe(0);
   });
 
-  it("keeps working without animation if the motion preference cannot be read", async () => {
+  it("keeps the selector usable if the motion preference cannot be read", async () => {
     jest.mocked(AccessibilityInfo.isReduceMotionEnabled).mockRejectedValue(new Error("Unavailable"));
-    const spring = jest.spyOn(Animated, "spring");
     const view = await render(seasonalView(10));
     await view.rerender(seasonalView(6));
     expect(screen.getByRole("button", { name: "Koala, June records" })).toBeTruthy();
-    expect(spring).not.toHaveBeenCalled();
+    expect(frames.size).toBe(0);
   });
 });
