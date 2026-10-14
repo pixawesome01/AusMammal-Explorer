@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   CLIMATE_REFERENCE,
@@ -14,6 +14,8 @@ import { getAustralianSeason, type OccurrenceDateRange } from "../data/occurrenc
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { monthlyOccurrenceAverages } from "../data/occurrenceStatistics";
 import { READABLE_COLOURS } from "./accessibility";
+import { MonthlyOccurrenceChart } from "./MonthlyOccurrenceChart";
+import { YearFilterSlider } from "./TemporalFilters";
 
 type EnvironmentalInsightsProps = {
   speciesName: string;
@@ -22,30 +24,9 @@ type EnvironmentalInsightsProps = {
   collection?: OccurrenceFeatureCollection;
   coverage?: { from: string; to: string };
   year?: number;
+  onYearChange?: (year: number | undefined) => void;
   dateRange?: OccurrenceDateRange;
 };
-
-const MONTH_COLORS = [
-  "#7d91b8",
-  "#739db7",
-  "#6ca8aa",
-  "#69af91",
-  "#78b47d",
-  "#96b071",
-  "#b4a563",
-  "#d19a58",
-  "#d48868",
-  "#bd7c88",
-  "#a37cb0",
-  "#8c82ba",
-] as const;
-
-const RADIAL_CHART_SIZE = 270;
-const RADIAL_CENTRE_SIZE = 40;
-const RADIAL_CHART_CENTRE = RADIAL_CHART_SIZE / 2;
-const RADIAL_CENTRE_OFFSET = (RADIAL_CHART_SIZE - RADIAL_CENTRE_SIZE) / 2;
-const RADIAL_LABEL_WIDTH = 40;
-const RADIAL_LABEL_HEIGHT = 18;
 
 const TEMPERATURE_COMPARISON = {
   higher: "warmer than",
@@ -153,6 +134,7 @@ export function EnvironmentalInsights({
   collection,
   coverage,
   year,
+  onYearChange,
   dateRange,
 }: EnvironmentalInsightsProps) {
   const monthlySeries = useMemo(() => countOccurrencesByMonth(collection), [collection]);
@@ -162,49 +144,7 @@ export function EnvironmentalInsights({
   }, [collection, coverage, year, dateRange]);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const selected = selectedMonth === null ? null : monthlySeries[selectedMonth];
-  const scrubMonth = (event: GestureResponderEvent) => {
-    const x = event.nativeEvent.locationX - RADIAL_CHART_CENTRE;
-    const y = event.nativeEvent.locationY - RADIAL_CHART_CENTRE;
-    // Ignore the centre (angle is ambiguous) and touches outside the circle.
-    const radius = Math.hypot(x, y);
-    if (radius < RADIAL_CENTRE_SIZE / 2 || radius > RADIAL_CHART_CENTRE) return;
-    const angle = Math.atan2(x, -y);
-    setSelectedMonth((Math.round(angle / (Math.PI / 6)) + 12) % 12);
-  };
   const peakMonths = useMemo(() => getPeakOccurrenceMonths(monthlySeries), [monthlySeries]);
-  const largestMonthlyCount = Math.max(1, ...monthlySeries.map((item) => item.count));
-  const largestAverage = Math.max(0.001, ...(averages?.map(item => item.average ?? 0) ?? []));
-  const radialBarHeights = monthlySeries.map((item, index) => {
-    const fraction = averages
-      ? (averages[index].average ?? 0) / largestAverage
-      : item.count / largestMonthlyCount;
-    return 52 + fraction * 52;
-  });
-  const radialLabels = peakMonths.map(item => {
-    const angle = (item.month - 1) * Math.PI / 6;
-    const radius = radialBarHeights[item.month - 1] - 24;
-    return {
-      ...item,
-      left: RADIAL_CHART_CENTRE + Math.sin(angle) * radius - RADIAL_LABEL_WIDTH / 2,
-      top: RADIAL_CHART_CENTRE - Math.cos(angle) * radius - RADIAL_LABEL_HEIGHT / 2,
-    };
-  });
-  // Trim unused canvas at both ends, not the bars themselves. Preserve the
-  // original inner coordinates so touch-to-month selection stays unchanged.
-  const radialBarBounds = radialBarHeights.map((height, index) => {
-    const angle = index * Math.PI / 6;
-    const tipY = RADIAL_CHART_CENTRE - height * Math.cos(angle);
-    const halfSpanY = height * Math.tan(Math.PI / 12) * Math.abs(Math.sin(angle));
-    return { top: tipY - halfSpanY, bottom: tipY + halfSpanY };
-  });
-  const radialTopInset = Math.max(0, Math.floor(Math.min(
-    ...radialBarBounds.map(bounds => bounds.top),
-    ...radialLabels.map(label => label.top),
-  )) - 10);
-  const radialBottomInset = Math.max(0, Math.floor(RADIAL_CHART_SIZE - Math.max(
-    ...radialBarBounds.map(bounds => bounds.bottom),
-    ...radialLabels.map(label => label.top + RADIAL_LABEL_HEIGHT),
-  )) - 6);
   const total = monthlySeries.reduce((sum, item) => sum + item.count, 0);
   const peakPhrase = listPhrase(peakMonths.map((item) => item.name));
   const peakSeasons = listPhrase([
@@ -236,12 +176,13 @@ export function EnvironmentalInsights({
             <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.title}>
               {averages ? "Average records by month" : "Records by month"}
             </Text>
-            <Text testID="monthly-pattern-year" style={styles.yearCaption}>
-              {year ?? "All years"}
-            </Text>
           </View>
           <View style={styles.headingIcon} />
         </View>
+
+        {coverage && onYearChange ? (
+          <YearFilterSlider coverage={coverage} value={year} onChange={onYearChange} />
+        ) : null}
 
         {status === "loading" ? <Text style={styles.message}>Calculating monthly pattern…</Text> : null}
         {status === "error" ? <Text style={styles.message}>Monthly insights are unavailable.</Text> : null}
@@ -253,102 +194,8 @@ export function EnvironmentalInsights({
 
         {status === "ready" ? (
           <>
-            <View testID="monthly-chart-viewport" style={[styles.radialViewport, { height: RADIAL_CHART_SIZE - radialTopInset - radialBottomInset }]}>
-              <View testID="monthly-chart-canvas" style={[styles.radialChart, { top: 0 - radialTopInset }]}>
-                {monthlySeries.map((item, index) => {
-                  const height = radialBarHeights[index];
-                  const halfWidth = height * Math.tan(Math.PI / 12);
-                  return (
-                    <View
-                      key={item.month}
-                      style={[styles.radialSpoke, { transform: [{ rotate: `${index * 30}deg` }] }]}
-                    >
-                      <View
-                        testID={`month-bar-${item.month}`}
-                        style={[
-                          styles.radialPetalClip,
-                          {
-                            top: RADIAL_CHART_CENTRE - height,
-                            width: halfWidth * 2,
-                            height,
-                            opacity: selectedMonth === null || selectedMonth === index ? 1 : 0.4,
-                          },
-                        ]}
-                      >
-                        <View style={[
-                          styles.radialPetal,
-                          {
-                            borderLeftWidth: halfWidth,
-                            borderRightWidth: halfWidth,
-                            borderTopWidth: height,
-                            borderTopColor: MONTH_COLORS[index],
-                          },
-                        ]} />
-                      </View>
-                    </View>
-                  );
-                })}
-                {monthlySeries.map((item, index) => {
-                  // Follow the shared edge of the two neighbouring petals.
-                  // A fixed maximum-length line can escape a short bar and
-                  // paint across the heading after the canvas is trimmed.
-                  const length = Math.max(radialBarHeights[index], radialBarHeights[(index + 1) % 12])
-                    / Math.cos(Math.PI / 12);
-                  return (
-                    <View
-                      key={`separator-${item.month}`}
-                      pointerEvents="none"
-                      style={[
-                        styles.radialSpoke,
-                        { transform: [{ rotate: `${index * 30 + 15}deg` }] },
-                      ]}
-                    >
-                      <View testID={`month-separator-${item.month}`} style={[
-                        styles.radialSeparator,
-                        { top: RADIAL_CHART_CENTRE - length, height: length },
-                      ]} />
-                    </View>
-                  );
-                })}
-                <View style={styles.radialCentre} />
-                {radialLabels.map((item) => (
-                  <Text
-                    key={item.month}
-                    testID={`month-label-${item.month}`}
-                    pointerEvents="none"
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    style={[styles.peakLabel, { left: item.left, top: item.top }]}
-                  >
-                    {item.name}
-                  </Text>
-                ))}
-                <View
-                  style={StyleSheet.absoluteFill}
-                  testID="month-scrubber"
-                  accessible
-                  accessibilityRole="adjustable"
-                  accessibilityLabel="Explore monthly records"
-                  accessibilityHint="Drag around the chart, or swipe up or down to change month."
-                  accessibilityValue={{
-                    min: 1, max: 12, now: (selectedMonth ?? 0) + 1,
-                    text: `${(selected ?? monthlySeries[0]).name}: ${(selected ?? monthlySeries[0]).count} records${averages ? `, ${averages[selectedMonth ?? 0].average?.toFixed(1) ?? "unavailable"} average records per month` : ""}`,
-                  }}
-                  accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
-                  onAccessibilityAction={({ nativeEvent }) => {
-                    if (nativeEvent.actionName === "increment" || nativeEvent.actionName === "decrement") {
-                      const step = nativeEvent.actionName === "increment" ? 1 : -1;
-                      setSelectedMonth(current => ((current ?? 0) + step + 12) % 12);
-                    }
-                  }}
-                  onStartShouldSetResponder={() => true}
-                  onMoveShouldSetResponder={() => true}
-                  onResponderGrant={scrubMonth}
-                  onResponderMove={scrubMonth}
-                  onResponderTerminationRequest={() => false}
-                />
-              </View>
-            </View>
+            <MonthlyOccurrenceChart series={monthlySeries} averages={averages}
+              selectedMonth={selectedMonth} onSelectMonth={setSelectedMonth} />
             <Text testID="month-readout" style={[styles.monthReadout, selectedMonth === null && styles.chartHint]}>
               {selected
                 ? `${selected.count.toLocaleString()} ${selected.count === 1 ? "record" : "records"}`
@@ -475,59 +322,7 @@ const styles = StyleSheet.create({
   },
   headingText: { flex: 1, minWidth: 0 },
   title: { color: "#34423a", fontSize: 18, fontWeight: "600", textAlign: "center" },
-  yearCaption: { marginTop: 3, color: "#747b78", fontSize: 11, lineHeight: 14, fontWeight: "400", textAlign: "center" },
   message: { marginTop: 18, color: "#66716a", fontSize: 13, lineHeight: 19 },
-  radialViewport: {
-    alignSelf: "center",
-    width: RADIAL_CHART_SIZE,
-    marginTop: 8,
-    // Retain inner gesture coordinates, but keep drawing inside the trimmed
-    // plot so no separator can cross the title or the readout.
-    overflow: "hidden",
-  },
-  radialChart: { position: "absolute", width: RADIAL_CHART_SIZE, height: RADIAL_CHART_SIZE },
-  radialSpoke: { ...StyleSheet.absoluteFill, alignItems: "center" },
-  radialPetalClip: {
-    position: "absolute",
-    overflow: "hidden",
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-  },
-  radialPetal: {
-    position: "absolute",
-    width: 0,
-    height: 0,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-  },
-  radialSeparator: {
-    position: "absolute",
-    width: 2,
-    backgroundColor: "rgba(255,255,255,0.94)",
-  },
-  radialCentre: {
-    position: "absolute",
-    top: RADIAL_CENTRE_OFFSET,
-    left: RADIAL_CENTRE_OFFSET,
-    width: RADIAL_CENTRE_SIZE,
-    height: RADIAL_CENTRE_SIZE,
-    borderWidth: 1,
-    borderColor: "rgba(78,98,87,0.24)",
-    borderRadius: RADIAL_CENTRE_SIZE / 2,
-    backgroundColor: "#ffffff",
-  },
-  peakLabel: {
-    position: "absolute",
-    width: RADIAL_LABEL_WIDTH,
-    lineHeight: RADIAL_LABEL_HEIGHT,
-    fontSize: 14,
-    fontWeight: "400",
-    color: "#ffffff",
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.28)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
   monthReadout: { color: "#34423a", fontSize: 16, fontWeight: "600", textAlign: "center", marginTop: 4 },
   description: { marginTop: 13, color: READABLE_COLOURS.muted, fontSize: 13, lineHeight: 19 },
   climateMetric: { marginTop: 18, fontSize: 16, fontWeight: "500", textAlign: "center" },

@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 
 import type { OccurrenceFeatureCollection } from "../data/occurrenceLoader";
 import { EnvironmentalInsights } from "./EnvironmentalInsights";
+
+// Geometry assertions inspect final shapes; transition frames have their own tests.
+beforeEach(() => jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true));
+afterEach(() => jest.restoreAllMocks());
 
 const collection: OccurrenceFeatureCollection = {
   type: "FeatureCollection",
@@ -28,10 +32,10 @@ const collection: OccurrenceFeatureCollection = {
 describe("EnvironmentalInsights", () => {
   it("keeps monthly averages without the seasonal averages panel", async () => {
     await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status="ready"
-      coverage={{ from: "2020-01-01", to: "2026-08-15" }} year={2026} />);
+      coverage={{ from: "2020-01-01", to: "2026-08-15" }} year={2026} onYearChange={jest.fn()} />);
     expect(screen.getByText("Average records by month")).toBeTruthy();
-    expect(screen.getByTestId("monthly-pattern-year")).toHaveTextContent(/^2026$/);
-    expect(screen.getByTestId("monthly-pattern-year")).toHaveStyle({ fontSize: 11, fontWeight: "400", textAlign: "center" });
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2026");
+    expect(screen.queryByTestId("monthly-pattern-year")).toBeNull();
     expect(screen.queryByText(/^Seasonal pattern$/i)).toBeNull();
     expect(screen.queryByText(/^Climate reference$/i)).toBeNull();
     expect(screen.getByRole("header", { name: "Typical monthly temperature" })).toBeTruthy();
@@ -54,12 +58,26 @@ describe("EnvironmentalInsights", () => {
 
   it("omits the seasonal averages panel when no records match", async () => {
     await render(<EnvironmentalInsights collection={{ type: "FeatureCollection", features: [] }}
-      speciesName="Koala" status="empty" coverage={{ from: "2020-01-01", to: "2026-08-15" }} />);
+      speciesName="Koala" status="empty" coverage={{ from: "2020-01-01", to: "2026-08-15" }} onYearChange={jest.fn()} />);
     expect(screen.getByText("No records in the available period.")).toBeTruthy();
     expect(screen.getByText("Average records by month")).toBeTruthy();
-    expect(screen.getByTestId("monthly-pattern-year")).toHaveTextContent(/^All years$/);
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("All years");
     expect(screen.queryByLabelText("Seasonal occurrence averages")).toBeNull();
     expect(screen.queryByText("Seasonal averages")).toBeNull();
+  });
+
+  it.each(["ready", "loading", "empty", "error"] as const)("keeps just the year slider usable when %s", async status => {
+    const onYearChange = jest.fn();
+    await render(<EnvironmentalInsights collection={collection} speciesName="Koala" status={status}
+      coverage={{ from: "2024-01-01", to: "2026-08-15" }} year={2024} onYearChange={onYearChange} />);
+    const slider = screen.getByRole("adjustable", { name: "Year" });
+    await fireEvent(slider, "accessibilityAction", { nativeEvent: { actionName: "increment" } });
+    expect(onYearChange).toHaveBeenLastCalledWith(2025);
+    await fireEvent(slider, "accessibilityAction", { nativeEvent: { actionName: "decrement" } });
+    expect(onYearChange).toHaveBeenLastCalledWith(undefined);
+    expect(screen.queryByRole("adjustable", { name: "Month" })).toBeNull();
+    expect(screen.queryByRole("adjustable", { name: "Season" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull();
   });
 
   it("shows record seasonality and sourced climate charts", async () => {

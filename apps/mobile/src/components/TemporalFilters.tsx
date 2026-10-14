@@ -166,19 +166,38 @@ function DiscreteSlider({
   );
 }
 
-export function TemporalFilters({ coverage, value, mode, onModeChange, onChange }: TemporalFiltersProps) {
+type YearFilterSliderProps = {
+  coverage: TemporalFiltersProps["coverage"];
+  value?: number;
+  onChange: (year: number | undefined) => void;
+  headerTrailingAccessory?: ReactNode;
+};
+
+/** The same year control is shared by Records and the monthly chart. */
+export function YearFilterSlider({ coverage, value, onChange, headerTrailingAccessory }: YearFilterSliderProps) {
   const firstYear = Number(coverage.from.slice(0, 4));
   const lastYear = Number(coverage.to.slice(0, 4));
   const years = Array.from({ length: lastYear - firstYear + 1 }, (_, index) => firstYear + index);
-  const yearOptions: SliderOption[] = [
+  const options: SliderOption[] = [
     { label: "All years", value: undefined },
     ...years.map((year) => ({ label: String(year), value: year })),
   ];
+  return (
+    <DiscreteSlider
+      accessibilityLabel="Year"
+      onSelect={onChange}
+      options={options}
+      selectedIndex={value === undefined ? 0 : years.indexOf(value) + 1}
+      headerTrailingAccessory={headerTrailingAccessory}
+    />
+  );
+}
+
+export function TemporalFilters({ coverage, value, mode, onModeChange, onChange }: TemporalFiltersProps) {
   const monthOptions: SliderOption[] = [
     { label: "All months", value: undefined },
     ...MONTHS.map((month, index) => ({ label: month, value: index + 1 })),
   ];
-  const selectedYearIndex = value.year === undefined ? 0 : years.indexOf(value.year) + 1;
   const selectedMonthIndex = value.month ?? 0;
   const seasonOptions: SliderOption[] = [
     { label: "All seasons", value: undefined },
@@ -215,11 +234,10 @@ export function TemporalFilters({ coverage, value, mode, onModeChange, onChange 
 
   return (
     <View accessibilityLabel="Occurrence time filters" style={styles.card}>
-      <DiscreteSlider
-        accessibilityLabel="Year"
-        onSelect={(year) => onChange(mode === "month" ? { year, month: value.month } : { year, season: value.season })}
-        options={yearOptions}
-        selectedIndex={selectedYearIndex}
+      <YearFilterSlider
+        coverage={coverage}
+        value={value.year}
+        onChange={(year) => onChange(mode === "month" ? { year, month: value.month } : { year, season: value.season })}
         headerTrailingAccessory={hasActiveFilter ? (
           <Pressable
             accessibilityRole="button"

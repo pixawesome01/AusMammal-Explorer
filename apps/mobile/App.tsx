@@ -421,6 +421,7 @@ export function ExplorerWorkspace({
                     status={insightsStatus}
                     coverage={manifest.files[selectedSpecies.id].coverage}
                     year={year}
+                    onYearChange={(nextYear) => setTemporalFilter(current => ({ ...current, year: nextYear }))}
                     dateRange={dateRange}
                   />
                   <StateRanking

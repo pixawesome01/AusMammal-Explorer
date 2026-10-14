@@ -130,7 +130,10 @@ the compact, bundled ABS ASGS Edition 3 (2021) state boundaries in
 `src/data/absStates2021.json`; records outside those boundaries are reported separately.
 
 The Insights monthly chart uses only the selected year (and any configured date-range
-bounds), ignoring the map's month/season filter. Its heading shows that year or "All years".
+bounds), ignoring the map's month/season filter. Its year slider is shared with Records;
+changing either control updates the same year without clearing month/season selections.
+The monthly plot morphs between year shapes, retargets rapid changes from its current
+shape, and honours the device's Reduce Motion setting.
 State rankings still follow all active map filters. A calendar month's count is divided by
 the number of covered occurrences of that month, including zero-record months. Partial
 boundary months count once; months outside the selected window have no average.

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
-  AccessibilityInfo,
   Animated,
   type ImageSourcePropType,
   Pressable,
@@ -15,6 +14,7 @@ import type { OccurrenceSnapshotManifest } from "../data/occurrenceSnapshot";
 import { MVP_SPECIES, type Species } from "../species";
 import { SEASONAL_CANVAS_HEIGHT } from "./seasonalBubbleLayout";
 import { useSeasonalBubbleMotion, type SeasonalBubbleMotion } from "./useSeasonalBubbleMotion";
+import { useReducedMotion } from "./useReducedMotion";
 
 const MONTHS = [
   "January",
@@ -43,27 +43,6 @@ type SeasonalSpeciesViewProps = {
 
 function wrapMonth(month: number) {
   return ((month - 1 + 12) % 12) + 1;
-}
-
-function useReducedMotion() {
-  // Stay still until the device preference is known, including on query failure.
-  const [reducedMotion, setReducedMotion] = useState(true);
-  useEffect(() => {
-    let active = true;
-    let preferenceChanged = false;
-    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => {
-      preferenceChanged = true;
-      setReducedMotion(enabled);
-    });
-    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (active && !preferenceChanged) setReducedMotion(enabled);
-    }).catch(() => {});
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
-  return reducedMotion;
 }
 
 type SeasonalBubbleProps = {

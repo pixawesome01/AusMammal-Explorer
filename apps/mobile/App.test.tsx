@@ -444,7 +444,7 @@ describe("ExplorerWorkspace species flow", () => {
       screen.getByTestId(`month-bar-${index + 1}`).props.style,
     );
     const expectPattern = (year: string, total: number, january: string) => {
-      expect(screen.getByTestId("monthly-pattern-year")).toHaveTextContent(year);
+      expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe(year);
       expect(screen.getByText(new RegExp(`^Based on ${total} records in this chart`))).toBeTruthy();
       expect(screen.getByTestId("month-scrubber").props.accessibilityValue.text).toBe(january);
     };
@@ -499,7 +499,7 @@ describe("ExplorerWorkspace species flow", () => {
     await showTab("Records");
     await incrementSlider("Year", 1); // 2026 is genuinely empty for the whole year.
     await showTab("Insights");
-    expect(screen.getByTestId("monthly-pattern-year")).toHaveTextContent(/^2026$/);
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2026");
     expect(screen.getByText("No records for 2026.")).toBeTruthy();
     expect(screen.queryByTestId("month-scrubber")).toBeNull();
 
@@ -508,6 +508,57 @@ describe("ExplorerWorkspace species flow", () => {
     await showTab("Insights");
     expectPattern("All years", 6, allYearsJanuary);
     expect(barStyles()).toEqual(allYearsBars);
+    expect(readAsset).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["Month", "Season"] as const)("changes years directly above the chart while preserving the Records %s filter", async mode => {
+    const dates = ["2024-01-15", "2024-04-15", "2025-01-15", "2025-07-15", "2025-07-20"];
+    const manifest: OccurrenceSnapshotManifest = {
+      ...TEST_MANIFEST,
+      files: { ...TEST_MANIFEST.files, koala: {
+        ...TEST_MANIFEST.files.koala, recordCount: dates.length,
+        coverage: { from: "2024-01-01", to: "2026-08-15" },
+      } },
+    };
+    const readAsset: OccurrenceAssetReader = jest.fn(async file => ({
+      type: "FeatureCollection", features: dates.map((eventDate, index) => ({
+        ...featureFor(file.scientificName, index + 1),
+        properties: { ...featureFor(file.scientificName, index + 1).properties, eventDate },
+      })),
+    }));
+    await render(<SpeciesProvider><ExplorerWorkspace readAsset={readAsset} manifest={manifest} /></SpeciesProvider>);
+    await fireEvent.press(screen.getByRole("button", { name: /koala/i }));
+    if (mode === "Season") await fireEvent.press(screen.getByRole("tab", { name: "Season" }));
+    await incrementSlider(mode, 1); // January or Summer, both match the January records.
+    const filterValue = screen.getByRole("adjustable", { name: mode }).props.accessibilityValue;
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("All years");
+    expect(screen.queryByTestId("monthly-pattern-year")).toBeNull();
+    expect(screen.queryByRole("adjustable", { name: mode })).toBeNull();
+    await incrementSlider("Year", 1);
+    expect(screen.getByRole("tab", { name: "Insights", selected: true })).toBeTruthy();
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2024");
+    expect(screen.getByText(/^Based on 2 records in this chart/)).toBeTruthy();
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^1 record$/);
+    await fireEvent(screen.getByTestId("month-scrubber"), "responderGrant",
+      { nativeEvent: { locationX: 135, locationY: 235 } });
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^0 records · 0.0 average$/);
+    await incrementSlider("Year", 1);
+    expect(screen.getByText(/^Based on 3 records in this chart/)).toBeTruthy();
+    expect(screen.getByTestId("month-readout")).toHaveTextContent(/^2 records · 2.0 average$/);
+    await fireEvent.press(screen.getByRole("tab", { name: "Records" }));
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("2025");
+    expect(screen.getByRole("adjustable", { name: mode }).props.accessibilityValue).toEqual(filterValue);
+    await fireEvent.press(screen.getByRole("tab", { name: "Insights" }));
+    await incrementSlider("Year", 1);
+    expect(screen.getByText("No records for 2026.")).toBeTruthy();
+    for (let index = 0; index < 3; index += 1) {
+      await fireEvent(screen.getByRole("adjustable", { name: "Year" }), "accessibilityAction",
+        { nativeEvent: { actionName: "decrement" } });
+    }
+    expect(screen.getByRole("adjustable", { name: "Year" }).props.accessibilityValue.text).toBe("All years");
+    expect(screen.getByText(/^Based on 5 records in this chart/)).toBeTruthy();
+    expect(screen.getByTestId("map-record-summary")).toHaveTextContent(/^2 records$/);
     expect(readAsset).toHaveBeenCalledTimes(1);
   });
 
