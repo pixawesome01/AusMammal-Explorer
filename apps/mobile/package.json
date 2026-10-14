@@ -12,6 +12,7 @@
     "start:demo": "expo start --dev-client --no-dev --minify",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "ios:demo": "EXPO_PUBLIC_OCCURRENCE_ASSET_BASE_URL= expo run:ios --configuration Release --no-bundler",
     "typecheck": "tsc --noEmit --pretty false",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",

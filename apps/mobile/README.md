@@ -32,6 +32,25 @@ Keep Metro running for development-build launches/reloads; use the computer's LA
 on a physical phone, not `127.0.0.1`. Prefer a standalone release build for the final
 presentation so launching the app does not depend on the development computer.
 
+### Server-free Simulator demo
+
+Build and install the standalone demo on the Mac's iPhone Simulator:
+
+```bash
+npm run ios:demo -- --device "iPhone 17"
+```
+
+This uses the Release configuration and the bundled 20% occurrence snapshot,
+without starting Metro or using an external occurrence-data server. JavaScript and
+prediction images are packaged inside the app. It replaces the installed development
+app with the same bundle identifier; no uninstall or simulator reset is needed.
+
+After installation, open **Simulator**, go to its Home Screen, and tap
+**AusMammal Explorer**. No terminal or development server is needed for subsequent
+launches, including after restarting the Mac. Keep an internet connection for the
+basemap. After changing source code, rebuild with the command above; this release
+app does not use Reload or Fast Refresh. To return to development, run `npm run ios`.
+
 On entering the species workspace, all seven prediction images are prepared in the
 device's asset cache. MapLibre receives only local file URLs, so switching prediction
 layers does not need Metro once preparation has succeeded. If preparation fails, the
