@@ -28,13 +28,13 @@
     "expo-glass-effect": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.88.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.2",
-    "expo-doctor": "^1.20.1",
+    "expo-doctor": "^1.21.5",
     "jest-expo": "~57.0.6",
     "typescript": "~6.0.3"
   },
